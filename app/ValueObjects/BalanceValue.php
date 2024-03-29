@@ -5,6 +5,7 @@ namespace App\ValueObjects;
 class BalanceValue
 {
     private int $value;
+
     private string $currency;
 
     public function __construct(int $value, string $currency = 'USD')

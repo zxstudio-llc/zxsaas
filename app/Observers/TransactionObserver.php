@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
@@ -14,11 +15,15 @@ class TransactionObserver
      */
     public function created(Transaction $transaction): void
     {
+        if ($transaction->type === TransactionType::Journal) {
+            return;
+        }
+
         $chartAccount = $transaction->account;
         $bankAccount = $transaction->bankAccount->account;
 
-        $debitAccount = $transaction->type === 'withdrawal' ? $chartAccount : $bankAccount;
-        $creditAccount = $transaction->type === 'withdrawal' ? $bankAccount : $chartAccount;
+        $debitAccount = $transaction->type === TransactionType::Withdrawal ? $chartAccount : $bankAccount;
+        $creditAccount = $transaction->type === TransactionType::Withdrawal ? $bankAccount : $chartAccount;
 
         $this->createJournalEntries($transaction, $debitAccount, $creditAccount);
     }
@@ -63,8 +68,8 @@ class TransactionObserver
         $debitEntry = $journalEntries->where('type', 'debit')->first();
         $creditEntry = $journalEntries->where('type', 'credit')->first();
 
-        $debitAccount = $transaction->type === 'withdrawal' ? $chartAccount : $bankAccount;
-        $creditAccount = $transaction->type === 'withdrawal' ? $bankAccount : $chartAccount;
+        $debitAccount = $transaction->type === TransactionType::Withdrawal ? $chartAccount : $bankAccount;
+        $creditAccount = $transaction->type === TransactionType::Withdrawal ? $bankAccount : $chartAccount;
 
         $debitEntry?->update([
             'account_id' => $debitAccount->id,

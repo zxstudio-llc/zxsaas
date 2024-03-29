@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 use Wallo\FilamentCompanies\FilamentCompanies;
 
 #[ObservedBy(AccountObserver::class)]
@@ -91,6 +92,27 @@ class Account extends Model
     public function accountable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function getLastTransactionDateAttribute(): ?string
+    {
+        $lastJournalEntryTransaction = $this->journalEntries()
+            ->with('transaction')
+            ->latest('transactions.posted_at')
+            ->join('transactions', 'journal_entries.transaction_id', '=', 'transactions.id')
+            ->select('transactions.posted_at')
+            ->first();
+
+        if ($lastJournalEntryTransaction) {
+            return Carbon::parse($lastJournalEntryTransaction->posted_at)->format('F j, Y');
+        }
+
+        return null;
+    }
+
+    public function isUncategorized(): bool
+    {
+        return $this->type->isUncategorized();
     }
 
     public function transactions(): HasMany

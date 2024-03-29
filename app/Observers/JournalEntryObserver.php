@@ -15,7 +15,6 @@ class JournalEntryObserver
         //
     }
 
-
     private function updateEndingBalance(Account $account): void
     {
         //

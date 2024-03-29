@@ -15,11 +15,6 @@ class AccountObserver
     public function creating(Account $account): void
     {
         $this->setCategoryAndType($account, true);
-
-        // $bankAccount = $account->accountable;
-        if (($account->accountable_type === BankAccount::class) && $account->code === null) {
-            $this->setFieldsForBankAccount($account);
-        }
     }
 
     public function updating(Account $account): void
@@ -54,6 +49,11 @@ class AccountObserver
      */
     public function created(Account $account): void
     {
+        // $bankAccount = $account->accountable;
+        if (($account->accountable_type === BankAccount::class) && $account->code === null) {
+            $this->setFieldsForBankAccount($account);
+        }
+
         //$account->histories()->create([
         // 'company_id' => $account->company_id,
         //  'account_id' => $account->id,

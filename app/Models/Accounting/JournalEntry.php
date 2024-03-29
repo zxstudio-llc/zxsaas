@@ -3,12 +3,14 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Enums\Accounting\JournalEntryType;
 use App\Models\Banking\BankAccount;
 use App\Observers\JournalEntryObserver;
 use App\Traits\Blamable;
 use App\Traits\CompanyOwned;
 use Database\Factories\Accounting\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,7 +28,7 @@ class JournalEntry extends Model
         'company_id',
         'account_id',
         'transaction_id',
-        'type', // debit or credit
+        'type',
         'amount',
         'description',
         'created_by',
@@ -34,6 +36,7 @@ class JournalEntry extends Model
     ];
 
     protected $casts = [
+        'type' => JournalEntryType::class,
         'amount' => MoneyCast::class,
     ];
 
@@ -52,16 +55,6 @@ class JournalEntry extends Model
         return $this->belongsTo(Transaction::class, 'transaction_id');
     }
 
-    public function scopeDebit($query)
-    {
-        return $query->where('type', 'debit');
-    }
-
-    public function scopeCredit($query)
-    {
-        return $query->where('type', 'credit');
-    }
-
     public function bankAccount(): BelongsTo
     {
         return $this->account()->where('accountable_type', BankAccount::class);
@@ -75,6 +68,21 @@ class JournalEntry extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
+    }
+
+    public function isUncategorized(): bool
+    {
+        return $this->account->isUncategorized();
+    }
+
+    public function scopeDebit(Builder $query): Builder
+    {
+        return $query->where('type', JournalEntryType::Debit);
+    }
+
+    public function scopeCredit(Builder $query): Builder
+    {
+        return $query->where('type', JournalEntryType::Credit);
     }
 
     protected static function newFactory(): Factory

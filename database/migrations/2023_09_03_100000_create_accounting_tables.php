@@ -63,7 +63,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('institution_id')->nullable()->constrained('institutions')->nullOnDelete();
             $table->string('type')->default(BankAccountType::DEFAULT);
-            $table->string('number', 20);
+            $table->string('number', 20)->nullable();
             $table->boolean('enabled')->default(true);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();

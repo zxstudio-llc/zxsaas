@@ -3,6 +3,7 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Enums\Accounting\TransactionType;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Contact;
 use App\Observers\TransactionObserver;
@@ -43,6 +44,7 @@ class Transaction extends Model
     ];
 
     protected $casts = [
+        'type' => TransactionType::class,
         'amount' => MoneyCast::class,
         'pending' => 'boolean',
         'reviewed' => 'boolean',
@@ -72,6 +74,11 @@ class Transaction extends Model
     public function journalEntries(): HasMany
     {
         return $this->hasMany(JournalEntry::class, 'transaction_id');
+    }
+
+    public function isUncategorized(): bool
+    {
+        return $this->journalEntries->contains(fn (JournalEntry $entry) => $entry->account->isUncategorized());
     }
 
     public function createdBy(): BelongsTo

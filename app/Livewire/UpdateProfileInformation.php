@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use RuntimeException;
-use Wallo\FilamentCompanies\Features;
+use Wallo\FilamentCompanies\FilamentCompanies;
 
 /**
  * @property Form $form
@@ -148,8 +148,8 @@ class UpdateProfileInformation extends Component implements HasForms
                             </div>
                         ');
                     })
-                    ->disk(Features::profilePhotoDisk())
-                    ->directory(Features::profilePhotoStoragePath())
+                    ->disk(FilamentCompanies::profilePhotoDisk())
+                    ->directory(FilamentCompanies::profilePhotoStoragePath())
                     ->saveUploadedFileUsing(function (User $record, UploadedFile $file) {
                         $record->updateProfilePhoto($file);
                     })

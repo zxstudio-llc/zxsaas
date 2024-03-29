@@ -96,7 +96,6 @@ return [
             'https://' => ['rules' => []],
         ],
 
-
         'log_output_file' => null,
 
         /**

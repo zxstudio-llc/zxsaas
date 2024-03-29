@@ -24,6 +24,7 @@ use App\Livewire\UpdateProfileInformation;
 use App\Models\Company;
 use Exception;
 use Filament\Actions\CreateAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -34,6 +35,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Alignment;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -43,12 +45,12 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Wallo\FilamentCompanies\Actions\GenerateRedirectForProvider;
+use Wallo\FilamentCompanies\Enums\Feature;
+use Wallo\FilamentCompanies\Enums\Provider;
 use Wallo\FilamentCompanies\FilamentCompanies;
 use Wallo\FilamentCompanies\Pages\Auth\Login;
 use Wallo\FilamentCompanies\Pages\Auth\Register;
 use Wallo\FilamentCompanies\Pages\Company\CompanySettings;
-use Wallo\FilamentCompanies\Providers;
-use Wallo\FilamentCompanies\Socialite;
 
 class FilamentCompaniesServiceProvider extends PanelProvider
 {
@@ -81,8 +83,8 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                     ->notifications()
                     ->modals()
                     ->socialite(
-                        providers: [Providers::github()],
-                        features: [Socialite::rememberSession(), Socialite::providerAvatars()]
+                        providers: [Provider::Github],
+                        features: [Feature::RememberSession, Feature::ProviderAvatars],
                     ),
             )
             ->colors([
@@ -144,13 +146,13 @@ class FilamentCompaniesServiceProvider extends PanelProvider
         FilamentCompanies::deleteCompaniesUsing(DeleteCompany::class);
         FilamentCompanies::deleteUsersUsing(DeleteUser::class);
 
-        Socialite::resolvesSocialiteUsersUsing(ResolveSocialiteUser::class);
-        Socialite::createUsersFromProviderUsing(CreateUserFromProvider::class);
-        Socialite::createConnectedAccountsUsing(CreateConnectedAccount::class);
-        Socialite::updateConnectedAccountsUsing(UpdateConnectedAccount::class);
-        Socialite::setUserPasswordsUsing(SetUserPassword::class);
-        Socialite::handlesInvalidStateUsing(HandleInvalidState::class);
-        Socialite::generatesProvidersRedirectsUsing(GenerateRedirectForProvider::class);
+        FilamentCompanies::resolvesSocialiteUsersUsing(ResolveSocialiteUser::class);
+        FilamentCompanies::createUsersFromProviderUsing(CreateUserFromProvider::class);
+        FilamentCompanies::createConnectedAccountsUsing(CreateConnectedAccount::class);
+        FilamentCompanies::updateConnectedAccountsUsing(UpdateConnectedAccount::class);
+        FilamentCompanies::setUserPasswordsUsing(SetUserPassword::class);
+        FilamentCompanies::handlesInvalidStateUsing(HandleInvalidState::class);
+        FilamentCompanies::generatesProvidersRedirectsUsing(GenerateRedirectForProvider::class);
     }
 
     /**
@@ -182,7 +184,11 @@ class FilamentCompaniesServiceProvider extends PanelProvider
         $this->configureSelect();
 
         CreateAction::configureUsing(static function (CreateAction $action) {
-            $action->createAnother(false);
+            $action
+                ->createAnother(false)
+                ->stickyModalHeader()
+                ->stickyModalFooter()
+                ->modalFooterActionsAlignment(Alignment::End);
         });
 
         DatePicker::configureUsing(static function (DatePicker $component) {
@@ -191,6 +197,27 @@ class FilamentCompaniesServiceProvider extends PanelProvider
 
         DateTimePicker::configureUsing(static function (DateTimePicker $component) {
             $component->native(false);
+        });
+
+        EditAction::configureUsing(static function (EditAction $action) {
+            $action
+                ->stickyModalHeader()
+                ->stickyModalFooter()
+                ->modalFooterActionsAlignment(Alignment::End);
+        });
+
+        \Filament\Tables\Actions\EditAction::configureUsing(static function (\Filament\Tables\Actions\EditAction $action) {
+            $action
+                ->stickyModalHeader()
+                ->stickyModalFooter()
+                ->modalFooterActionsAlignment(Alignment::End);
+        });
+
+        \Filament\Tables\Actions\CreateAction::configureUsing(static function (\Filament\Tables\Actions\CreateAction $action) {
+            $action
+                ->stickyModalHeader()
+                ->stickyModalFooter()
+                ->modalFooterActionsAlignment(Alignment::End);
         });
     }
 

@@ -1,7 +1,48 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 @import 'tooltip.css';
+@import '../../../../vendor/awcodes/filament-table-repeater/resources/css/plugin.css';
 
 @config './tailwind.config.js';
+
+.choices__list.choices__list--single {
+    @apply w-full;
+}
+
+.table-repeater-container {
+    @apply rounded-none ring-0;
+}
+
+.table-repeater-component {
+    @apply space-y-10;
+}
+
+.table-repeater-component ul {
+    @apply justify-start;
+}
+
+.table-repeater-row {
+    @apply divide-x-0 !important;
+}
+
+.table-repeater-column {
+    @apply py-2 !important;
+}
+
+.table-repeater-header {
+    @apply rounded-t-none !important;
+}
+
+.table-repeater-rows-wrapper {
+    @apply divide-gray-300 last:border-b last:border-gray-300 dark:divide-white/20 dark:last:border-white/20;
+}
+
+.table-repeater-header tr {
+    @apply divide-x-0 text-base sm:text-sm sm:leading-6 !important;
+}
+
+.table-repeater-header-column {
+    @apply ps-3 pe-3 font-semibold bg-gray-200 dark:bg-gray-800 rounded-none !important;
+}
 
 .es-report-card {
     @apply md:!grid-cols-2;
@@ -16,6 +57,24 @@
 
     .fi-section-content {
         @apply !p-0;
+    }
+}
+
+.fi-modal.fi-width-screen {
+    .fi-modal-header {
+        @apply xl:px-80;
+
+        .absolute.end-4.top-4 {
+            @apply xl:end-80;
+        }
+    }
+
+    .fi-modal-content {
+        @apply xl:px-80;
+    }
+
+    .fi-modal-footer {
+        @apply xl:px-80;
     }
 }
 

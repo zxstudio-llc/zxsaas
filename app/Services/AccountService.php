@@ -10,6 +10,7 @@ use App\DTO\AccountDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
+use App\Models\Banking\BankAccount;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\ValueObjects\BalanceValue;
 use Illuminate\Database\Eloquent\Collection;
@@ -188,6 +189,22 @@ class AccountService
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances, 'USD');
 
         return new AccountBalanceReportDTO($accountCategories, $formattedReportTotalBalances);
+    }
+
+    public function getTotalBalanceForAllBankAccount(string $startDate, string $endDate): BalanceValue
+    {
+        $bankAccountsAccounts = Account::where('accountable_type', BankAccount::class)
+            ->get();
+
+        $totalBalance = 0;
+
+        // Get ending balance for each bank account
+        foreach ($bankAccountsAccounts as $account) {
+            $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getValue() ?? 0;
+            $totalBalance += $endingBalance;
+        }
+
+        return new BalanceValue($totalBalance, 'USD');
     }
 
     public function getAccountCategoryOrder(): array

@@ -4,6 +4,7 @@ namespace App\Listeners;
 
 use App\Events\CompanyConfigured;
 use App\Filament\Company\Pages\Accounting\AccountChart;
+use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
@@ -12,7 +13,6 @@ use App\Filament\Company\Pages\Setting\CompanyDefault;
 use App\Filament\Company\Pages\Setting\CompanyProfile;
 use App\Filament\Company\Pages\Setting\Invoice;
 use App\Filament\Company\Pages\Setting\Localization;
-use App\Filament\Company\Resources\Accounting\TransactionResource;
 use App\Filament\Company\Resources\Banking\AccountResource;
 use App\Filament\Company\Resources\Core\DepartmentResource;
 use App\Filament\Company\Resources\Setting\CurrencyResource;
@@ -114,7 +114,7 @@ class ConfigureCompanyNavigation
                         ->extraSidebarAttributes(['class' => 'es-sidebar-group'])
                         ->items([
                             ...AccountChart::getNavigationItems(),
-                            ...TransactionResource::getNavigationItems(),
+                            ...Transactions::getNavigationItems(),
                         ]),
                     NavigationGroup::make('Banking')
                         ->icon('heroicon-o-building-library')

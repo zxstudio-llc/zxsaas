@@ -4,6 +4,7 @@ namespace App\Models\Banking;
 
 use App\Enums\BankAccountType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Observers\BankAccountObserver;
 use App\Traits\Blamable;
 use App\Traits\CompanyOwned;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Wallo\FilamentCompanies\FilamentCompanies;
@@ -68,6 +70,11 @@ class BankAccount extends Model
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class, 'institution_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'bank_account_id');
     }
 
     public function createdBy(): BelongsTo

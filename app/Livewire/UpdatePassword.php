@@ -146,6 +146,7 @@ class UpdatePassword extends Component implements HasForms
                 Forms\Components\TextInput::make('password')
                     ->label(__('filament-companies::default.labels.new_password'))
                     ->password()
+                    ->revealable()
                     ->autocomplete('new-password')
                     ->rule(Password::default())
                     ->required()
@@ -155,6 +156,7 @@ class UpdatePassword extends Component implements HasForms
                 Forms\Components\TextInput::make('password_confirmation')
                     ->label(__('filament-companies::default.labels.password_confirmation'))
                     ->password()
+                    ->revealable()
                     ->autocomplete('new-password')
                     ->required()
                     ->dehydrated(false),

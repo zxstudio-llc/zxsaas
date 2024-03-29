@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('bank_account_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('type'); // deposit, withdrawal, journal entry
+            $table->string('type'); // deposit, withdrawal, journal
             $table->string('payment_channel')->nullable(); // online, in store, other
             $table->string('description')->nullable();
             $table->text('notes')->nullable();

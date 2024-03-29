@@ -55,4 +55,12 @@ enum AccountType: string implements HasLabel
             self::OperatingExpense, self::NonOperatingExpense, self::ContraExpense, self::UncategorizedExpense => AccountCategory::Expense,
         };
     }
+
+    public function isUncategorized(): bool
+    {
+        return match ($this) {
+            self::UncategorizedRevenue, self::UncategorizedExpense => true,
+            default => false,
+        };
+    }
 }

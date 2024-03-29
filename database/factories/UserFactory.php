@@ -7,8 +7,9 @@ use App\Models\Setting\CompanyDefault;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Wallo\FilamentCompanies\Features;
+use Wallo\FilamentCompanies\FilamentCompanies;
 
 class UserFactory extends Factory
 {
@@ -20,6 +21,11 @@ class UserFactory extends Factory
     protected $model = User::class;
 
     /**
+     * The current password being used by the factory.
+     */
+    protected static ?string $password = null;
+
+    /**
      * Define the model's default state.
      *
      * @return array<string, mixed>
@@ -27,10 +33,10 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->name(),
-            'email' => $this->faker->unique()->safeEmail(),
+            'name' => fake()->name(),
+            'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password
+            'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'profile_photo_path' => null,
             'current_company_id' => null,
@@ -42,35 +48,35 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'email_verified_at' => null,
-            ];
-        });
+        return $this->state(static fn (array $attributes) => [
+            'email_verified_at' => null,
+        ]);
     }
 
     /**
      * Indicate that the user should have a personal company.
      */
-    public function withPersonalCompany(): static
+    public function withPersonalCompany(?callable $callback = null): static
     {
-        if (! Features::hasCompanyFeatures()) {
+        if (! FilamentCompanies::hasCompanyFeatures()) {
             return $this->state([]);
         }
 
         $countryCode = $this->faker->countryCode;
 
-        return $this->afterCreating(function (User $user) use ($countryCode) {
+        return $this->afterCreating(function (User $user) use ($countryCode, $callback) {
             Company::factory()
+                ->state(static fn (array $attributes, User $user) => [
+                    'name' => $user->name . '\'s Company',
+                    'user_id' => $user->id,
+                    'personal_company' => true,
+                ])
                 ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
                 ->afterCreating(function (Company $company) use ($user, $countryCode) {
                     CompanyDefault::factory()->withDefault($user, $company, $countryCode)->create();
                 })
-                ->create([
-                    'name' => $user->name . '\'s Company',
-                    'user_id' => $user->id,
-                    'personal_company' => true,
-                ]);
+                ->when(is_callable($callback), $callback)
+                ->create();
         });
     }
 }
