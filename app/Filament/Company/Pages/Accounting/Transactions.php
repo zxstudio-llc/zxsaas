@@ -6,19 +6,20 @@ use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Enums\DateFormat;
+use App\Facades\Accounting;
+use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Forms\Components\JournalEntryRepeater;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
+use App\Models\Company;
 use App\Models\Setting\Localization;
-use App\Services\AccountService;
 use App\Traits\HasJournalEntryActions;
 use Awcodes\TableRepeater\Header;
-use Filament\Actions\ActionGroup;
-use Filament\Actions\CreateAction;
-use Filament\Actions\StaticAction;
+use Filament\Actions;
+use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Components\Actions\Action;
+use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
@@ -55,19 +56,26 @@ class Transactions extends Page implements HasTable
     use HasJournalEntryActions;
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static string $view = 'filament.company.pages.accounting.transactions';
 
     protected static ?string $model = Transaction::class;
 
+    protected static ?string $navigationParentItem = 'Chart of Accounts';
+
+    protected static ?string $navigationGroup = 'Accounting';
+
     public ?string $bankAccountIdFiltered = 'all';
 
-    protected AccountService $accountService;
+    public string $fiscalYearStartDate = '';
 
-    public function boot(AccountService $accountService): void
+    public string $fiscalYearEndDate = '';
+
+    public function mount(): void
     {
-        $this->accountService = $accountService;
+        /** @var Company $company */
+        $company = Filament::getTenant();
+        $this->fiscalYearStartDate = $company->locale->fiscalYearStartDate();
+        $this->fiscalYearEndDate = $company->locale->fiscalYearEndDate();
     }
 
     public static function getModel(): string
@@ -85,19 +93,21 @@ class Transactions extends Page implements HasTable
         return [
             $this->buildTransactionAction('addIncome', 'Add Income', TransactionType::Deposit),
             $this->buildTransactionAction('addExpense', 'Add Expense', TransactionType::Withdrawal),
-            ActionGroup::make([
-                CreateAction::make('addJournalTransaction')
+            Actions\ActionGroup::make([
+                Actions\CreateAction::make('addJournalTransaction')
                     ->label('Add Journal Transaction')
                     ->fillForm(fn (): array => $this->getFormDefaultsForType(TransactionType::Journal))
                     ->modalWidth(MaxWidth::Screen)
                     ->model(static::getModel())
                     ->form(fn (Form $form) => $this->journalTransactionForm($form))
-                    ->modalSubmitAction(fn (StaticAction $action) => $action->disabled(! $this->isJournalEntryBalanced()))
+                    ->modalSubmitAction(fn (Actions\StaticAction $action) => $action->disabled(! $this->isJournalEntryBalanced()))
                     ->groupedIcon(null)
                     ->modalHeading('Journal Entry')
                     ->mutateFormDataUsing(static fn (array $data) => array_merge($data, ['type' => TransactionType::Journal]))
                     ->afterFormFilled(fn () => $this->resetJournalEntryAmounts()),
-
+                Actions\Action::make('connectBank')
+                    ->label('Connect Your Bank')
+                    ->url(ConnectedAccount::getUrl()),
             ])
                 ->label('More')
                 ->button()
@@ -110,70 +120,20 @@ class Transactions extends Page implements HasTable
         ];
     }
 
-    protected function getFormDefaultsForType(TransactionType $type): array
+    public function form(Form $form): Form
     {
-        $commonDefaults = [
-            'posted_at' => now()->format('Y-m-d'),
-        ];
-
-        return match ($type) {
-            TransactionType::Deposit, TransactionType::Withdrawal => array_merge($commonDefaults, $this->transactionDefaults($type)),
-            TransactionType::Journal => array_merge($commonDefaults, $this->journalEntryDefaults()),
-        };
-    }
-
-    protected function journalEntryDefaults(): array
-    {
-        return [
-            'journalEntries' => [
-                $this->defaultEntry(JournalEntryType::Debit),
-                $this->defaultEntry(JournalEntryType::Credit),
-            ],
-        ];
-    }
-
-    protected function defaultEntry(JournalEntryType $journalEntryType): array
-    {
-        return [
-            'type' => $journalEntryType,
-            'account_id' => static::getUncategorizedAccountByType($journalEntryType->isDebit() ? TransactionType::Withdrawal : TransactionType::Deposit)?->id,
-            'amount' => '0.00',
-        ];
-    }
-
-    public function buildTransactionAction(string $name, string $label, TransactionType $type): CreateAction
-    {
-        return CreateAction::make($name)
-            ->label($label)
-            ->modalWidth(MaxWidth::ThreeExtraLarge)
-            ->model(static::getModel())
-            ->fillForm(fn (): array => $this->getFormDefaultsForType($type))
-            ->form(fn (Form $form) => $this->transactionForm($form))
-            ->button()
-            ->outlined();
-    }
-
-    protected function transactionDefaults(TransactionType $type): array
-    {
-        return [
-            'type' => $type,
-            'bank_account_id' => BankAccount::where('enabled', true)->first()?->id,
-            'amount' => '0.00',
-            'account_id' => static::getUncategorizedAccountByType($type)?->id,
-        ];
-    }
-
-    public static function getUncategorizedAccountByType(TransactionType $type): ?Account
-    {
-        [$category, $accountName] = match ($type) {
-            TransactionType::Deposit => [AccountCategory::Revenue, 'Uncategorized Income'],
-            TransactionType::Withdrawal => [AccountCategory::Expense, 'Uncategorized Expense'],
-            default => [null, null],
-        };
-
-        return Account::where('category', $category)
-            ->where('name', $accountName)
-            ->first();
+        return $form
+            ->schema([
+                Forms\Components\Select::make('bankAccountIdFiltered')
+                    ->label('Account')
+                    ->hiddenLabel()
+                    ->allowHtml()
+                    ->options($this->getBankAccountOptions(true, true))
+                    ->live()
+                    ->selectablePlaceholder(false)
+                    ->columnSpan(4),
+            ])
+            ->columns(14);
     }
 
     public function transactionForm(Form $form): Form
@@ -232,163 +192,6 @@ class Transactions extends Page implements HasTable
                     ]),
             ])
             ->columns(1);
-    }
-
-    protected function getJournalTransactionFormEditTab(): Tab
-    {
-        return Tab::make('Edit')
-            ->label('Edit')
-            ->icon('heroicon-o-pencil-square')
-            ->schema([
-                $this->getTransactionDetailsGrid(),
-                $this->getJournalEntriesTableRepeater(),
-            ]);
-    }
-
-    protected function getJournalTransactionFormNotesTab(): Tab
-    {
-        return Tab::make('Notes')
-            ->label('Notes')
-            ->icon('heroicon-o-clipboard')
-            ->id('notes')
-            ->schema([
-                $this->getTransactionDetailsGrid(),
-                Textarea::make('notes')
-                    ->label('Notes')
-                    ->rows(10)
-                    ->autosize(),
-            ]);
-    }
-
-    protected function getTransactionDetailsGrid(): Grid
-    {
-        return Grid::make(8)
-            ->schema([
-                DatePicker::make('posted_at')
-                    ->label('Date')
-                    ->softRequired()
-                    ->displayFormat('Y-m-d'),
-                TextInput::make('description')
-                    ->label('Description')
-                    ->columnSpan(2),
-            ]);
-    }
-
-    protected function getJournalEntriesTableRepeater(): JournalEntryRepeater
-    {
-        return JournalEntryRepeater::make('journalEntries')
-            ->relationship('journalEntries')
-            ->hiddenLabel()
-            ->columns(4)
-            ->headers($this->getJournalEntriesTableRepeaterHeaders())
-            ->schema($this->getJournalEntriesTableRepeaterSchema())
-            ->streamlined()
-            ->deletable(fn (JournalEntryRepeater $repeater) => $repeater->getItemsCount() > 2)
-            ->minItems(2)
-            ->defaultItems(2)
-            ->addable(false)
-            ->footerItem(fn (): View => $this->getJournalTransactionModalFooter())
-            ->extraActions([
-                $this->buildAddJournalEntryAction(JournalEntryType::Debit),
-                $this->buildAddJournalEntryAction(JournalEntryType::Credit),
-            ]);
-    }
-
-    protected function getJournalEntriesTableRepeaterHeaders(): array
-    {
-        return [
-            Header::make('type')
-                ->width('150px')
-                ->label('Type'),
-            Header::make('description')
-                ->width('320px')
-                ->label('Description'),
-            Header::make('account_id')
-                ->width('320px')
-                ->label('Account'),
-            Header::make('amount')
-                ->width('192px')
-                ->label('Amount'),
-        ];
-    }
-
-    protected function getJournalEntriesTableRepeaterSchema(): array
-    {
-        return [
-            Select::make('type')
-                ->label('Type')
-                ->options(JournalEntryType::class)
-                ->live()
-                ->afterStateUpdated(function (Get $get, Set $set, ?string $state, ?string $old) {
-                    $this->adjustJournalEntryAmountsForTypeChange(JournalEntryType::parse($state), JournalEntryType::parse($old), $get('amount'));
-                })
-                ->softRequired(),
-            TextInput::make('description')
-                ->label('Description'),
-            Select::make('account_id')
-                ->label('Account')
-                ->options(fn (): array => $this->getChartAccountOptions())
-                ->live()
-                ->softRequired()
-                ->searchable(),
-            TextInput::make('amount')
-                ->label('Amount')
-                ->live()
-                ->mask(RawJs::make('$money($input)'))
-                ->afterStateUpdated(function (Get $get, Set $set, ?string $state, ?string $old) {
-                    $this->updateJournalEntryAmount(JournalEntryType::parse($get('type')), $state, $old);
-                })
-                ->softRequired(),
-        ];
-    }
-
-    protected function buildAddJournalEntryAction(JournalEntryType $type): Action
-    {
-        $typeLabel = $type->getLabel();
-
-        return Action::make("add{$typeLabel}Entry")
-            ->label("Add {$typeLabel} Entry")
-            ->button()
-            ->outlined()
-            ->color($type->isDebit() ? 'primary' : 'gray')
-            ->iconSize(IconSize::Small)
-            ->iconPosition(IconPosition::Before)
-            ->action(function (JournalEntryRepeater $component) use ($type) {
-                $state = $component->getState();
-                $newUuid = (string) Str::uuid();
-                $state[$newUuid] = $this->defaultEntry($type);
-
-                $component->state($state);
-            });
-    }
-
-    public function getJournalTransactionModalFooter(): View
-    {
-        return view(
-            'filament.company.components.actions.journal-entry-footer',
-            [
-                'debitAmount' => $this->getFormattedDebitAmount(),
-                'creditAmount' => $this->getFormattedCreditAmount(),
-                'difference' => $this->getFormattedBalanceDifference(),
-                'isJournalBalanced' => $this->isJournalEntryBalanced(),
-            ],
-        );
-    }
-
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('bankAccountIdFiltered')
-                    ->label('Account')
-                    ->hiddenLabel()
-                    ->allowHtml()
-                    ->options($this->getBankAccountOptions(true, true))
-                    ->live()
-                    ->selectablePlaceholder(false)
-                    ->columnSpan(4),
-            ])
-            ->columns(14);
     }
 
     public function table(Table $table): Table
@@ -541,7 +344,7 @@ class Transactions extends Page implements HasTable
                         return [
                             $table->getFiltersApplyAction()
                                 ->close(),
-                            StaticAction::make('cancel')
+                            Actions\StaticAction::make('cancel')
                                 ->label($action->getModalCancelActionLabel())
                                 ->button()
                                 ->close()
@@ -610,6 +413,213 @@ class Transactions extends Page implements HasTable
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    protected function buildTransactionAction(string $name, string $label, TransactionType $type): Actions\CreateAction
+    {
+        return Actions\CreateAction::make($name)
+            ->label($label)
+            ->modalWidth(MaxWidth::ThreeExtraLarge)
+            ->model(static::getModel())
+            ->fillForm(fn (): array => $this->getFormDefaultsForType($type))
+            ->form(fn (Form $form) => $this->transactionForm($form))
+            ->button()
+            ->outlined();
+    }
+
+    protected function getFormDefaultsForType(TransactionType $type): array
+    {
+        $commonDefaults = [
+            'posted_at' => now()->format('Y-m-d'),
+        ];
+
+        return match ($type) {
+            TransactionType::Deposit, TransactionType::Withdrawal => array_merge($commonDefaults, $this->transactionDefaults($type)),
+            TransactionType::Journal => array_merge($commonDefaults, $this->journalEntryDefaults()),
+        };
+    }
+
+    protected function journalEntryDefaults(): array
+    {
+        return [
+            'journalEntries' => [
+                $this->defaultEntry(JournalEntryType::Debit),
+                $this->defaultEntry(JournalEntryType::Credit),
+            ],
+        ];
+    }
+
+    protected function defaultEntry(JournalEntryType $journalEntryType): array
+    {
+        return [
+            'type' => $journalEntryType,
+            'account_id' => static::getUncategorizedAccountByType($journalEntryType->isDebit() ? TransactionType::Withdrawal : TransactionType::Deposit)?->id,
+            'amount' => '0.00',
+        ];
+    }
+
+    protected function transactionDefaults(TransactionType $type): array
+    {
+        return [
+            'type' => $type,
+            'bank_account_id' => BankAccount::where('enabled', true)->first()?->id,
+            'amount' => '0.00',
+            'account_id' => static::getUncategorizedAccountByType($type)?->id,
+        ];
+    }
+
+    protected static function getUncategorizedAccountByType(TransactionType $type): ?Account
+    {
+        [$category, $accountName] = match ($type) {
+            TransactionType::Deposit => [AccountCategory::Revenue, 'Uncategorized Income'],
+            TransactionType::Withdrawal => [AccountCategory::Expense, 'Uncategorized Expense'],
+            default => [null, null],
+        };
+
+        return Account::where('category', $category)
+            ->where('name', $accountName)
+            ->first();
+    }
+
+    protected function getJournalTransactionFormEditTab(): Tab
+    {
+        return Tab::make('Edit')
+            ->label('Edit')
+            ->icon('heroicon-o-pencil-square')
+            ->schema([
+                $this->getTransactionDetailsGrid(),
+                $this->getJournalEntriesTableRepeater(),
+            ]);
+    }
+
+    protected function getJournalTransactionFormNotesTab(): Tab
+    {
+        return Tab::make('Notes')
+            ->label('Notes')
+            ->icon('heroicon-o-clipboard')
+            ->id('notes')
+            ->schema([
+                $this->getTransactionDetailsGrid(),
+                Textarea::make('notes')
+                    ->label('Notes')
+                    ->rows(10)
+                    ->autosize(),
+            ]);
+    }
+
+    protected function getTransactionDetailsGrid(): Grid
+    {
+        return Grid::make(8)
+            ->schema([
+                DatePicker::make('posted_at')
+                    ->label('Date')
+                    ->softRequired()
+                    ->displayFormat('Y-m-d'),
+                TextInput::make('description')
+                    ->label('Description')
+                    ->columnSpan(2),
+            ]);
+    }
+
+    protected function getJournalEntriesTableRepeater(): JournalEntryRepeater
+    {
+        return JournalEntryRepeater::make('journalEntries')
+            ->relationship('journalEntries')
+            ->hiddenLabel()
+            ->columns(4)
+            ->headers($this->getJournalEntriesTableRepeaterHeaders())
+            ->schema($this->getJournalEntriesTableRepeaterSchema())
+            ->streamlined()
+            ->deletable(fn (JournalEntryRepeater $repeater) => $repeater->getItemsCount() > 2)
+            ->minItems(2)
+            ->defaultItems(2)
+            ->addable(false)
+            ->footerItem(fn (): View => $this->getJournalTransactionModalFooter())
+            ->extraActions([
+                $this->buildAddJournalEntryAction(JournalEntryType::Debit),
+                $this->buildAddJournalEntryAction(JournalEntryType::Credit),
+            ]);
+    }
+
+    protected function getJournalEntriesTableRepeaterHeaders(): array
+    {
+        return [
+            Header::make('type')
+                ->width('150px')
+                ->label('Type'),
+            Header::make('description')
+                ->width('320px')
+                ->label('Description'),
+            Header::make('account_id')
+                ->width('320px')
+                ->label('Account'),
+            Header::make('amount')
+                ->width('192px')
+                ->label('Amount'),
+        ];
+    }
+
+    protected function getJournalEntriesTableRepeaterSchema(): array
+    {
+        return [
+            Select::make('type')
+                ->label('Type')
+                ->options(JournalEntryType::class)
+                ->live()
+                ->afterStateUpdated(function (Get $get, Set $set, ?string $state, ?string $old) {
+                    $this->adjustJournalEntryAmountsForTypeChange(JournalEntryType::parse($state), JournalEntryType::parse($old), $get('amount'));
+                })
+                ->softRequired(),
+            TextInput::make('description')
+                ->label('Description'),
+            Select::make('account_id')
+                ->label('Account')
+                ->options(fn (): array => $this->getChartAccountOptions())
+                ->live()
+                ->softRequired()
+                ->searchable(),
+            TextInput::make('amount')
+                ->label('Amount')
+                ->live()
+                ->mask(RawJs::make('$money($input)'))
+                ->afterStateUpdated(function (Get $get, Set $set, ?string $state, ?string $old) {
+                    $this->updateJournalEntryAmount(JournalEntryType::parse($get('type')), $state, $old);
+                })
+                ->softRequired(),
+        ];
+    }
+
+    protected function buildAddJournalEntryAction(JournalEntryType $type): FormAction
+    {
+        $typeLabel = $type->getLabel();
+
+        return FormAction::make("add{$typeLabel}Entry")
+            ->label("Add {$typeLabel} Entry")
+            ->button()
+            ->outlined()
+            ->color($type->isDebit() ? 'primary' : 'gray')
+            ->iconSize(IconSize::Small)
+            ->iconPosition(IconPosition::Before)
+            ->action(function (JournalEntryRepeater $component) use ($type) {
+                $state = $component->getState();
+                $newUuid = (string) Str::uuid();
+                $state[$newUuid] = $this->defaultEntry($type);
+
+                $component->state($state);
+            });
+    }
+
+    public function getJournalTransactionModalFooter(): View
+    {
+        return view(
+            'filament.company.components.actions.journal-entry-footer',
+            [
+                'debitAmount' => $this->getFormattedDebitAmount(),
+                'creditAmount' => $this->getFormattedCreditAmount(),
+                'difference' => $this->getFormattedBalanceDifference(),
+                'isJournalBalanced' => $this->isJournalEntryBalanced(),
+            ],
+        );
     }
 
     protected function addIndicatorForSingleSelection($data, $key, $label, &$indicators): void
@@ -709,21 +719,13 @@ class Transactions extends Page implements HasTable
         return array_merge($options, $bankAccountOptions);
     }
 
-    public function getAccountBalance(Account $account): ?string
+    protected function getAccountBalance(Account $account): ?string
     {
-        $company = $account->company;
-        $startDate = $company->locale->fiscalYearStartDate();
-        $endDate = $company->locale->fiscalYearEndDate();
-
-        return $this->accountService->getEndingBalance($account, $startDate, $endDate)?->formatted();
+        return Accounting::getEndingBalance($account, $this->fiscalYearStartDate, $this->fiscalYearEndDate)?->formatted();
     }
 
-    public function getBalanceForAllAccounts(): string
+    protected function getBalanceForAllAccounts(): string
     {
-        $company = auth()->user()->currentCompany;
-        $startDate = $company->locale->fiscalYearStartDate();
-        $endDate = $company->locale->fiscalYearEndDate();
-
-        return $this->accountService->getTotalBalanceForAllBankAccount($startDate, $endDate)->formatted();
+        return Accounting::getTotalBalanceForAllBankAccounts($this->fiscalYearStartDate, $this->fiscalYearEndDate)->formatted();
     }
 }

@@ -4,7 +4,6 @@ namespace App\Listeners;
 
 use App\Enums\DateFormat;
 use App\Enums\Font;
-use App\Enums\MaxContentWidth;
 use App\Enums\ModalWidth;
 use App\Enums\PrimaryColor;
 use App\Enums\RecordsPerPage;
@@ -35,7 +34,6 @@ class ConfigureCompanyDefault
         $stripedTables = $company->appearance->is_table_striped ?? false;
         $defaultPrimaryColor = $company->appearance->primary_color ?? PrimaryColor::from(PrimaryColor::DEFAULT);
         $modalWidth = $company->appearance->modal_width->value ?? ModalWidth::DEFAULT;
-        $maxContentWidth = $company->appearance->max_content_width->value ?? MaxContentWidth::DEFAULT;
         $defaultFont = $company->appearance->font->value ?? Font::DEFAULT;
         $default_language = $company->locale->language ?? config('transmatic.source_locale');
         $defaultTimezone = $company->locale->timezone ?? config('app.timezone');
@@ -70,8 +68,7 @@ class ConfigureCompanyDefault
 
         Filament::getPanel('company')
             ->font($defaultFont)
-            ->brandName($company->name)
-            ->maxContentWidth($maxContentWidth);
+            ->brandName($company->name);
 
         DatePicker::configureUsing(static function (DatePicker $component) use ($dateFormat, $weekStart) {
             $component
@@ -82,12 +79,17 @@ class ConfigureCompanyDefault
         Tab::configureUsing(static function (Tab $tab) {
             $label = $tab->getLabel();
 
-            $tab->label(ucwords(translate($label)));
+            $translatedLabel = translate($label);
+
+            $tab->label(ucwords($translatedLabel));
         }, isImportant: true);
 
         Section::configureUsing(static function (Section $section): void {
             $heading = $section->getHeading();
-            $section->heading(ucfirst(translate($heading)));
+
+            $translatedHeading = translate($heading);
+
+            $section->heading(ucfirst($translatedHeading));
         }, isImportant: true);
 
         ResourcesTab::configureUsing(static function (ResourcesTab $tab): void {

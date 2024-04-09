@@ -12,7 +12,6 @@ use App\Models\Banking\BankAccount;
 use App\Services\AccountService;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -37,15 +36,6 @@ class AccountResource extends Resource
         $modelLabel = static::$modelLabel;
 
         return translate($modelLabel);
-    }
-
-    public static function getNavigationParentItem(): ?string
-    {
-        if (Filament::hasTopNavigation()) {
-            return translate(static::$navigationGroup);
-        }
-
-        return null;
     }
 
     public static function form(Form $form): Form
@@ -154,7 +144,7 @@ class AccountResource extends Resource
                                     }),
                             ]),
                         Forms\Components\Group::make()
-                            ->columns(2)
+                            ->columns()
                             ->columnSpanFull()
                             ->schema([
                                 Forms\Components\TextInput::make('number')
@@ -165,8 +155,7 @@ class AccountResource extends Resource
                                         return $rule->where('company_id', $companyId)->where('number', $state);
                                     })
                                     ->maxLength(20)
-                                    ->validationAttribute('account number')
-                                    ->required(),
+                                    ->validationAttribute('account number'),
                                 ToggleButton::make('enabled')
                                     ->localizeLabel('Default'),
                             ]),

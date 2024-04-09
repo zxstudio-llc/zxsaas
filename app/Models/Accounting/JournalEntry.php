@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 #[ObservedBy(JournalEntryObserver::class)]
 class JournalEntry extends Model
@@ -40,11 +39,6 @@ class JournalEntry extends Model
         'amount' => MoneyCast::class,
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
@@ -58,16 +52,6 @@ class JournalEntry extends Model
     public function bankAccount(): BelongsTo
     {
         return $this->account()->where('accountable_type', BankAccount::class);
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     public function isUncategorized(): bool

@@ -10,7 +10,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class ConnectedBankAccount extends Model
 {
@@ -48,11 +47,6 @@ class ConnectedBankAccount extends Model
         'masked_number',
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class, 'institution_id');
@@ -80,15 +74,5 @@ class ConnectedBankAccount extends Model
         return Attribute::get(static function (mixed $value, array $attributes): ?string {
             return $attributes['mask'] ? '•••• ' . substr($attributes['mask'], -4) : null;
         });
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 }

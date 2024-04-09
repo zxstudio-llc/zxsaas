@@ -42,6 +42,8 @@ class AccountObserver
         $generatedAccountCode = AccountCode::generate($account->company_id, $account->subtype_id);
 
         $account->code = $generatedAccountCode;
+
+        $account->save();
     }
 
     /**
@@ -50,7 +52,10 @@ class AccountObserver
     public function created(Account $account): void
     {
         // $bankAccount = $account->accountable;
+
+        info('Observer triggered for Account: ', $account->toArray());
         if (($account->accountable_type === BankAccount::class) && $account->code === null) {
+            info('Setting fields for Bank Account');
             $this->setFieldsForBankAccount($account);
         }
 

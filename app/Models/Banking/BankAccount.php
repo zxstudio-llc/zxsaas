@@ -20,7 +20,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 #[ObservedBy(BankAccountObserver::class)]
 class BankAccount extends Model
@@ -52,11 +51,6 @@ class BankAccount extends Model
         'mask',
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function connectedBankAccount(): HasOne
     {
         return $this->hasOne(ConnectedBankAccount::class, 'bank_account_id');
@@ -75,16 +69,6 @@ class BankAccount extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class, 'bank_account_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected function mask(): Attribute

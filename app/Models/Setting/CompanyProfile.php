@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class CompanyProfile extends Model
 {
@@ -60,11 +59,6 @@ class CompanyProfile extends Model
         });
     }
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function country(): BelongsTo
     {
         return $this->belongsTo(Country::class, 'country', 'id');
@@ -78,16 +72,6 @@ class CompanyProfile extends Model
     public function state(): BelongsTo
     {
         return $this->belongsTo(State::class, 'state_id', 'id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     public function getCountryName(): string

@@ -53,8 +53,8 @@
                                             {{ $account->name }}
                                             <br>
                                             <small class="text-gray-500 dark:text-gray-400">
-                                                @if($account->last_transaction_date)
-                                                    Last transaction on {{ $account->last_transaction_date }}
+                                                @if($account->getLastTransactionDate())
+                                                    Last transaction on {{ $account->getLastTransactionDate() }}
                                                 @else
                                                     No transactions for this account
                                                 @endif

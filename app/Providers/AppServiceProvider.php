@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\AccountHandler;
+use App\Services\AccountService;
 use BezhanSalleh\PanelSwitch\PanelSwitch;
 use Filament\Notifications\Livewire\Notifications;
 use Filament\Support\Assets\Js;
@@ -11,6 +13,13 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * All of the container bindings that should be registered.
+     */
+    public array $bindings = [
+        AccountHandler::class => AccountService::class,
+    ];
+
     /**
      * Register any application services.
      */

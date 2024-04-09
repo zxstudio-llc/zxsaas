@@ -48,11 +48,6 @@ class Contact extends Model
         'type' => ContactType::class,
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_code');
@@ -61,16 +56,6 @@ class Contact extends Model
     public function employeeship(): HasOne
     {
         return $this->hasOne(FilamentCompanies::employeeshipModel(), 'contact_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected static function newFactory(): Factory

@@ -52,36 +52,46 @@ class TransactionObserver
      */
     public function updated(Transaction $transaction): void
     {
-        $changes = $transaction->getChanges();
-
-        $relevantChanges = array_intersect_key($changes, array_flip(['amount', 'description', 'account_id', 'bank_account_id', 'type']));
-
-        if (empty($relevantChanges)) {
+        if ($transaction->type === TransactionType::Journal || $this->hasRelevantChanges($transaction) === false) {
             return;
         }
 
         $chartAccount = $transaction->account;
-        $bankAccount = $transaction->bankAccount->account;
+        $bankAccount = $transaction->bankAccount?->account;
+
+        if (! $chartAccount || ! $bankAccount) {
+            return;
+        }
 
         $journalEntries = $transaction->journalEntries;
 
         $debitEntry = $journalEntries->where('type', 'debit')->first();
         $creditEntry = $journalEntries->where('type', 'credit')->first();
 
+        if (! $debitEntry || ! $creditEntry) {
+            return;
+        }
+
         $debitAccount = $transaction->type === TransactionType::Withdrawal ? $chartAccount : $bankAccount;
         $creditAccount = $transaction->type === TransactionType::Withdrawal ? $bankAccount : $chartAccount;
 
-        $debitEntry?->update([
-            'account_id' => $debitAccount->id,
-            'amount' => $transaction->amount,
-            'description' => $transaction->description,
-        ]);
+        $this->updateJournalEntriesForTransaction($debitEntry, $debitAccount, $transaction);
+        $this->updateJournalEntriesForTransaction($creditEntry, $creditAccount, $transaction);
+    }
 
-        $creditEntry?->update([
-            'account_id' => $creditAccount->id,
-            'amount' => $transaction->amount,
-            'description' => $transaction->description,
-        ]);
+    protected function hasRelevantChanges(Transaction $transaction): bool
+    {
+        return $transaction->wasChanged(['amount', 'account_id', 'bank_account_id', 'type']);
+    }
+
+    protected function updateJournalEntriesForTransaction(JournalEntry $journalEntry, Account $account, Transaction $transaction): void
+    {
+        DB::transaction(static function () use ($journalEntry, $account, $transaction) {
+            $journalEntry->update([
+                'account_id' => $account->id,
+                'amount' => $transaction->amount,
+            ]);
+        });
     }
 
     /**

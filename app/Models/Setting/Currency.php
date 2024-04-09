@@ -16,10 +16,8 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class Currency extends Model
 {
@@ -70,11 +68,6 @@ class Currency extends Model
         });
     }
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function defaultCurrency(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'currency_code', 'code');
@@ -88,16 +81,6 @@ class Currency extends Model
     public function accountHistories(): HasMany
     {
         return $this->hasMany(AccountHistory::class, 'currency_code', 'code');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected static function newFactory(): Factory

@@ -14,8 +14,6 @@ use Database\Factories\Setting\AppearanceFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class Appearance extends Model
 {
@@ -49,21 +47,6 @@ class Appearance extends Model
         'has_top_navigation' => 'boolean',
         'is_table_striped' => 'boolean',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
-    }
 
     protected static function newFactory(): Factory
     {

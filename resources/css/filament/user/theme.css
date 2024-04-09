@@ -62,18 +62,6 @@
     transition: background-color 0.3s, top 0.3s;
 }
 
-.fi-topbar > nav {
-    @apply relative flex justify-center;
-
-    > ul {
-        @apply absolute -translate-x-2/4 gap-x-0 left-2/4;
-    }
-
-    > div {
-        @apply static;
-    }
-}
-
 .fi-topbar > nav.topbar-hovered, .fi-sidebar-header.topbar-hovered {
     background-color: rgba(255, 255, 255, 0.75) !important;
 }

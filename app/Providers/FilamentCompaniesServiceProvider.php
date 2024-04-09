@@ -17,25 +17,37 @@ use App\Actions\FilamentCompanies\UpdateCompanyName;
 use App\Actions\FilamentCompanies\UpdateConnectedAccount;
 use App\Actions\FilamentCompanies\UpdateUserPassword;
 use App\Actions\FilamentCompanies\UpdateUserProfileInformation;
+use App\Filament\Company\Clusters\Settings;
+use App\Filament\Company\Pages\Accounting\AccountChart;
+use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Filament\Company\Pages\CreateCompany;
+use App\Filament\Company\Pages\ManageCompany;
+use App\Filament\Company\Pages\Reports;
+use App\Filament\Company\Pages\Service\ConnectedAccount;
+use App\Filament\Company\Pages\Service\LiveCurrency;
+use App\Filament\Company\Resources\Banking\AccountResource;
+use App\Filament\Company\Resources\Core\DepartmentResource;
+use App\Filament\Components\PanelShiftDropdown;
 use App\Http\Middleware\ConfigureCurrentCompany;
 use App\Livewire\UpdatePassword;
 use App\Livewire\UpdateProfileInformation;
 use App\Models\Company;
+use App\Support\FilamentComponentConfigurator;
 use Exception;
-use Filament\Actions\CreateAction;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Actions;
+use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationBuilder;
+use Filament\Navigation\NavigationGroup;
 use Filament\Pages;
+use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Support\Enums\Alignment;
+use Filament\Tables;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -50,7 +62,6 @@ use Wallo\FilamentCompanies\Enums\Provider;
 use Wallo\FilamentCompanies\FilamentCompanies;
 use Wallo\FilamentCompanies\Pages\Auth\Login;
 use Wallo\FilamentCompanies\Pages\Auth\Register;
-use Wallo\FilamentCompanies\Pages\Company\CompanySettings;
 
 class FilamentCompaniesServiceProvider extends PanelProvider
 {
@@ -66,6 +77,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
             ->login(Login::class)
             ->registration(Register::class)
             ->passwordReset()
+            ->tenantMenu(false)
             ->plugin(
                 FilamentCompanies::make()
                     ->userPanel('user')
@@ -87,17 +99,54 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         features: [Feature::RememberSession, Feature::ProviderAvatars],
                     ),
             )
+            ->plugin(
+                PanelShiftDropdown::make()
+                    ->logoutItem()
+                    ->companySettings(),
+            )
             ->colors([
                 'primary' => Color::Indigo,
                 'gray' => Color::Gray,
             ])
+            ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
+                return $builder
+                    ->items([
+                        ...Dashboard::getNavigationItems(),
+                        ...Reports::getNavigationItems(),
+                    ])
+                    ->groups([
+                        NavigationGroup::make('Accounting')
+                            ->localizeLabel()
+                            ->icon('heroicon-o-clipboard-document-list')
+                            ->extraSidebarAttributes(['class' => 'es-sidebar-group'])
+                            ->items([
+                                ...AccountChart::getNavigationItems(),
+                                ...Transactions::getNavigationItems(),
+                            ]),
+                        NavigationGroup::make('Banking')
+                            ->localizeLabel()
+                            ->icon('heroicon-o-building-library')
+                            ->items(AccountResource::getNavigationItems()),
+                        NavigationGroup::make('HR')
+                            ->icon('heroicon-o-user-group')
+                            ->items(DepartmentResource::getNavigationItems()),
+                        NavigationGroup::make('Services')
+                            ->localizeLabel()
+                            ->icon('heroicon-o-wrench-screwdriver')
+                            ->items([
+                                ...ConnectedAccount::getNavigationItems(),
+                                ...LiveCurrency::getNavigationItems(),
+                            ]),
+                    ]);
+            })
             ->viteTheme('resources/css/filament/company/theme.css')
             ->brandLogo(static fn () => view('components.icons.logo'))
             ->tenant(Company::class)
-            ->tenantProfile(CompanySettings::class)
+            ->tenantProfile(ManageCompany::class)
             ->tenantRegistration(CreateCompany::class)
             ->discoverResources(in: app_path('Filament/Company/Resources'), for: 'App\\Filament\\Company\\Resources')
             ->discoverPages(in: app_path('Filament/Company/Pages'), for: 'App\\Filament\\Company\\Pages')
+            ->discoverClusters(in: app_path('Filament/Company/Clusters'), for: 'App\\Filament\\Company\\Clusters')
             ->pages([
                 Pages\Dashboard::class,
             ])
@@ -183,41 +232,12 @@ class FilamentCompaniesServiceProvider extends PanelProvider
     {
         $this->configureSelect();
 
-        CreateAction::configureUsing(static function (CreateAction $action) {
-            $action
-                ->createAnother(false)
-                ->stickyModalHeader()
-                ->stickyModalFooter()
-                ->modalFooterActionsAlignment(Alignment::End);
-        });
-
-        DatePicker::configureUsing(static function (DatePicker $component) {
+        Actions\CreateAction::configureUsing(static fn (Actions\CreateAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Actions\EditAction::configureUsing(static fn (Actions\EditAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Tables\Actions\EditAction::configureUsing(static fn (Tables\Actions\EditAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Tables\Actions\CreateAction::configureUsing(static fn (Tables\Actions\CreateAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Forms\Components\DateTimePicker::configureUsing(static function (Forms\Components\DateTimePicker $component) {
             $component->native(false);
-        });
-
-        DateTimePicker::configureUsing(static function (DateTimePicker $component) {
-            $component->native(false);
-        });
-
-        EditAction::configureUsing(static function (EditAction $action) {
-            $action
-                ->stickyModalHeader()
-                ->stickyModalFooter()
-                ->modalFooterActionsAlignment(Alignment::End);
-        });
-
-        \Filament\Tables\Actions\EditAction::configureUsing(static function (\Filament\Tables\Actions\EditAction $action) {
-            $action
-                ->stickyModalHeader()
-                ->stickyModalFooter()
-                ->modalFooterActionsAlignment(Alignment::End);
-        });
-
-        \Filament\Tables\Actions\CreateAction::configureUsing(static function (\Filament\Tables\Actions\CreateAction $action) {
-            $action
-                ->stickyModalHeader()
-                ->stickyModalFooter()
-                ->modalFooterActionsAlignment(Alignment::End);
         });
     }
 

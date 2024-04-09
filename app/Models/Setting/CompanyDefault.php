@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class CompanyDefault extends Model
 {
@@ -33,11 +32,6 @@ class CompanyDefault extends Model
         'created_by',
         'updated_by',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
 
     public function bankAccount(): BelongsTo
     {
@@ -71,16 +65,6 @@ class CompanyDefault extends Model
     {
         return $this->belongsTo(Discount::class, 'purchase_discount_id', 'id')
             ->where('type', DiscountType::Purchase);
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected static function newFactory(): Factory

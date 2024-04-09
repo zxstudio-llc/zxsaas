@@ -17,7 +17,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 #[ObservedBy(AccountObserver::class)]
 class Account extends Model
@@ -53,11 +52,6 @@ class Account extends Model
         'default' => 'boolean',
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function subtype(): BelongsTo
     {
         return $this->belongsTo(AccountSubtype::class, 'subtype_id');
@@ -79,32 +73,19 @@ class Account extends Model
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
-    }
-
     public function accountable(): MorphTo
     {
         return $this->morphTo();
     }
 
-    public function getLastTransactionDateAttribute(): ?string
+    public function getLastTransactionDate(): ?string
     {
         $lastJournalEntryTransaction = $this->journalEntries()
-            ->with('transaction')
-            ->latest('transactions.posted_at')
             ->join('transactions', 'journal_entries.transaction_id', '=', 'transactions.id')
-            ->select('transactions.posted_at')
-            ->first();
+            ->max('transactions.posted_at');
 
         if ($lastJournalEntryTransaction) {
-            return Carbon::parse($lastJournalEntryTransaction->posted_at)->format('F j, Y');
+            return Carbon::parse($lastJournalEntryTransaction)->format('F j, Y');
         }
 
         return null;

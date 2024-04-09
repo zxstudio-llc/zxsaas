@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Akaunting\Money\Money;
+use App\Contracts\AccountHandler;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountBalanceReportDTO;
 use App\DTO\AccountCategoryDTO;
@@ -15,7 +16,7 @@ use App\Repositories\Accounting\JournalEntryRepository;
 use App\ValueObjects\BalanceValue;
 use Illuminate\Database\Eloquent\Collection;
 
-class AccountService
+class AccountService implements AccountHandler
 {
     protected JournalEntryRepository $journalEntryRepository;
 
@@ -191,7 +192,7 @@ class AccountService
         return new AccountBalanceReportDTO($accountCategories, $formattedReportTotalBalances);
     }
 
-    public function getTotalBalanceForAllBankAccount(string $startDate, string $endDate): BalanceValue
+    public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): BalanceValue
     {
         $bankAccountsAccounts = Account::where('accountable_type', BankAccount::class)
             ->get();

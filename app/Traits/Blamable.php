@@ -2,7 +2,9 @@
 
 namespace App\Traits;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Wallo\FilamentCompanies\FilamentCompanies;
 
 trait Blamable
 {
@@ -18,5 +20,20 @@ trait Blamable
             $auth = Auth::id();
             $model->updated_by = $auth;
         });
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo($this->userModel(), 'created_by');
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo($this->userModel(), 'updated_by');
+    }
+
+    protected function userModel(): string
+    {
+        return FilamentCompanies::userModel();
     }
 }

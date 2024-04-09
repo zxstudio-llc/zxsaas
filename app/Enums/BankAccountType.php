@@ -18,4 +18,15 @@ enum BankAccountType: string implements HasLabel
     {
         return translate($this->name);
     }
+
+    public function getDefaultSubtype(): string
+    {
+        return match ($this) {
+            self::Depository => 'Cash and Cash Equivalents',
+            self::Credit => 'Short-Term Borrowings',
+            self::Loan => 'Long-Term Borrowings',
+            self::Investment => 'Long-Term Investments',
+            self::Other => 'Other Current Assets',
+        };
+    }
 }

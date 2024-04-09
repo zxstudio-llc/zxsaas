@@ -9,9 +9,7 @@ use Database\Factories\Accounting\AccountSubtypeFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 class AccountSubtype extends Model
 {
@@ -34,11 +32,6 @@ class AccountSubtype extends Model
         'category' => AccountCategory::class,
         'type' => AccountType::class,
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
 
     public function accounts(): HasMany
     {

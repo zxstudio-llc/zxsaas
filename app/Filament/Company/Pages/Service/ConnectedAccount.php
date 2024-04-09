@@ -3,7 +3,6 @@
 namespace App\Filament\Company\Pages\Service;
 
 use Filament\Actions\Action;
-use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Enums\MaxWidth;
 use Illuminate\Contracts\Support\Htmlable;
@@ -24,15 +23,6 @@ class ConnectedAccount extends Page
     public static function getNavigationLabel(): string
     {
         return translate(static::$title);
-    }
-
-    public static function getNavigationParentItem(): ?string
-    {
-        if (Filament::hasTopNavigation()) {
-            return translate('Banking');
-        }
-
-        return null;
     }
 
     protected function getHeaderActions(): array

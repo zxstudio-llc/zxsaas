@@ -19,10 +19,11 @@
                             {{ $institution->name }}
                         </h3>
 
-                        {{-- Eventually we will need to assert last updated time based on when the last time one of the accounts for the institution last has transactions imported --}}
-                        <p class="connected-account-section-header-description text-sm leading-6 text-gray-500 dark:text-gray-400">
-                            {{ __('Last Updated') }} {{ $institution->updated_at->diffForHumans() }}
-                        </p>
+                        @if($institution->getLastTransactionDate())
+                            <p class="connected-account-section-header-description text-sm leading-6 text-gray-500 dark:text-gray-400">
+                                {{ __('Last updated') }} {{ $institution->getLastTransactionDate() }}
+                            </p>
+                        @endif
                     </div>
 
                     {{ ($this->deleteBankConnection)(['institution' => $institution->id]) }}
@@ -38,7 +39,7 @@
 
                             @if($connectedBankAccount->bankAccount?->account)
                                 <div class="account-balance flex text-base leading-6 text-gray-700 dark:text-gray-200 space-x-1">
-                                    <strong>{{ $this->getAccountBalance($connectedBankAccount->bankAccount->account) }}</strong>
+                                    <strong wire:poll.visible>{{ $this->getAccountBalance($connectedBankAccount->bankAccount->account) }}</strong>
                                     <p>{{ $connectedBankAccount->bankAccount->account->currency_code }}</p>
                                 </div>
                             @endif

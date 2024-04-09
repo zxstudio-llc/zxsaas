@@ -16,7 +16,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Wallo\FilamentCompanies\FilamentCompanies;
 
 #[ObservedBy(TransactionObserver::class)]
 class Transaction extends Model
@@ -28,9 +27,9 @@ class Transaction extends Model
     protected $fillable = [
         'company_id',
         'account_id', // Account from Chart of Accounts (Income/Expense accounts)
-        'bank_account_id', // Cash or Bank Account
+        'bank_account_id', // Cash/Bank Account
         'contact_id',
-        'type', // 'deposit', 'withdrawal', 'journal entry'
+        'type', // 'deposit', 'withdrawal', 'journal'
         'payment_channel',
         'description',
         'notes',
@@ -50,11 +49,6 @@ class Transaction extends Model
         'reviewed' => 'boolean',
         'posted_at' => 'datetime',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
 
     public function account(): BelongsTo
     {
@@ -79,16 +73,6 @@ class Transaction extends Model
     public function isUncategorized(): bool
     {
         return $this->journalEntries->contains(fn (JournalEntry $entry) => $entry->account->isUncategorized());
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected static function newFactory(): Factory

@@ -31,11 +31,6 @@ class Department extends Model
         'updated_by',
     ];
 
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'manager_id');
@@ -55,16 +50,6 @@ class Department extends Model
     public function employeeships(): HasMany
     {
         return $this->hasMany(FilamentCompanies::employeeshipModel(), 'department_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
     }
 
     protected static function newFactory(): Factory

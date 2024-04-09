@@ -41,7 +41,7 @@ class ConnectedBankAccountService
 
     public function processNewAccountForBank(BankAccount $bankAccount, Company $company, ConnectedBankAccount $connectedBankAccount): Account
     {
-        $defaultAccountSubtypeName = $this->accountSubtypeRepository->getDefaultAccountSubtypeByType($bankAccount->type);
+        $defaultAccountSubtypeName = $bankAccount->type->getDefaultSubtype();
 
         $accountSubtype = $this->accountSubtypeRepository->findAccountSubtypeByNameOrFail($company, $defaultAccountSubtypeName);
 

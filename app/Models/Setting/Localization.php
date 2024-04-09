@@ -13,10 +13,8 @@ use Database\Factories\Setting\LocalizationFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use NumberFormatter;
 use ResourceBundle;
-use Wallo\FilamentCompanies\FilamentCompanies;
 use Wallo\Transmatic\Facades\Transmatic;
 
 class Localization extends Model
@@ -50,21 +48,6 @@ class Localization extends Model
         'week_start' => WeekStart::class,
         'number_format' => NumberFormat::class,
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::companyModel(), 'company_id');
-    }
-
-    public function createdBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'created_by');
-    }
-
-    public function updatedBy(): BelongsTo
-    {
-        return $this->belongsTo(FilamentCompanies::userModel(), 'updated_by');
-    }
 
     public static function getLocale(string $language, string $countryCode): string
     {

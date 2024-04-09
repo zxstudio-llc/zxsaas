@@ -12,7 +12,6 @@ use App\Events\PlaidSuccess;
 use App\Events\StartTransactionImport;
 use App\Listeners\ConfigureChartOfAccounts;
 use App\Listeners\ConfigureCompanyDefault;
-use App\Listeners\ConfigureCompanyNavigation;
 use App\Listeners\CreateCompanyDefaults;
 use App\Listeners\CreateConnectedAccount;
 use App\Listeners\HandleTransactionImport;
@@ -20,8 +19,6 @@ use App\Listeners\SyncAssociatedModels;
 use App\Listeners\SyncWithCompanyDefaults;
 use App\Listeners\UpdateAccountBalances;
 use App\Listeners\UpdateCurrencyRates;
-use App\Models\Setting\Currency;
-use App\Observers\CurrencyObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -45,7 +42,6 @@ class EventServiceProvider extends ServiceProvider
         ],
         CompanyConfigured::class => [
             ConfigureCompanyDefault::class,
-            ConfigureCompanyNavigation::class,
         ],
         CompanyGenerated::class => [
             CreateCompanyDefaults::class,
