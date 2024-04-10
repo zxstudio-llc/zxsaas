@@ -4,7 +4,7 @@ namespace App\Filament\Company\Resources\Banking;
 
 use App\Actions\OptionAction\CreateCurrency;
 use App\Enums\Accounting\AccountCategory;
-use App\Enums\BankAccountType;
+use App\Enums\Banking\BankAccountType;
 use App\Facades\Forex;
 use App\Filament\Company\Resources\Banking\AccountResource\Pages;
 use App\Models\Accounting\AccountSubtype;

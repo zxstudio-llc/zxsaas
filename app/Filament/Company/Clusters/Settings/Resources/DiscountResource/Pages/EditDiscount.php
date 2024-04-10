@@ -2,9 +2,9 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\DiscountResource\Pages;
 
-use App\Enums\DiscountType;
+use App\Concerns\HandlesResourceRecordUpdate;
+use App\Enums\Setting\DiscountType;
 use App\Filament\Company\Clusters\Settings\Resources\DiscountResource;
-use App\Traits\HandlesResourceRecordUpdate;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;

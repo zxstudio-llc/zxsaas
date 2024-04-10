@@ -2,9 +2,9 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\TaxResource\Pages;
 
-use App\Enums\TaxType;
+use App\Concerns\HandlesResourceRecordUpdate;
+use App\Enums\Setting\TaxType;
 use App\Filament\Company\Clusters\Settings\Resources\TaxResource;
-use App\Traits\HandlesResourceRecordUpdate;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;

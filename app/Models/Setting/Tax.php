@@ -3,13 +3,13 @@
 namespace App\Models\Setting;
 
 use App\Casts\RateCast;
-use App\Enums\TaxComputation;
-use App\Enums\TaxScope;
-use App\Enums\TaxType;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
-use App\Traits\HasDefault;
-use App\Traits\SyncsWithCompanyDefaults;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Concerns\HasDefault;
+use App\Concerns\SyncsWithCompanyDefaults;
+use App\Enums\Setting\TaxComputation;
+use App\Enums\Setting\TaxScope;
+use App\Enums\Setting\TaxType;
 use Database\Factories\Setting\TaxFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

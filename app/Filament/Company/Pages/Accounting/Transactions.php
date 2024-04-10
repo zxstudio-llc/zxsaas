@@ -2,10 +2,11 @@
 
 namespace App\Filament\Company\Pages\Accounting;
 
+use App\Concerns\HasJournalEntryActions;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
-use App\Enums\DateFormat;
+use App\Enums\Setting\DateFormat;
 use App\Facades\Accounting;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Forms\Components\JournalEntryRepeater;
@@ -14,7 +15,6 @@ use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Models\Setting\Localization;
-use App\Traits\HasJournalEntryActions;
 use Awcodes\TableRepeater\Header;
 use Filament\Actions;
 use Filament\Facades\Filament;
@@ -128,7 +128,7 @@ class Transactions extends Page implements HasTable
                     ->label('Account')
                     ->hiddenLabel()
                     ->allowHtml()
-                    ->options($this->getBankAccountOptions(true, true))
+                    ->options(fn () => $this->getBankAccountOptions(true, true))
                     ->live()
                     ->selectablePlaceholder(false)
                     ->columnSpan(4),

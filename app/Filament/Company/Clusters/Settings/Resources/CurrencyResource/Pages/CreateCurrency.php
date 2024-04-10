@@ -2,9 +2,9 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\CurrencyResource\Pages;
 
+use App\Concerns\HandlesResourceRecordCreation;
 use App\Filament\Company\Clusters\Settings\Resources\CurrencyResource;
 use App\Models\Setting\Currency;
-use App\Traits\HandlesResourceRecordCreation;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;

@@ -2,9 +2,9 @@
 
 namespace App\Models\Core;
 
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
 use App\Models\User;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Core\DepartmentFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

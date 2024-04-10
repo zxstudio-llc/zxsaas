@@ -2,7 +2,7 @@
 
 namespace App\Utilities\Localization;
 
-use App\Enums\TimeFormat;
+use App\Enums\Setting\TimeFormat;
 use App\Models\Setting\Localization;
 use DateTimeZone;
 use IntlTimeZone;

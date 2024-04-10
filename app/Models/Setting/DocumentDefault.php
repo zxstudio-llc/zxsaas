@@ -3,12 +3,12 @@
 namespace App\Models\Setting;
 
 use App\Casts\TrimLeadingZeroCast;
-use App\Enums\DocumentType;
-use App\Enums\Font;
-use App\Enums\PaymentTerms;
-use App\Enums\Template;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Setting\DocumentType;
+use App\Enums\Setting\Font;
+use App\Enums\Setting\PaymentTerms;
+use App\Enums\Setting\Template;
 use Database\Factories\Setting\DocumentDefaultFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;

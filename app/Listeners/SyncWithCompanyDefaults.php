@@ -2,8 +2,8 @@
 
 namespace App\Listeners;
 
-use App\Enums\DiscountType;
-use App\Enums\TaxType;
+use App\Enums\Setting\DiscountType;
+use App\Enums\Setting\TaxType;
 use App\Events\CompanyDefaultEvent;
 use App\Models\Setting\CompanyDefault;
 use Illuminate\Support\Facades\DB;

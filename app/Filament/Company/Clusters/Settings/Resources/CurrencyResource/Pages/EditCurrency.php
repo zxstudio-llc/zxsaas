@@ -2,9 +2,9 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\CurrencyResource\Pages;
 
+use App\Concerns\HandlesResourceRecordUpdate;
 use App\Filament\Company\Clusters\Settings\Resources\CurrencyResource;
 use App\Models\Setting\Currency;
-use App\Traits\HandlesResourceRecordUpdate;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Exceptions\Halt;

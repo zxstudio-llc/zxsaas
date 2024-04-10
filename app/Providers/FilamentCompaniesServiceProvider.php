@@ -113,6 +113,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                     ->items([
                         ...Dashboard::getNavigationItems(),
                         ...Reports::getNavigationItems(),
+                        ...Settings::getNavigationItems(),
                     ])
                     ->groups([
                         NavigationGroup::make('Accounting')

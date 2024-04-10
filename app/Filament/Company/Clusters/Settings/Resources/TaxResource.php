@@ -2,13 +2,13 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources;
 
-use App\Enums\TaxComputation;
-use App\Enums\TaxScope;
-use App\Enums\TaxType;
+use App\Concerns\NotifiesOnDelete;
+use App\Enums\Setting\TaxComputation;
+use App\Enums\Setting\TaxScope;
+use App\Enums\Setting\TaxType;
 use App\Filament\Company\Clusters\Settings;
 use App\Filament\Company\Clusters\Settings\Resources\TaxResource\Pages;
 use App\Models\Setting\Tax;
-use App\Traits\NotifiesOnDelete;
 use Closure;
 use Filament\Facades\Filament;
 use Filament\Forms;

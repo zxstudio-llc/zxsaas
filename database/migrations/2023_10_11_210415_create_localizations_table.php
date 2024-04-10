@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\DateFormat;
-use App\Enums\NumberFormat;
-use App\Enums\TimeFormat;
-use App\Enums\WeekStart;
+use App\Enums\Setting\DateFormat;
+use App\Enums\Setting\NumberFormat;
+use App\Enums\Setting\TimeFormat;
+use App\Enums\Setting\WeekStart;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

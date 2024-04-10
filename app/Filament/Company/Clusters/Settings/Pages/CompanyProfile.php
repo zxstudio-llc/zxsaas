@@ -2,7 +2,7 @@
 
 namespace App\Filament\Company\Clusters\Settings\Pages;
 
-use App\Enums\EntityType;
+use App\Enums\Setting\EntityType;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Locale\City;
 use App\Models\Locale\Country;

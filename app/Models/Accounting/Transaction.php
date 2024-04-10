@@ -3,12 +3,12 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Contact;
 use App\Observers\TransactionObserver;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\Factory;

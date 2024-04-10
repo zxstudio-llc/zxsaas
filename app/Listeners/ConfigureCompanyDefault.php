@@ -2,16 +2,14 @@
 
 namespace App\Listeners;
 
-use App\Enums\DateFormat;
-use App\Enums\Font;
-use App\Enums\ModalWidth;
-use App\Enums\PrimaryColor;
-use App\Enums\RecordsPerPage;
-use App\Enums\TableSortDirection;
-use App\Enums\WeekStart;
+use App\Enums\Setting\DateFormat;
+use App\Enums\Setting\Font;
+use App\Enums\Setting\PrimaryColor;
+use App\Enums\Setting\RecordsPerPage;
+use App\Enums\Setting\TableSortDirection;
+use App\Enums\Setting\WeekStart;
 use App\Events\CompanyConfigured;
 use App\Utilities\Currency\ConfigureCurrencies;
-use Filament\Actions\MountableAction;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Section;
@@ -31,9 +29,7 @@ class ConfigureCompanyDefault
         $paginationPageOptions = RecordsPerPage::caseValues();
         $defaultPaginationPageOption = $company->appearance->records_per_page->value ?? RecordsPerPage::DEFAULT;
         $defaultSort = $company->appearance->table_sort_direction->value ?? TableSortDirection::DEFAULT;
-        $stripedTables = $company->appearance->is_table_striped ?? false;
         $defaultPrimaryColor = $company->appearance->primary_color ?? PrimaryColor::from(PrimaryColor::DEFAULT);
-        $modalWidth = $company->appearance->modal_width->value ?? ModalWidth::DEFAULT;
         $defaultFont = $company->appearance->font->value ?? Font::DEFAULT;
         $default_language = $company->locale->language ?? config('transmatic.source_locale');
         $defaultTimezone = $company->locale->timezone ?? config('app.timezone');
@@ -45,21 +41,12 @@ class ConfigureCompanyDefault
         config(['app.timezone' => $defaultTimezone]);
         date_default_timezone_set($defaultTimezone);
 
-        Table::configureUsing(static function (Table $table) use ($paginationPageOptions, $defaultSort, $stripedTables, $defaultPaginationPageOption): void {
+        Table::configureUsing(static function (Table $table) use ($paginationPageOptions, $defaultSort, $defaultPaginationPageOption): void {
 
             $table
                 ->paginationPageOptions($paginationPageOptions)
                 ->defaultSort(column: 'id', direction: $defaultSort)
-                ->striped($stripedTables)
                 ->defaultPaginationPageOption($defaultPaginationPageOption);
-        }, isImportant: true);
-
-        MountableAction::configureUsing(static function (MountableAction $action) use ($modalWidth): void {
-            $actionOperation = $action->getName();
-
-            if (in_array($actionOperation, ['delete', 'restore', 'forceDelete', 'detach'])) {
-                $action->modalWidth($modalWidth);
-            }
         }, isImportant: true);
 
         FilamentColor::register([

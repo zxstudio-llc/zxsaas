@@ -2,10 +2,10 @@
 
 namespace App\Models\Common;
 
-use App\Enums\ContactType;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Common\ContactType;
 use App\Models\Setting\Currency;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Common\ContactFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

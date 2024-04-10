@@ -2,10 +2,10 @@
 
 namespace App\Filament\Company\Clusters\Settings\Pages;
 
-use App\Enums\DocumentType;
-use App\Enums\Font;
-use App\Enums\PaymentTerms;
-use App\Enums\Template;
+use App\Enums\Setting\DocumentType;
+use App\Enums\Setting\Font;
+use App\Enums\Setting\PaymentTerms;
+use App\Enums\Setting\Template;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\DocumentDefault as InvoiceModel;
 use Filament\Actions\Action;

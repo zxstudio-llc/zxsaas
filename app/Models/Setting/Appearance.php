@@ -2,14 +2,12 @@
 
 namespace App\Models\Setting;
 
-use App\Enums\Font;
-use App\Enums\MaxContentWidth;
-use App\Enums\ModalWidth;
-use App\Enums\PrimaryColor;
-use App\Enums\RecordsPerPage;
-use App\Enums\TableSortDirection;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Setting\Font;
+use App\Enums\Setting\PrimaryColor;
+use App\Enums\Setting\RecordsPerPage;
+use App\Enums\Setting\TableSortDirection;
 use Database\Factories\Setting\AppearanceFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,12 +25,8 @@ class Appearance extends Model
         'company_id',
         'primary_color',
         'font',
-        'max_content_width',
-        'modal_width',
         'table_sort_direction',
         'records_per_page',
-        'has_top_navigation',
-        'is_table_striped',
         'created_by',
         'updated_by',
     ];
@@ -40,12 +34,8 @@ class Appearance extends Model
     protected $casts = [
         'primary_color' => PrimaryColor::class,
         'font' => Font::class,
-        'max_content_width' => MaxContentWidth::class,
-        'modal_width' => ModalWidth::class,
         'table_sort_direction' => TableSortDirection::class,
         'records_per_page' => RecordsPerPage::class,
-        'has_top_navigation' => 'boolean',
-        'is_table_striped' => 'boolean',
     ];
 
     protected static function newFactory(): Factory

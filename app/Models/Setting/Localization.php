@@ -2,12 +2,12 @@
 
 namespace App\Models\Setting;
 
-use App\Enums\DateFormat;
-use App\Enums\NumberFormat;
-use App\Enums\TimeFormat;
-use App\Enums\WeekStart;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Setting\DateFormat;
+use App\Enums\Setting\NumberFormat;
+use App\Enums\Setting\TimeFormat;
+use App\Enums\Setting\WeekStart;
 use Carbon\Carbon;
 use Database\Factories\Setting\LocalizationFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;

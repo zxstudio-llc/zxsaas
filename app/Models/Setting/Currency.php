@@ -3,13 +3,13 @@
 namespace App\Models\Setting;
 
 use App\Casts\CurrencyRateCast;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Concerns\HasDefault;
+use App\Concerns\SyncsWithCompanyDefaults;
 use App\Facades\Forex;
 use App\Models\Accounting\Account;
 use App\Models\History\AccountHistory;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
-use App\Traits\HasDefault;
-use App\Traits\SyncsWithCompanyDefaults;
 use App\Utilities\Currency\CurrencyAccessor;
 use Database\Factories\Setting\CurrencyFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;

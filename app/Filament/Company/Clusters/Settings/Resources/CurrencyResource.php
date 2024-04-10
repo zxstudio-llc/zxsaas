@@ -2,14 +2,14 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources;
 
+use App\Concerns\ChecksForeignKeyConstraints;
+use App\Concerns\NotifiesOnDelete;
 use App\Facades\Forex;
 use App\Filament\Company\Clusters\Settings;
 use App\Filament\Company\Clusters\Settings\Resources\CurrencyResource\Pages;
 use App\Models\Accounting\Account;
 use App\Models\Setting\Currency;
 use App\Models\Setting\Currency as CurrencyModel;
-use App\Traits\ChecksForeignKeyConstraints;
-use App\Traits\NotifiesOnDelete;
 use App\Utilities\Currency\CurrencyAccessor;
 use Closure;
 use Filament\Facades\Filament;

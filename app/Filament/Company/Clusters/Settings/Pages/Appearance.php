@@ -2,12 +2,10 @@
 
 namespace App\Filament\Company\Clusters\Settings\Pages;
 
-use App\Enums\Font;
-use App\Enums\MaxContentWidth;
-use App\Enums\ModalWidth;
-use App\Enums\PrimaryColor;
-use App\Enums\RecordsPerPage;
-use App\Enums\TableSortDirection;
+use App\Enums\Setting\Font;
+use App\Enums\Setting\PrimaryColor;
+use App\Enums\Setting\RecordsPerPage;
+use App\Enums\Setting\TableSortDirection;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\Appearance as AppearanceModel;
 use Filament\Actions\Action;
@@ -25,7 +23,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Livewire\Attributes\Locked;
-use Wallo\FilamentSelectify\Components\ToggleButton;
 
 use function Filament\authorize;
 
@@ -106,7 +103,6 @@ class Appearance extends Page
         return $form
             ->schema([
                 $this->getGeneralSection(),
-                $this->getLayoutSection(),
                 $this->getDataPresentationSection(),
             ])
             ->model($this->record)
@@ -145,29 +141,6 @@ class Appearance extends Page
             ])->columns();
     }
 
-    protected function getLayoutSection(): Component
-    {
-        return Section::make('Layout')
-            ->schema([
-                Select::make('max_content_width')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->options(MaxContentWidth::class),
-                Select::make('modal_width')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->options(ModalWidth::class),
-                Select::make('has_top_navigation')
-                    ->localizeLabel('Navigation Layout')
-                    ->selectablePlaceholder(false)
-                    ->boolean(translate('Top Navigation'), translate('Side Navigation')),
-                ToggleButton::make('is_table_striped')
-                    ->localizeLabel('Striped Tables')
-                    ->onLabel(translate('Enabled'))
-                    ->offLabel(translate('Disabled')),
-            ])->columns();
-    }
-
     protected function getDataPresentationSection(): Component
     {
         return Section::make('Data Presentation')
@@ -189,8 +162,6 @@ class Appearance extends Page
 
         $keysToWatch = [
             'primary_color',
-            'max_content_width',
-            'has_top_navigation',
             'font',
         ];
 

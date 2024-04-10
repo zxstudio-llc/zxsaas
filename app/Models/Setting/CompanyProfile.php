@@ -2,12 +2,12 @@
 
 namespace App\Models\Setting;
 
-use App\Enums\EntityType;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Setting\EntityType;
 use App\Models\Locale\City;
 use App\Models\Locale\Country;
 use App\Models\Locale\State;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Setting\CompanyProfileFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;

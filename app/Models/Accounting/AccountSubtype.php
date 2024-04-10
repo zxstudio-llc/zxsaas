@@ -2,9 +2,9 @@
 
 namespace App\Models\Accounting;
 
+use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
-use App\Traits\CompanyOwned;
 use Database\Factories\Accounting\AccountSubtypeFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

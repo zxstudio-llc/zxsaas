@@ -2,12 +2,12 @@
 
 namespace App\Models\Accounting;
 
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Models\Setting\Currency;
 use App\Observers\AccountObserver;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Accounting\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\Factory;

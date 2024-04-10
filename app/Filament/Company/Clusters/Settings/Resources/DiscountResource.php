@@ -2,16 +2,16 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources;
 
-use App\Enums\DateFormat;
-use App\Enums\DiscountComputation;
-use App\Enums\DiscountScope;
-use App\Enums\DiscountType;
-use App\Enums\TimeFormat;
+use App\Concerns\NotifiesOnDelete;
+use App\Enums\Setting\DateFormat;
+use App\Enums\Setting\DiscountComputation;
+use App\Enums\Setting\DiscountScope;
+use App\Enums\Setting\DiscountType;
+use App\Enums\Setting\TimeFormat;
 use App\Filament\Company\Clusters\Settings;
 use App\Filament\Company\Clusters\Settings\Resources\DiscountResource\Pages;
 use App\Models\Setting\Discount;
 use App\Models\Setting\Localization;
-use App\Traits\NotifiesOnDelete;
 use Closure;
 use Filament\Facades\Filament;
 use Filament\Forms;

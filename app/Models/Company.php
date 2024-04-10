@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentType;
+use App\Enums\Setting\DocumentType;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
 use App\Models\Banking\ConnectedBankAccount;

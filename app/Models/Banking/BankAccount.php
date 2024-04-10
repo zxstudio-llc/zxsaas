@@ -2,14 +2,14 @@
 
 namespace App\Models\Banking;
 
-use App\Enums\BankAccountType;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Concerns\HasDefault;
+use App\Concerns\SyncsWithCompanyDefaults;
+use App\Enums\Banking\BankAccountType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Observers\BankAccountObserver;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
-use App\Traits\HasDefault;
-use App\Traits\SyncsWithCompanyDefaults;
 use Database\Factories\Banking\BankAccountFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;

@@ -2,8 +2,8 @@
 
 namespace App\Filament\Company\Resources\Banking\AccountResource\Pages;
 
+use App\Concerns\HandlesResourceRecordUpdate;
 use App\Filament\Company\Resources\Banking\AccountResource;
-use App\Traits\HandlesResourceRecordUpdate;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 

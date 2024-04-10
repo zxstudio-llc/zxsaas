@@ -2,11 +2,11 @@
 
 namespace App\Models\Setting;
 
-use App\Enums\DiscountType;
-use App\Enums\TaxType;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Setting\DiscountType;
+use App\Enums\Setting\TaxType;
 use App\Models\Banking\BankAccount;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Setting\CompanyDefaultFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

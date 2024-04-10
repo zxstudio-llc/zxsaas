@@ -2,10 +2,10 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\DiscountResource\Pages;
 
-use App\Enums\DiscountType;
+use App\Concerns\HandlesResourceRecordCreation;
+use App\Enums\Setting\DiscountType;
 use App\Filament\Company\Clusters\Settings\Resources\DiscountResource;
 use App\Models\Setting\Discount;
-use App\Traits\HandlesResourceRecordCreation;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;

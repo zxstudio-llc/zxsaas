@@ -2,10 +2,10 @@
 
 namespace App\Filament\Company\Clusters\Settings\Resources\TaxResource\Pages;
 
-use App\Enums\TaxType;
+use App\Concerns\HandlesResourceRecordCreation;
+use App\Enums\Setting\TaxType;
 use App\Filament\Company\Clusters\Settings\Resources\TaxResource;
 use App\Models\Setting\Tax;
-use App\Traits\HandlesResourceRecordCreation;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;

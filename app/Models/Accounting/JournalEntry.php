@@ -3,11 +3,11 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\JournalEntryType;
 use App\Models\Banking\BankAccount;
 use App\Observers\JournalEntryObserver;
-use App\Traits\Blamable;
-use App\Traits\CompanyOwned;
 use Database\Factories\Accounting\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
