@@ -52,29 +52,26 @@ class AccountCode
     public static function generate(int $companyId, string $subtypeId): string
     {
         $subtype = AccountSubtype::find($subtypeId);
-        $type = $subtype->type;
+        $subtypeName = $subtype->name;
+        $typeEnum = $subtype->type;
+        $typeValue = $typeEnum->value;
 
-        $range = self::getRangeForType($type);
+        $baseCode = config("chart-of-accounts.default.{$typeValue}.{$subtypeName}.base_code");
+        $range = self::getRangeForType($typeEnum);
 
         $lastAccount = Account::where('subtype_id', $subtypeId)
             ->where('company_id', $companyId)
+            ->whereNotNull('code')
             ->orderBy('code', 'desc')
-            ->first(); // maybe handle subaccounts (parent-child) in the future (not using max() because of subaccounts)
+            ->first();
 
-        if ($lastAccount) {
-            $lastCode = $lastAccount->code;
-            $lastAccountPart = explode('-', $lastCode)[0]; // possibly handle subaccounts (parent-child) in the future
-            $numericValue = (int) $lastAccountPart;
-            $numericValue++;
-        } else {
-            $numericValue = $range[0];
-        }
+        $numericValue = $lastAccount ? (int) explode('-', $lastAccount->code)[0] + 1 : (int) $baseCode;
 
+        // Ensure the new code does not exist and is within the acceptable range
         while (Account::where('company_id', $companyId)->where('code', '=', (string) $numericValue)->exists() || $numericValue > $range[1]) {
             if ($numericValue > $range[1]) {
-                throw new RuntimeException('No more account codes available for this type.');
+                throw new RuntimeException('No more account codes available within the allowed range for this type.');
             }
-
             $numericValue++;
         }
 
