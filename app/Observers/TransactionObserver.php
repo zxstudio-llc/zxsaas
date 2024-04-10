@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
@@ -33,7 +34,7 @@ class TransactionObserver
         $debitAccount->journalEntries()->create([
             'company_id' => $transaction->company_id,
             'transaction_id' => $transaction->id,
-            'type' => 'debit',
+            'type' => JournalEntryType::Debit,
             'amount' => $transaction->amount,
             'description' => $transaction->description,
         ]);
@@ -41,7 +42,7 @@ class TransactionObserver
         $creditAccount->journalEntries()->create([
             'company_id' => $transaction->company_id,
             'transaction_id' => $transaction->id,
-            'type' => 'credit',
+            'type' => JournalEntryType::Credit,
             'amount' => $transaction->amount,
             'description' => $transaction->description,
         ]);
@@ -65,8 +66,8 @@ class TransactionObserver
 
         $journalEntries = $transaction->journalEntries;
 
-        $debitEntry = $journalEntries->where('type', 'debit')->first();
-        $creditEntry = $journalEntries->where('type', 'credit')->first();
+        $debitEntry = $journalEntries->where('type', JournalEntryType::Debit)->first();
+        $creditEntry = $journalEntries->where('type', JournalEntryType::Credit)->first();
 
         if (! $debitEntry || ! $creditEntry) {
             return;

@@ -2,7 +2,6 @@
 
 namespace App\Observers;
 
-use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
 
 class JournalEntryObserver
@@ -11,11 +10,6 @@ class JournalEntryObserver
      * Handle the JournalEntry "created" event.
      */
     public function created(JournalEntry $journalEntry): void
-    {
-        //
-    }
-
-    private function updateEndingBalance(Account $account): void
     {
         //
     }
