@@ -9,6 +9,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Enums\Setting\DateFormat;
 use App\Facades\Accounting;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
+use App\Forms\Components\DateRangeSelect;
 use App\Forms\Components\JournalEntryRepeater;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
@@ -16,6 +17,7 @@ use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Models\Setting\Localization;
 use Awcodes\TableRepeater\Header;
+use Exception;
 use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms;
@@ -194,6 +196,9 @@ class Transactions extends Page implements HasTable
             ->columns(1);
     }
 
+    /**
+     * @throws Exception
+     */
     public function table(Table $table): Table
     {
         return $table
@@ -261,48 +266,6 @@ class Transactions extends Page implements HasTable
                             ->extraAttributes([
                                 'class' => 'border-b border-gray-200 dark:border-white/10 pb-8',
                             ]),
-                        Grid::make()
-                            ->schema([
-                                Select::make('posted_at_date_range')
-                                    ->label('Posted Date')
-                                    ->placeholder('Select a date range')
-                                    ->options([
-                                        'all' => 'All Dates', // Handle this later
-                                        'custom' => 'Custom Date Range',
-                                    ]),
-                                DatePicker::make('posted_at_start_date')
-                                    ->label('Posted From')
-                                    ->displayFormat('Y-m-d')
-                                    ->columnStart(1),
-                                DatePicker::make('posted_at_end_date')
-                                    ->label('Posted To')
-                                    ->displayFormat('Y-m-d'),
-                                TextInput::make('posted_at_combined_dates')
-                                    ->hidden(),
-                            ])
-                            ->extraAttributes([
-                                'class' => 'border-b border-gray-200 dark:border-white/10 pb-8',
-                            ]),
-                        Grid::make()
-                            ->schema([
-                                Select::make('updated_at_date_range')
-                                    ->label('Last Modified Date')
-                                    ->placeholder('Select a date range')
-                                    ->options([
-                                        'all' => 'All Dates', // Handle this later
-                                        'custom' => 'Custom Date Range',
-                                    ]),
-                                DatePicker::make('updated_at_start_date')
-                                    ->label('Last Modified From')
-                                    ->displayFormat('Y-m-d')
-                                    ->columnStart(1),
-                                DatePicker::make('updated_at_end_date')
-                                    ->label('Last Modified To')
-                                    ->displayFormat('Y-m-d'),
-                                TextInput::make('updated_at_combined_dates')
-                                    ->label('Updated Date Range')
-                                    ->hidden(),
-                            ]),
                     ])->query(function (Builder $query, array $data): Builder {
                         if (filled($data['reviewed'])) {
                             $reviewedStatus = $data['reviewed'] === '1';
@@ -311,11 +274,7 @@ class Transactions extends Page implements HasTable
 
                         $query
                             ->when($data['account_id'], fn (Builder $query, $accountIds) => $query->whereIn('account_id', $accountIds))
-                            ->when($data['type'], fn (Builder $query, $types) => $query->whereIn('type', $types))
-                            ->when($data['posted_at_start_date'], fn (Builder $query, $startDate) => $query->whereDate('posted_at', '>=', $startDate))
-                            ->when($data['posted_at_end_date'], fn (Builder $query, $endDate) => $query->whereDate('posted_at', '<=', $endDate))
-                            ->when($data['updated_at_start_date'], fn (Builder $query, $startDate) => $query->whereDate('updated_at', '>=', $startDate))
-                            ->when($data['updated_at_end_date'], fn (Builder $query, $endDate) => $query->whereDate('updated_at', '<=', $endDate));
+                            ->when($data['type'], fn (Builder $query, $types) => $query->whereIn('type', $types));
 
                         return $query;
                     })
@@ -325,11 +284,11 @@ class Transactions extends Page implements HasTable
                         $this->addIndicatorForSingleSelection($data, 'reviewed', $data['reviewed'] === '1' ? 'Reviewed' : 'Not Reviewed', $indicators);
                         $this->addMultipleSelectionIndicator($data, 'account_id', fn ($accountId) => Account::find($accountId)->name, 'account_id', $indicators);
                         $this->addMultipleSelectionIndicator($data, 'type', fn ($type) => TransactionType::parse($type)->getLabel(), 'type', $indicators);
-                        $this->addIndicatorForDateRange($data, 'posted_at_start_date', 'posted_at_end_date', 'Posted', 'posted_at_combined_dates', $indicators);
-                        $this->addIndicatorForDateRange($data, 'updated_at_start_date', 'updated_at_end_date', 'Last Modified', 'updated_at_combined_dates', $indicators);
 
                         return $indicators;
                     }),
+                $this->buildDateRangeFilter('posted_at', 'Posted', true),
+                $this->buildDateRangeFilter('updated_at', 'Last Modified'),
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->deferFilters()
             ->filtersFormColumns(2)
@@ -622,6 +581,56 @@ class Transactions extends Page implements HasTable
         );
     }
 
+    /**
+     * @throws Exception
+     */
+    protected function buildDateRangeFilter(string $fieldPrefix, string $label, bool $hasBottomBorder = false): Tables\Filters\Filter
+    {
+        return Tables\Filters\Filter::make($fieldPrefix)
+            ->columnSpanFull()
+            ->form([
+                Grid::make()
+                    ->live()
+                    ->schema([
+                        DateRangeSelect::make("{$fieldPrefix}_date_range")
+                            ->label($label)
+                            ->selectablePlaceholder(false)
+                            ->placeholder('Select a date range')
+                            ->startDateField("{$fieldPrefix}_start_date")
+                            ->endDateField("{$fieldPrefix}_end_date"),
+                        DatePicker::make("{$fieldPrefix}_start_date")
+                            ->label("{$label} From")
+                            ->displayFormat('Y-m-d')
+                            ->columnStart(1)
+                            ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
+                                $set("{$fieldPrefix}_date_range", 'Custom');
+                            }),
+                        DatePicker::make("{$fieldPrefix}_end_date")
+                            ->label("{$label} To")
+                            ->displayFormat('Y-m-d')
+                            ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
+                                $set("{$fieldPrefix}_date_range", 'Custom');
+                            }),
+                    ])
+                    ->extraAttributes($hasBottomBorder ? ['class' => 'border-b border-gray-200 dark:border-white/10 pb-8'] : []),
+            ])
+            ->query(function (Builder $query, array $data) use ($fieldPrefix): Builder {
+                $query
+                    ->when($data["{$fieldPrefix}_start_date"], fn (Builder $query, $startDate) => $query->whereDate($fieldPrefix, '>=', $startDate))
+                    ->when($data["{$fieldPrefix}_end_date"], fn (Builder $query, $endDate) => $query->whereDate($fieldPrefix, '<=', $endDate));
+
+                return $query;
+            })
+            ->indicateUsing(function (array $data) use ($fieldPrefix, $label): array {
+                $indicators = [];
+
+                $this->addIndicatorForDateRange($data, "{$fieldPrefix}_start_date", "{$fieldPrefix}_end_date", $label, $indicators);
+
+                return $indicators;
+            });
+
+    }
+
     protected function addIndicatorForSingleSelection($data, $key, $label, &$indicators): void
     {
         if (filled($data[$key])) {
@@ -641,13 +650,13 @@ class Transactions extends Page implements HasTable
         }
     }
 
-    protected function addIndicatorForDateRange($data, $startKey, $endKey, $labelPrefix, $combinedFieldKey, &$indicators): void
+    protected function addIndicatorForDateRange($data, $startKey, $endKey, $labelPrefix, &$indicators): void
     {
         $formattedStartDate = filled($data[$startKey]) ? Carbon::parse($data[$startKey])->toFormattedDateString() : null;
         $formattedEndDate = filled($data[$endKey]) ? Carbon::parse($data[$endKey])->toFormattedDateString() : null;
         if ($formattedStartDate && $formattedEndDate) {
-            $indicators[] = Tables\Filters\Indicator::make("{$labelPrefix}: {$formattedStartDate} - {$formattedEndDate}")
-                ->removeField($combinedFieldKey); // Associate with the hidden combined_dates field for removal
+            // If both start and end dates are set, show the combined date range as the indicator, no specific field needs to be removed since the entire filter will be removed
+            $indicators[] = Tables\Filters\Indicator::make("{$labelPrefix}: {$formattedStartDate} - {$formattedEndDate}");
         } else {
             if ($formattedStartDate) {
                 $indicators[] = Tables\Filters\Indicator::make("{$labelPrefix} After: {$formattedStartDate}")
