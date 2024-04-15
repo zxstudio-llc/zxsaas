@@ -9,14 +9,13 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
-use App\Scopes\CurrentCompanyScope;
 use Illuminate\Support\Carbon;
 
 class TransactionService
 {
     public function createStartingBalanceIfNeeded(Company $company, Account $account, BankAccount $bankAccount, array $transactions, float $currentBalance, string $startDate): void
     {
-        if ($account->transactions()->withoutGlobalScope(CurrentCompanyScope::class)->doesntExist()) {
+        if ($account->transactions()->doesntExist()) {
             $accountSign = $account->category === AccountCategory::Asset ? 1 : -1;
 
             $sumOfTransactions = collect($transactions)->reduce(static function ($carry, $transaction) {
