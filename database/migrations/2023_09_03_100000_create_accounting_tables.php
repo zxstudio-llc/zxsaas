@@ -86,6 +86,7 @@ return new class extends Migration
             $table->string('type')->default(BankAccountType::DEFAULT);
             $table->string('subtype')->nullable();
             $table->boolean('import_transactions')->default(false);
+            $table->timestamp('last_imported_at')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

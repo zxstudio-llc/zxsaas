@@ -78,6 +78,10 @@ class ProcessTransactionImport implements ShouldQueue
 
             $transactionService->createStartingBalanceIfNeeded($this->company, $this->account, $this->bankAccount, $postedTransactions, $currentBalance, $startDate);
             $transactionService->storeTransactions($this->company, $this->bankAccount, $postedTransactions);
+
+            $this->connectedBankAccount->update([
+                'last_imported_at' => Carbon::now(),
+            ]);
         }
     }
 }

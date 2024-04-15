@@ -33,6 +33,7 @@ class ConnectedBankAccount extends Model
         'type',
         'subtype',
         'import_transactions',
+        'last_imported_at',
         'created_by',
         'updated_by',
     ];
@@ -41,6 +42,7 @@ class ConnectedBankAccount extends Model
         'import_transactions' => 'boolean',
         'type' => BankAccountType::class,
         'access_token' => 'encrypted',
+        'last_imported_at' => 'datetime',
     ];
 
     protected $appends = [

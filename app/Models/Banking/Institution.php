@@ -57,6 +57,19 @@ class Institution extends Model
         return null;
     }
 
+    public function getLastImportDate(): ?string
+    {
+        $latestDate = $this->connectedBankAccounts->map(function ($connectedBankAccount) {
+            return $connectedBankAccount->last_imported_at;
+        })->filter()->max();
+
+        if ($latestDate) {
+            return Carbon::parse($latestDate)->diffForHumans();
+        }
+
+        return null;
+    }
+
     protected function logoUrl(): Attribute
     {
         return Attribute::get(static function (mixed $value, array $attributes): ?string {

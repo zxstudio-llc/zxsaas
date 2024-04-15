@@ -70,6 +70,7 @@ class TransactionService
             'company_id' => $company->id,
             'account_id' => $chartAccount->id,
             'bank_account_id' => $bankAccount->id,
+            'plaid_transaction_id' => $transaction->transaction_id,
             'type' => $transactionType,
             'amount' => abs($transaction->amount),
             'payment_channel' => $paymentChannel,

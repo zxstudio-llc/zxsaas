@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('account_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('bank_account_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('plaid_transaction_id')->nullable();
             $table->foreignId('contact_id')->nullable()->constrained()->nullOnDelete();
             $table->string('type'); // deposit, withdrawal, journal
             $table->string('payment_channel')->nullable(); // online, in store, other

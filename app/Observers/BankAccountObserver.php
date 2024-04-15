@@ -3,9 +3,10 @@
 namespace App\Observers;
 
 use App\Enums\Accounting\AccountType;
-use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
+use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
+use Illuminate\Support\Facades\DB;
 
 class BankAccountObserver
 {
@@ -50,6 +51,26 @@ class BankAccountObserver
     public function updated(BankAccount $bankAccount): void
     {
         //
+    }
+
+    /**
+     * Handle the BankAccount "deleting" event.
+     */
+    public function deleting(BankAccount $bankAccount): void
+    {
+        DB::transaction(function () use ($bankAccount) {
+            $account = $bankAccount->account;
+            $connectedBankAccount = $bankAccount->connectedBankAccount;
+
+            if ($account) {
+                $bankAccount->transactions()->each(fn (Transaction $transaction) => $transaction->delete());
+                $account->delete();
+            }
+
+            if ($connectedBankAccount) {
+                $connectedBankAccount->delete();
+            }
+        });
     }
 
     /**

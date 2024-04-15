@@ -19,9 +19,9 @@
                             {{ $institution->name }}
                         </h3>
 
-                        @if($institution->getLastTransactionDate())
+                        @if($institution->getLastImportDate())
                             <p class="connected-account-section-header-description text-sm leading-6 text-gray-500 dark:text-gray-400">
-                                {{ __('Last updated') }} {{ $institution->getLastTransactionDate() }}
+                                {{ __('Last updated') }} {{ $institution->getLastImportDate() }}
                             </p>
                         @endif
                     </div>

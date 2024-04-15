@@ -21,6 +21,8 @@ class PlaidService
 
     protected ?string $environment;
 
+    protected ?string $webhook_url;
+
     protected ?string $base_url;
 
     protected HttpClient $client;
@@ -51,6 +53,7 @@ class PlaidService
         $this->client_id = $this->config->get('plaid.client_id');
         $this->client_secret = $this->config->get('plaid.client_secret');
         $this->environment = $this->config->get('plaid.environment', 'sandbox');
+        $this->webhook_url = $this->config->get('plaid.webhook_url');
 
         $this->setBaseUrl($this->environment);
     }
@@ -191,6 +194,10 @@ class PlaidService
             $data['products'] = $products;
         }
 
+        if (! empty($this->webhook_url)) {
+            $data['webhook'] = $this->webhook_url;
+        }
+
         return $this->sendRequest('link/token/create', $data);
     }
 
@@ -243,5 +250,12 @@ class PlaidService
         ];
 
         return $this->sendRequest('transactions/get', $data);
+    }
+
+    public function fireSandboxWebhook(string $access_token, string $webhook_code, string $webhook_type): object
+    {
+        $data = compact('access_token', 'webhook_code', 'webhook_type');
+
+        return $this->sendRequest('sandbox/item/fire_webhook', $data);
     }
 }

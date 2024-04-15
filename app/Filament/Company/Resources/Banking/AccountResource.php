@@ -251,9 +251,14 @@ class AccountResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalDescription('Are you sure you want to delete the selected accounts? All transactions associated with the accounts will be deleted as well.'),
                 ]),
             ])
+            ->checkIfRecordIsSelectableUsing(static function (BankAccount $record) {
+                return $record->isDisabled();
+            })
             ->emptyStateActions([
                 Tables\Actions\CreateAction::make(),
             ]);
