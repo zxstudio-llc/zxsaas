@@ -72,12 +72,16 @@ class ProcessTransactionImport implements ShouldQueue
             $allTransactions = [...$allTransactions, ...$transactionsResponse->transactions];
         }
 
-        if (count($allTransactions) > 0) {
-            $postedTransactions = array_filter($allTransactions, static fn ($transaction) => $transaction->pending === false);
+        $existingTransactionIds = $this->bankAccount->transactions->pluck('plaid_transaction_id')->toArray();
+        $newTransactions = array_filter($allTransactions, static function ($transaction) use ($existingTransactionIds) {
+            return ! in_array($transaction->transaction_id, $existingTransactionIds) && $transaction->pending === false;
+        });
+
+        if (count($newTransactions) > 0) {
             $currentBalance = $transactionsResponse->accounts[0]->balances->current;
 
-            $transactionService->createStartingBalanceIfNeeded($this->company, $this->account, $this->bankAccount, $postedTransactions, $currentBalance, $startDate);
-            $transactionService->storeTransactions($this->company, $this->bankAccount, $postedTransactions);
+            $transactionService->createStartingBalanceIfNeeded($this->company, $this->account, $this->bankAccount, $newTransactions, $currentBalance, $startDate);
+            $transactionService->storeTransactions($this->company, $this->bankAccount, $newTransactions);
 
             $this->connectedBankAccount->update([
                 'last_imported_at' => Carbon::now(),

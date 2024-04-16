@@ -26,6 +26,12 @@
                         @endif
                     </div>
 
+                    {{-- Refresh Transactions --}}
+                    @if($institution->getEnabledConnectedBankAccounts()->isNotEmpty())
+                        {{ ($this->refreshTransactions)(['institution' => $institution->id]) }}
+                    @endif
+
+                    {{-- Delete Institution --}}
                     {{ ($this->deleteBankConnection)(['institution' => $institution->id]) }}
                 </header>
 
@@ -95,14 +101,17 @@
     {{-- Initialize Plaid Link --}}
     @script
     <script>
+        const mobileSize = window.matchMedia("(max-width: 480px)");
+
         let data = Alpine.reactive({ windowWidth: 'max-w-2xl' });
+
+        // Add a media query change listener
+        mobileSize.addEventListener('change', (e) => {
+            data.windowWidth = e.matches ? 'screen' : 'max-w-2xl';
+        });
 
         Alpine.effect(() => {
             $wire.$set('modalWidth', data.windowWidth);
-        });
-
-        window.addEventListener('resize', () => {
-            data.windowWidth = window.innerWidth <= 480 ? 'screen' : 'max-w-2xl';
         });
 
         $wire.on('initializeLink', token => {

@@ -103,7 +103,7 @@ class ListInstitutions extends Component implements HasActions, HasForms
                     ->required()
                     ->placeholder('Select a start date for importing transactions.'),
             ])
-            ->action(function (array $arguments, array $data, ConnectedBankAccount $connectedBankAccount) {
+            ->action(function (array $data, ConnectedBankAccount $connectedBankAccount) {
                 $selectedBankAccountId = $data['bank_account_id'] ?? $connectedBankAccount->bank_account_id;
                 $startDate = $data['start_date'];
                 $company = $this->user->currentCompany;
@@ -150,8 +150,47 @@ class ListInstitutions extends Component implements HasActions, HasForms
 
                 if ($connectedBankAccount) {
                     $connectedBankAccount->update([
-                        'import_transactions' => ! $connectedBankAccount->import_transactions,
+                        'import_transactions' => false,
                     ]);
+                }
+
+                unset($this->connectedInstitutions);
+            });
+    }
+
+    public function refreshTransactions(): Action
+    {
+        return Action::make('refreshTransactions')
+            ->iconButton()
+            ->icon('heroicon-o-arrow-path')
+            ->color('primary')
+            ->record(fn (array $arguments) => Institution::find($arguments['institution']))
+            ->modalWidth(fn () => $this->modalWidth)
+            ->modalFooterActionsAlignment(fn () => $this->modalWidth === 'screen' ? Alignment::Center : Alignment::Start)
+            ->stickyModalHeader()
+            ->stickyModalFooter()
+            ->modalHeading('Refresh Transactions')
+            ->modalSubmitActionLabel('Refresh')
+            ->modalCancelActionLabel('Cancel')
+            ->form([
+                Placeholder::make('modalDetails')
+                    ->hiddenLabel()
+                    ->content(static fn (Institution $institution): View => view(
+                        'components.actions.refresh-transactions-modal',
+                        compact('institution')
+                    )),
+                Checkbox::make('confirm')
+                    ->label('Yes, I want to refresh transactions.')
+                    ->markAsRequired(false)
+                    ->required(),
+            ])
+            ->action(function (Institution $institution) {
+                $connectedBankAccounts = $institution->getEnabledConnectedBankAccounts();
+
+                foreach ($connectedBankAccounts as $connectedBankAccount) {
+                    $access_token = $connectedBankAccount->access_token;
+
+                    $this->plaidService->refreshTransactions($access_token);
                 }
 
                 unset($this->connectedInstitutions);
@@ -171,15 +210,12 @@ class ListInstitutions extends Component implements HasActions, HasForms
             ->stickyModalFooter()
             ->record(fn (array $arguments) => Institution::find($arguments['institution']))
             ->form([
-                Placeholder::make('accounts')
+                Placeholder::make('modalDetails')
                     ->hiddenLabel()
                     ->content(static fn (Institution $institution): View => view(
                         'components.actions.delete-bank-connection-modal',
                         compact('institution')
                     )),
-                Placeholder::make('info')
-                    ->hiddenLabel()
-                    ->content('Deleting this bank connection will stop the import of transactions for all accounts associated with this bank. Existing transactions will remain unchanged.'),
                 Checkbox::make('confirm')
                     ->label('Yes, I want to delete this bank connection.')
                     ->markAsRequired(false)

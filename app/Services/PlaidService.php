@@ -258,4 +258,11 @@ class PlaidService
 
         return $this->sendRequest('sandbox/item/fire_webhook', $data);
     }
+
+    public function refreshTransactions(string $access_token): object
+    {
+        $data = compact('access_token');
+
+        return $this->sendRequest('transactions/refresh', $data);
+    }
 }
