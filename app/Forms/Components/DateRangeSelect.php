@@ -135,7 +135,7 @@ class DateRangeSelect extends Select
     {
         $currentYear = now()->year;
         $diff = $currentYear - $year;
-        $fiscalYearStart = Carbon::parse($this->company->locale->fiscal_year_start_date)->subYears($diff);
+        $fiscalYearStart = Carbon::parse($this->fiscalYearStartDate)->subYears($diff);
         $quarterStart = $fiscalYearStart->copy()->addMonths(($quarter - 1) * 3);
         $quarterEnd = $quarterStart->copy()->addMonths(3)->subDay();
         $this->setDateRange($quarterStart, $quarterEnd, $set);

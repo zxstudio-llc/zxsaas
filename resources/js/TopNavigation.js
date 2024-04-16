@@ -1,49 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    for (const dropdown of document.querySelectorAll('.fi-topbar-dropdown, .fi-topbar-dropdown .fi-dropdown-trigger')) {
-        const observer = new MutationObserver((mutations) => {
-            for (const { attributeName } of mutations) {
-                if (attributeName === 'aria-expanded') {
-                    updateBorder(dropdown);
-                }
-            }
-        });
-
-        observer.observe(dropdown, { attributes: true });
-    }
-
-    document.querySelectorAll('.fi-topbar-item > a').forEach(item => {
-        item.addEventListener('mouseenter', () => updateBorderOnHover(true, item));
-        item.addEventListener('mouseleave', () => updateBorderOnHover(false, item));
-    });
-
-    insertBgDiv();
-
     handleTopbarAndSidebarHover();
 
     handleScroll();
 });
-
-const updateBorder = (dropdown) => {
-    const activeItem = document.querySelector('.fi-topbar-item-active > *');
-    const hoveredItem = dropdown.querySelector('.fi-topbar-item > *');
-
-    if (activeItem && hoveredItem !== activeItem) {
-        activeItem.style.borderBottomColor = dropdown.getAttribute('aria-expanded') === 'true' ? 'transparent' : '';
-    }
-};
-
-const updateBorderOnHover = (isHovered, hoveredItem) => {
-    const activeItem = document.querySelector('.fi-topbar-item-active > *');
-    if (activeItem && hoveredItem !== activeItem) {
-        activeItem.style.borderBottomColor = isHovered ? 'transparent' : '';
-    }
-};
-
-const insertBgDiv = () => {
-    document.querySelectorAll('a.fi-topbar-dropdown-list-item').forEach(anchor => {
-        anchor.insertAdjacentHTML('beforeend', '<div class="bg"></div>');
-    });
-};
 
 const handleTopbarAndSidebarHover = () => {
     const topbarNav = document.querySelector('.fi-topbar > nav');
