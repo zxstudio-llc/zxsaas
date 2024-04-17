@@ -171,27 +171,20 @@ class ListInstitutions extends Component implements HasActions, HasForms
             ->stickyModalFooter()
             ->modalHeading('Refresh Transactions')
             ->modalSubmitActionLabel('Refresh')
-            ->modalCancelActionLabel('Cancel')
             ->form([
                 Placeholder::make('modalDetails')
                     ->hiddenLabel()
-                    ->content(static fn (Institution $institution): View => view(
-                        'components.actions.refresh-transactions-modal',
-                        compact('institution')
-                    )),
-                Checkbox::make('confirm')
-                    ->label('Yes, I want to refresh transactions.')
-                    ->markAsRequired(false)
+                    ->content('Refreshing transactions will update the selected account with the latest transactions from the bank if there are any new transactions available. This may take a few moments.'),
+                Select::make('connected_bank_account_id')
+                    ->label('Select Account')
+                    ->options(fn (Institution $institution) => $institution->getEnabledConnectedBankAccounts()->pluck('name', 'id')->toArray())
                     ->required(),
             ])
-            ->action(function (Institution $institution) {
-                $connectedBankAccounts = $institution->getEnabledConnectedBankAccounts();
-
-                foreach ($connectedBankAccounts as $connectedBankAccount) {
-                    $access_token = $connectedBankAccount->access_token;
-
-                    $this->plaidService->refreshTransactions($access_token);
-                }
+            ->action(function (array $data) {
+                $connectedBankAccountId = $data['connected_bank_account_id'];
+                $connectedBankAccount = ConnectedBankAccount::find($connectedBankAccountId);
+                $access_token = $connectedBankAccount->access_token;
+                $this->plaidService->refreshTransactions($access_token);
 
                 unset($this->connectedInstitutions);
             });
