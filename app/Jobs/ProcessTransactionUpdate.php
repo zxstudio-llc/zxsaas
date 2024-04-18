@@ -40,7 +40,8 @@ class ProcessTransactionUpdate implements ShouldQueue
     {
         $connectedBankAccounts = $this->company->connectedBankAccounts()
             ->where('item_id', $this->item_id)
-            ->where('import_transactions', true);
+            ->where('import_transactions', true)
+            ->get();
 
         foreach ($connectedBankAccounts as $connectedBankAccount) {
             /** @var ConnectedBankAccount $connectedBankAccount */
@@ -71,9 +72,9 @@ class ProcessTransactionUpdate implements ShouldQueue
                 $allTransactions = [...$allTransactions, ...$transactionsResponse->transactions];
             }
 
-            $existingTransactionIds = $bankAccount->transactions()->pluck('transaction_id')->toArray();
+            $existingTransactionIds = $bankAccount->transactions()->pluck('plaid_transaction_id')->toArray();
             $newTransactions = array_filter($allTransactions, static function ($transaction) use ($existingTransactionIds) {
-                return ! in_array($transaction->transaction_id, $existingTransactionIds) && $transaction->pending === false;
+                return ! in_array($transaction->transaction_id, $existingTransactionIds, true) && $transaction->pending === false;
             });
 
             if (count($newTransactions) > 0) {

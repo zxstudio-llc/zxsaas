@@ -2,6 +2,7 @@
 
 namespace App\Models\Banking;
 
+use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Banking\BankAccountType;
@@ -39,6 +40,7 @@ class ConnectedBankAccount extends Model
     ];
 
     protected $casts = [
+        'current_balance' => MoneyCast::class,
         'import_transactions' => 'boolean',
         'type' => BankAccountType::class,
         'access_token' => 'encrypted',

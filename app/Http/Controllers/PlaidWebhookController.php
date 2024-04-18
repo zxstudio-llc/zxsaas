@@ -36,7 +36,8 @@ class PlaidWebhookController extends Controller
         })->first();
 
         if ($company && $newTransactions > 0) {
-            ProcessTransactionUpdate::dispatch($company, $itemID);
+            ProcessTransactionUpdate::dispatch($company, $itemID)
+                ->onQueue('transactions');
         }
     }
 }
