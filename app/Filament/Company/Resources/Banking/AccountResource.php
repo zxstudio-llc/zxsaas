@@ -9,12 +9,10 @@ use App\Facades\Forex;
 use App\Filament\Company\Resources\Banking\AccountResource\Pages;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
-use App\Services\AccountService;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
@@ -176,78 +174,15 @@ class AccountResource extends Resource
                     ->iconPosition('after')
                     ->description(static fn (BankAccount $record) => $record->mask ?: 'N/A')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('account.code') // Just so I could display the balance in the table for now
+                Tables\Columns\TextColumn::make('account.ending_balance')
                     ->localizeLabel('Current Balance')
-                    ->sortable()
-                    ->formatStateUsing(function (BankAccount $record) {
-                        $accountService = app(AccountService::class);
-                        $startDate = $record->account->company->locale->fiscalYearStartDate();
-                        $endDate = $record->account->company->locale->fiscalYearEndDate();
-
-                        return $accountService->getEndingBalance($record->account, $startDate, $endDate)?->formatted();
-                    }),
+                    ->sortable(),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('update_balance')
-                    ->hidden(function (BankAccount $record) {
-                        $usesDefaultCurrency = $record->account->currency->isEnabled();
-                        $forexDisabled = Forex::isDisabled();
-                        $sameExchangeRate = $record->account->currency->rate === $record->account->currency->live_rate;
-
-                        return $usesDefaultCurrency || $forexDisabled || $sameExchangeRate;
-                    })
-                    ->label('Update Balance')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->requiresConfirmation()
-                    ->modalDescription('Are you sure you want to update the balance with the latest exchange rate?')
-                    ->before(static function (Tables\Actions\Action $action, BankAccount $record) {
-                        if ($record->account->currency->isDisabled()) {
-                            $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-                            $exchangeRate = Forex::getCachedExchangeRate($defaultCurrency, $record->account->currency_code);
-                            if ($exchangeRate === null) {
-                                Notification::make()
-                                    ->warning()
-                                    ->title(__('Exchange Rate Unavailable'))
-                                    ->body(__('The exchange rate for this account is currently unavailable. Please try again later.'))
-                                    ->persistent()
-                                    ->send();
-
-                                $action->cancel();
-                            }
-                        }
-                    })
-                    ->action(static function (BankAccount $record) {
-                        if ($record->account->currency->isDisabled()) {
-                            $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-                            $exchangeRate = Forex::getCachedExchangeRate($defaultCurrency, $record->account->currency_code);
-                            $oldExchangeRate = $record->account->currency->rate;
-
-                            if ($exchangeRate !== null && $exchangeRate !== $oldExchangeRate) {
-
-                                $scale = 10 ** $record->account->currency->precision;
-                                $cleanedBalance = (int) filter_var($record->account->starting_balance, FILTER_SANITIZE_NUMBER_INT);
-
-                                $newBalance = ($exchangeRate / $oldExchangeRate) * $cleanedBalance;
-                                $newBalanceInt = (int) round($newBalance, $scale);
-
-                                $record->account->starting_balance = money($newBalanceInt, $record->account->currency_code)->getValue();
-                                $record->account->currency->rate = $exchangeRate;
-
-                                $record->account->currency->save();
-                                $record->save();
-
-                                Notification::make()
-                                    ->success()
-                                    ->title('Balance Updated Successfully')
-                                    ->body(__('The :name account balance has been updated to reflect the current exchange rate.', ['name' => $record->account->name]))
-                                    ->send();
-                            }
-                        }
-                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

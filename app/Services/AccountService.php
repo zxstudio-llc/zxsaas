@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Akaunting\Money\Money;
 use App\Contracts\AccountHandler;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountBalanceReportDTO;
@@ -13,6 +12,7 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Repositories\Accounting\JournalEntryRepository;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\BalanceValue;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -29,14 +29,14 @@ class AccountService implements AccountHandler
     {
         $amount = $this->journalEntryRepository->sumDebitAmounts($account, $startDate, $endDate);
 
-        return new BalanceValue($amount, $account->currency_code ?? 'USD');
+        return new BalanceValue($amount, $account->currency_code);
     }
 
     public function getCreditBalance(Account $account, string $startDate, string $endDate): BalanceValue
     {
         $amount = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
 
-        return new BalanceValue($amount, $account->currency_code ?? 'USD');
+        return new BalanceValue($amount, $account->currency_code);
     }
 
     public function getNetMovement(Account $account, string $startDate, string $endDate): BalanceValue
@@ -45,7 +45,7 @@ class AccountService implements AccountHandler
         $creditBalance = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
         $netMovement = $this->calculateNetMovementByCategory($account->category, $debitBalance, $creditBalance);
 
-        return new BalanceValue($netMovement, $account->currency_code ?? 'USD');
+        return new BalanceValue($netMovement, $account->currency_code);
     }
 
     public function getStartingBalance(Account $account, string $startDate): ?BalanceValue
@@ -58,7 +58,7 @@ class AccountService implements AccountHandler
         $creditBalanceBefore = $this->journalEntryRepository->sumCreditAmounts($account, $startDate);
         $startingBalance = $this->calculateNetMovementByCategory($account->category, $debitBalanceBefore, $creditBalanceBefore);
 
-        return new BalanceValue($startingBalance, $account->currency_code ?? 'USD');
+        return new BalanceValue($startingBalance, $account->currency_code);
     }
 
     public function getEndingBalance(Account $account, string $startDate, string $endDate): ?BalanceValue
@@ -71,7 +71,7 @@ class AccountService implements AccountHandler
         $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getValue();
         $endingBalance = $startingBalance + $netMovement;
 
-        return new BalanceValue($endingBalance, $account->currency_code ?? 'USD');
+        return new BalanceValue($endingBalance, $account->currency_code);
     }
 
     public function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
@@ -102,18 +102,12 @@ class AccountService implements AccountHandler
         return $balances;
     }
 
-    public function getBalancesFormatted(Account $account, string $startDate, string $endDate): AccountBalanceDTO
+    public function formatBalances(array $balances): AccountBalanceDTO
     {
-        $balances = $this->getBalances($account, $startDate, $endDate);
-        $currency = $account->currency_code ?? 'USD';
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
-        return $this->formatBalances($balances, $currency);
-    }
-
-    public function formatBalances(array $balances, string $currency): AccountBalanceDTO
-    {
         foreach ($balances as $key => $balance) {
-            $balances[$key] = Money::{$currency}($balance)->format();
+            $balances[$key] = money($balance, $defaultCurrency)->format();
         }
 
         return new AccountBalanceDTO(
@@ -157,6 +151,7 @@ class AccountService implements AccountHandler
             $categoryAccounts = [];
 
             foreach ($accountsInCategory as $account) {
+                /** @var Account $account */
                 $accountBalances = $this->getBalances($account, $startDate, $endDate);
 
                 if (array_sum($accountBalances) === 0) {
@@ -167,7 +162,7 @@ class AccountService implements AccountHandler
                     $categorySummaryBalances[$accountBalanceType] += $accountBalance;
                 }
 
-                $formattedAccountBalances = $this->formatBalances($accountBalances, $account->currency_code ?? 'USD');
+                $formattedAccountBalances = $this->formatBalances($accountBalances);
 
                 $categoryAccounts[] = new AccountDTO(
                     $account->name,
@@ -179,7 +174,7 @@ class AccountService implements AccountHandler
             $reportTotalBalances['debit_balance'] += $categorySummaryBalances['debit_balance'];
             $reportTotalBalances['credit_balance'] += $categorySummaryBalances['credit_balance'];
 
-            $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances, $accountsInCategory->first()->currency_code ?? 'USD');
+            $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
 
             $accountCategories[$categoryName] = new AccountCategoryDTO(
                 $categoryAccounts,
@@ -187,7 +182,7 @@ class AccountService implements AccountHandler
             );
         }
 
-        $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances, 'USD');
+        $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
         return new AccountBalanceReportDTO($accountCategories, $formattedReportTotalBalances);
     }
@@ -205,7 +200,7 @@ class AccountService implements AccountHandler
             $totalBalance += $endingBalance;
         }
 
-        return new BalanceValue($totalBalance, 'USD');
+        return new BalanceValue($totalBalance, CurrencyAccessor::getDefaultCurrency());
     }
 
     public function getAccountCategoryOrder(): array

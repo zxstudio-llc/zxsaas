@@ -21,4 +21,9 @@ class CurrencyConverter
     {
         return money($balance, $oldCurrency)->swapAmountFor($newCurrency);
     }
+
+    public static function convertFormattedBalance($balance, $oldCurrency, $newCurrency): int
+    {
+        return money($balance, $oldCurrency)->swapFormattedAmountFor($newCurrency);
+    }
 }

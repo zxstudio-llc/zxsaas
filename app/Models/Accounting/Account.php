@@ -6,10 +6,12 @@ use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
+use App\Facades\Accounting;
 use App\Models\Setting\Currency;
 use App\Observers\AccountObserver;
 use Database\Factories\Accounting\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -89,6 +91,17 @@ class Account extends Model
         }
 
         return null;
+    }
+
+    protected function endingBalance(): Attribute
+    {
+        return Attribute::get(function () {
+            $company = $this->company;
+            $fiscalYearStart = $company->locale->fiscalYearStartDate();
+            $fiscalYearEnd = $company->locale->fiscalYearEndDate();
+
+            return Accounting::getEndingBalance($this, $fiscalYearStart, $fiscalYearEnd)?->formattedForDisplay();
+        });
     }
 
     public function isUncategorized(): bool

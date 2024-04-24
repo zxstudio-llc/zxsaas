@@ -4,12 +4,10 @@ namespace App\Livewire\Company\Service\ConnectedAccount;
 
 use App\Events\PlaidSuccess;
 use App\Events\StartTransactionImport;
-use App\Models\Accounting\Account;
 use App\Models\Banking\BankAccount;
 use App\Models\Banking\ConnectedBankAccount;
 use App\Models\Banking\Institution;
 use App\Models\User;
-use App\Services\AccountService;
 use App\Services\PlaidService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -25,7 +23,9 @@ use Filament\Support\Enums\Alignment;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -38,16 +38,13 @@ class ListInstitutions extends Component implements HasActions, HasForms
 
     protected PlaidService $plaidService;
 
-    protected AccountService $accountService;
-
     public User $user;
 
     public string $modalWidth;
 
-    public function boot(PlaidService $plaidService, AccountService $accountService): void
+    public function boot(PlaidService $plaidService): void
     {
         $this->plaidService = $plaidService;
-        $this->accountService = $accountService;
     }
 
     public function mount(): void
@@ -60,15 +57,6 @@ class ListInstitutions extends Component implements HasActions, HasForms
     {
         return Institution::withWhereHas('connectedBankAccounts')
             ->get();
-    }
-
-    public function getAccountBalance(Account $account): ?string
-    {
-        $company = $account->company;
-        $startDate = $company->locale->fiscalYearStartDate();
-        $endDate = $company->locale->fiscalYearEndDate();
-
-        return $this->accountService->getEndingBalance($account, $startDate, $endDate)?->formatted();
     }
 
     public function startImportingTransactions(): Action
@@ -177,14 +165,24 @@ class ListInstitutions extends Component implements HasActions, HasForms
                     ->content('Refreshing transactions will update the selected account with the latest transactions from the bank if there are any new transactions available. This may take a few moments.'),
                 Select::make('connected_bank_account_id')
                     ->label('Select Account')
+                    ->softRequired()
+                    ->selectablePlaceholder(false)
+                    ->hint(
+                        fn (Institution $institution) => $institution->getEnabledConnectedBankAccounts()->count() . ' ' .
+                        Str::plural('account', $institution->getEnabledConnectedBankAccounts()->count()) . ' available'
+                    )
+                    ->hintColor('primary')
                     ->options(fn (Institution $institution) => $institution->getEnabledConnectedBankAccounts()->pluck('name', 'id')->toArray())
-                    ->required(),
+                    ->default(fn (Institution $institution) => $institution->getEnabledConnectedBankAccounts()->first()?->id),
             ])
             ->action(function (array $data) {
                 $connectedBankAccountId = $data['connected_bank_account_id'];
                 $connectedBankAccount = ConnectedBankAccount::find($connectedBankAccountId);
-                $access_token = $connectedBankAccount->access_token;
-                $this->plaidService->refreshTransactions($access_token);
+
+                if ($connectedBankAccount) {
+                    $access_token = $connectedBankAccount->access_token;
+                    $this->plaidService->refreshTransactions($access_token);
+                }
 
                 unset($this->connectedInstitutions);
             });
@@ -214,30 +212,43 @@ class ListInstitutions extends Component implements HasActions, HasForms
                     ->markAsRequired(false)
                     ->required(),
             ])
-            ->action(function (array $arguments) {
-                $institutionId = $arguments['institution'];
+            ->action(function (array $arguments, Institution $institution) {
+                try {
+                    $this->processBankConnectionDeletion($institution);
+                } catch (RuntimeException $e) {
+                    Log::error('Error deleting bank connection ' . $e->getMessage());
 
-                $institution = Institution::find($institutionId);
-
-                if ($institution) {
-                    $institution->connectedBankAccounts()->delete();
+                    $this->sendErrorNotification("We're currently experiencing issues deleting your bank connection. Please try again in a few moments.");
+                } finally {
+                    unset($this->connectedInstitutions);
                 }
-
-                unset($this->connectedInstitutions);
             });
+    }
+
+    private function processBankConnectionDeletion(Institution $institution): void
+    {
+        DB::transaction(function () use ($institution) {
+            $accessTokens = $institution->connectedBankAccounts->pluck('access_token')->unique()->toArray();
+
+            foreach ($accessTokens as $accessToken) {
+                $this->plaidService->removeItem($accessToken);
+            }
+
+            $institution->connectedBankAccounts()->each(fn (ConnectedBankAccount $connectedBankAccount) => $connectedBankAccount->delete());
+        });
     }
 
     #[On('createToken')]
     public function createLinkToken(): void
     {
-        $company = $this->user->currentCompany;
-
-        $companyLanguage = $company->locale->language ?? 'en';
-        $companyCountry = $company->profile->country ?? 'US';
-
-        $plaidUser = $this->plaidService->createPlaidUser($company);
-
         try {
+            $company = $this->user->currentCompany;
+
+            $companyLanguage = $company->locale->language ?? 'en';
+            $companyCountry = $company->profile->country ?? 'US';
+
+            $plaidUser = $this->plaidService->createPlaidUser($company);
+
             $response = $this->plaidService->createToken($companyLanguage, $companyCountry, $plaidUser, ['transactions']);
 
             $plaidLinkToken = $response->link_token;

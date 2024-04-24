@@ -24,9 +24,7 @@ interface AccountHandler
 
     public function getBalances(Account $account, string $startDate, string $endDate): array;
 
-    public function getBalancesFormatted(Account $account, string $startDate, string $endDate): AccountBalanceDTO;
-
-    public function formatBalances(array $balances, string $currency): AccountBalanceDTO;
+    public function formatBalances(array $balances): AccountBalanceDTO;
 
     public function buildAccountBalanceReport(string $startDate, string $endDate): AccountBalanceReportDTO;
 

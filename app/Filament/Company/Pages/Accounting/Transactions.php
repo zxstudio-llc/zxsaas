@@ -730,7 +730,7 @@ class Transactions extends Page implements HasTable
 
     protected function getAccountBalance(Account $account): ?string
     {
-        return Accounting::getEndingBalance($account, $this->fiscalYearStartDate, $this->fiscalYearEndDate)?->formatted();
+        return Accounting::getEndingBalance($account, $this->fiscalYearStartDate, $this->fiscalYearEndDate)?->formattedForDisplay();
     }
 
     protected function getBalanceForAllAccounts(): string

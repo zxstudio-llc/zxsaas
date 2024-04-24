@@ -265,4 +265,11 @@ class PlaidService
 
         return $this->sendRequest('transactions/refresh', $data);
     }
+
+    public function removeItem(string $access_token): object
+    {
+        $data = compact('access_token');
+
+        return $this->sendRequest('item/remove', $data);
+    }
 }

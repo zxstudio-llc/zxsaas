@@ -7,6 +7,8 @@ use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
+use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use Illuminate\Support\Facades\DB;
 
 class TransactionObserver
@@ -31,11 +33,20 @@ class TransactionObserver
 
     private function createJournalEntries(Transaction $transaction, Account $debitAccount, Account $creditAccount): void
     {
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $transactionCurrency = $transaction->bankAccount->account->currency_code; // only account which would have a different currency compared to the default currency
+
+        if ($transactionCurrency !== $defaultCurrency) {
+            $convertedTransactionAmount = $this->convertToDefaultCurrency($transaction->amount, $transactionCurrency, $defaultCurrency);
+        } else {
+            $convertedTransactionAmount = $transaction->amount;
+        }
+
         $debitAccount->journalEntries()->create([
             'company_id' => $transaction->company_id,
             'transaction_id' => $transaction->id,
             'type' => JournalEntryType::Debit,
-            'amount' => $transaction->amount,
+            'amount' => $convertedTransactionAmount,
             'description' => $transaction->description,
         ]);
 
@@ -43,9 +54,16 @@ class TransactionObserver
             'company_id' => $transaction->company_id,
             'transaction_id' => $transaction->id,
             'type' => JournalEntryType::Credit,
-            'amount' => $transaction->amount,
+            'amount' => $convertedTransactionAmount,
             'description' => $transaction->description,
         ]);
+    }
+
+    private function convertToDefaultCurrency(string $amount, string $fromCurrency, string $toCurrency): string
+    {
+        $amountInCents = CurrencyConverter::convertFormattedBalance($amount, $fromCurrency, $toCurrency);
+
+        return money($amountInCents, $toCurrency)->formatSimple();
     }
 
     /**
@@ -73,11 +91,20 @@ class TransactionObserver
             return;
         }
 
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $transactionCurrency = $transaction->bankAccount->account->currency_code; // only account which would have a different currency compared to the default currency
+
+        if ($transactionCurrency !== $defaultCurrency) {
+            $convertedTransactionAmount = $this->convertToDefaultCurrency($transaction->amount, $transactionCurrency, $defaultCurrency);
+        } else {
+            $convertedTransactionAmount = $transaction->amount;
+        }
+
         $debitAccount = $transaction->type === TransactionType::Withdrawal ? $chartAccount : $bankAccount;
         $creditAccount = $transaction->type === TransactionType::Withdrawal ? $bankAccount : $chartAccount;
 
-        $this->updateJournalEntriesForTransaction($debitEntry, $debitAccount, $transaction);
-        $this->updateJournalEntriesForTransaction($creditEntry, $creditAccount, $transaction);
+        $this->updateJournalEntriesForTransaction($debitEntry, $debitAccount, $convertedTransactionAmount);
+        $this->updateJournalEntriesForTransaction($creditEntry, $creditAccount, $convertedTransactionAmount);
     }
 
     protected function hasRelevantChanges(Transaction $transaction): bool
@@ -85,12 +112,12 @@ class TransactionObserver
         return $transaction->wasChanged(['amount', 'account_id', 'bank_account_id', 'type']);
     }
 
-    protected function updateJournalEntriesForTransaction(JournalEntry $journalEntry, Account $account, Transaction $transaction): void
+    protected function updateJournalEntriesForTransaction(JournalEntry $journalEntry, Account $account, string $convertedTransactionAmount): void
     {
-        DB::transaction(static function () use ($journalEntry, $account, $transaction) {
+        DB::transaction(static function () use ($journalEntry, $account, $convertedTransactionAmount) {
             $journalEntry->update([
                 'account_id' => $account->id,
-                'amount' => $transaction->amount,
+                'amount' => $convertedTransactionAmount,
             ]);
         });
     }

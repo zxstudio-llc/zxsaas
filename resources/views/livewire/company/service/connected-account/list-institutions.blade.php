@@ -11,7 +11,11 @@
                             />
                         </div>
                     @else
-                        <img src="{{ $institution->logo_url }}" alt="{{ $institution->name }}" class="h-10 object-contain object-left">
+                        <img
+                            src="{{ $institution->logo_url }}"
+                            alt="{{ $institution->name }}"
+                            class="h-10 object-contain object-left"
+                        >
                     @endif
 
                     <div class="flex-auto">
@@ -36,17 +40,24 @@
                 </header>
 
                 @foreach($institution->connectedBankAccounts as $connectedBankAccount)
+                    @php
+                        $account = $connectedBankAccount->bankAccount?->account;
+                    @endphp
                     <div class="border-t-2 border-gray-200 dark:border-white/10 px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start gap-y-2">
                             <div class="grid flex-auto gap-y-2">
-                                <span class="account-name text-base font-medium leading-6 text-gray-900 dark:text-white">{{ $connectedBankAccount->name }}</span>
-                                <span class="account-type text-sm leading-6 text-gray-600 dark:text-gray-200">{{  ucwords($connectedBankAccount->subtype) }} {{ $connectedBankAccount->masked_number }}</span>
+                                <span class="account-name text-base font-medium leading-6 text-gray-900 dark:text-white">
+                                    {{ $connectedBankAccount->name }}
+                                </span>
+                                <span class="account-type text-sm leading-6 text-gray-600 dark:text-gray-200">
+                                    {{  ucwords($connectedBankAccount->subtype) }} {{ $connectedBankAccount->masked_number }}
+                                </span>
                             </div>
 
-                            @if($connectedBankAccount->bankAccount?->account)
+                            @if($account?->ending_balance)
                                 <div class="account-balance flex text-base leading-6 text-gray-700 dark:text-gray-200 space-x-1">
-                                    <strong wire:poll.visible>{{ $this->getAccountBalance($connectedBankAccount->bankAccount->account) }}</strong>
-                                    <p>{{ $connectedBankAccount->bankAccount->account->currency_code }}</p>
+                                    <strong wire:poll.visible>{{ $account->ending_balance }}</strong>
+                                    <p>{{ $account->currency_code }}</p>
                                 </div>
                             @endif
                         </div>
@@ -91,19 +102,20 @@
             </section>
         @endforelse
 
-        <x-filament-actions::modals />
+        <x-filament-actions::modals/>
     </div>
-    {{-- Include Plaid's JavaScript SDK --}}
+    {{-- Include Plaid's JavaScript SDK CDN --}}
     @assets
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
     @endassets
 
-    {{-- Initialize Plaid Link --}}
+    {{-- Include the Plaid script --}}
     @script
     <script>
+        {{-- Adjust the modal width based on the screen size --}}
         const mobileSize = window.matchMedia("(max-width: 480px)");
 
-        let data = Alpine.reactive({ windowWidth: 'max-w-2xl' });
+        let data = Alpine.reactive({windowWidth: 'max-w-2xl'});
 
         // Add a media query change listener
         mobileSize.addEventListener('change', (e) => {
@@ -114,14 +126,17 @@
             $wire.$set('modalWidth', data.windowWidth);
         });
 
+        {{-- Initialize Plaid Link --}}
         $wire.on('initializeLink', token => {
             const handler = Plaid.create({
                 token: token,
                 onSuccess: (publicToken, metadata) => {
                     $wire.dispatchSelf('linkSuccess', {publicToken: publicToken, metadata: metadata});
                 },
-                onExit: (err, metadata) => {},
-                onEvent: (eventName, metadata) => {},
+                onExit: (err, metadata) => {
+                },
+                onEvent: (eventName, metadata) => {
+                },
             });
 
             handler.open();

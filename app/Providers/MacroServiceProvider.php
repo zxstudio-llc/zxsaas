@@ -59,7 +59,7 @@ class MacroServiceProvider extends ServiceProvider
                 $currency = $column->evaluate($currency);
                 $convert = $column->evaluate($convert);
 
-                return money($state, $currency, $convert)->formatWithCode();
+                return money($state, $currency, $convert)->format();
             });
 
             return $this;
@@ -142,6 +142,20 @@ class MacroServiceProvider extends ServiceProvider
         });
 
         Money::macro('swapAmountFor', function ($newCurrency) {
+            $oldCurrency = $this->currency->getCurrency();
+            $balanceInMajorUnits = $this->getAmount();
+
+            $oldRate = currency($oldCurrency)->getRate();
+            $newRate = currency($newCurrency)->getRate();
+
+            $ratio = $newRate / $oldRate;
+
+            $convertedBalance = money($balanceInMajorUnits, $oldCurrency)->multiply($ratio)->getAmount();
+
+            return (int) round($convertedBalance);
+        });
+
+        Money::macro('swapFormattedAmountFor', function ($newCurrency) {
             $oldCurrency = $this->currency->getCurrency();
             $balance = $this->getAmount();
 
