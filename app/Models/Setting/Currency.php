@@ -10,8 +10,10 @@ use App\Concerns\SyncsWithCompanyDefaults;
 use App\Facades\Forex;
 use App\Models\Accounting\Account;
 use App\Models\History\AccountHistory;
+use App\Observers\CurrencyObserver;
 use App\Utilities\Currency\CurrencyAccessor;
 use Database\Factories\Setting\CurrencyFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+#[ObservedBy(CurrencyObserver::class)]
 class Currency extends Model
 {
     use Blamable;

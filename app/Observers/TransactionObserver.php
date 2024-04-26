@@ -61,9 +61,11 @@ class TransactionObserver
 
     private function convertToDefaultCurrency(string $amount, string $fromCurrency, string $toCurrency): string
     {
-        $amountInCents = CurrencyConverter::convertFormattedBalance($amount, $fromCurrency, $toCurrency);
+        $amountInCents = CurrencyConverter::prepareForAccessor($amount, $fromCurrency);
 
-        return money($amountInCents, $toCurrency)->formatSimple();
+        $convertedAmountInCents = CurrencyConverter::convertBalance($amountInCents, $fromCurrency, $toCurrency);
+
+        return CurrencyConverter::prepareForMutator($convertedAmountInCents, $toCurrency);
     }
 
     /**

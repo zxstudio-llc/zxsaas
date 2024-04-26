@@ -100,7 +100,7 @@ class Account extends Model
             $fiscalYearStart = $company->locale->fiscalYearStartDate();
             $fiscalYearEnd = $company->locale->fiscalYearEndDate();
 
-            return Accounting::getEndingBalance($this, $fiscalYearStart, $fiscalYearEnd)?->formattedForDisplay();
+            return Accounting::getEndingBalance($this, $fiscalYearStart, $fiscalYearEnd);
         });
     }
 

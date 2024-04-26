@@ -6,6 +6,7 @@ use Akaunting\Money\Currency;
 use Akaunting\Money\Money;
 use App\Models\Accounting\AccountSubtype;
 use App\Utilities\Accounting\AccountCode;
+use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
 use Closure;
 use Filament\Forms\Components\Field;
@@ -155,32 +156,20 @@ class MacroServiceProvider extends ServiceProvider
             return (int) round($convertedBalance);
         });
 
-        Money::macro('swapFormattedAmountFor', function ($newCurrency) {
-            $oldCurrency = $this->currency->getCurrency();
-            $balance = $this->getAmount();
-
-            $oldRate = currency($oldCurrency)->getRate();
-            $newRate = currency($newCurrency)->getRate();
-
-            $ratio = $newRate / $oldRate;
-
-            $convertedBalance = money($balance, $oldCurrency)->multiply($ratio)->getAmount();
-
-            return (int) filter_var($convertedBalance, FILTER_SANITIZE_NUMBER_INT);
-        });
-
-        Money::macro('formatWithCode', function () {
-            $formatted = $this->formatSimple();
-
-            $isSymbolFirst = $this->currency->isSymbolFirst();
+        Money::macro('formatWithCode', function (bool $codeBefore = false) {
+            $formatted = $this->format();
 
             $currencyCode = $this->currency->getCurrency();
 
-            if ($isSymbolFirst) {
-                return $formatted . ' ' . $currencyCode;
+            if ($currencyCode === CurrencyAccessor::getDefaultCurrency()) {
+                return $formatted;
             }
 
-            return $currencyCode . ' ' . $formatted;
+            if ($codeBefore) {
+                return $currencyCode . ' ' . $formatted;
+            }
+
+            return $formatted . ' ' . $currencyCode;
         });
 
         Currency::macro('getEntity', function () {

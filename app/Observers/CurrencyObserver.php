@@ -26,7 +26,7 @@ class CurrencyObserver
         }
 
         if ($currency->wasChanged('rate')) {
-            event(new CurrencyRateChanged($currency));
+            event(new CurrencyRateChanged($currency, $currency->getOriginal('rate'), $currency->rate));
         }
     }
 

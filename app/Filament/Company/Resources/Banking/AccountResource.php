@@ -176,6 +176,7 @@ class AccountResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('account.ending_balance')
                     ->localizeLabel('Current Balance')
+                    ->state(static fn (BankAccount $record) => $record->account->ending_balance->convert()->formatWithCode())
                     ->sortable(),
             ])
             ->filters([

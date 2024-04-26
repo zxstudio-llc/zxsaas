@@ -713,10 +713,10 @@ class Transactions extends Page implements HasTable
             ->get()
             ->groupBy('account.subtype.name')
             ->mapWithKeys(function (Collection $bankAccounts, string $subtype) use ($isFilter) {
-                return [$subtype => $bankAccounts->mapWithKeys(function (BankAccount $bankAccount) use ($isFilter) {
+                return [$subtype => $bankAccounts->mapWithKeys(static function (BankAccount $bankAccount) use ($isFilter) {
                     $label = $bankAccount->account->name;
                     if ($isFilter) {
-                        $balance = $this->getAccountBalance($bankAccount->account);
+                        $balance = $bankAccount->account->ending_balance->convert()->formatWithCode(true);
                         $label .= "<span class='float-right'>{$balance}</span>";
                     }
 
@@ -726,11 +726,6 @@ class Transactions extends Page implements HasTable
             ->toArray();
 
         return array_merge($options, $bankAccountOptions);
-    }
-
-    protected function getAccountBalance(Account $account): ?string
-    {
-        return Accounting::getEndingBalance($account, $this->fiscalYearStartDate, $this->fiscalYearEndDate)?->formattedForDisplay();
     }
 
     protected function getBalanceForAllAccounts(): string

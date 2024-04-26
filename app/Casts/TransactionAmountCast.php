@@ -3,6 +3,7 @@
 namespace App\Casts;
 
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use UnexpectedValueException;
@@ -15,7 +16,7 @@ class TransactionAmountCast implements CastsAttributes
         $currency_code = $model->bankAccount?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency();
 
         if ($value !== null) {
-            return money($value, $currency_code)->formatSimple();
+            return CurrencyConverter::prepareForMutator($value, $currency_code);
         }
 
         return '';
@@ -38,6 +39,6 @@ class TransactionAmountCast implements CastsAttributes
             throw new UnexpectedValueException('Expected string or numeric value for money cast');
         }
 
-        return money($value, $currency_code, true)->getAmount();
+        return CurrencyConverter::prepareForAccessor($value, $currency_code);
     }
 }

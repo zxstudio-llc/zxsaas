@@ -11,6 +11,8 @@ class BalanceValue
 
     private string $currency;
 
+    private ?int $convertedValue = null;
+
     public function __construct(int $value, string $currency)
     {
         $this->value = $value;
@@ -22,27 +24,46 @@ class BalanceValue
         return $this->value;
     }
 
+    public function getEffectiveValue(): int
+    {
+        return $this->convertedValue ?? $this->value;
+    }
+
+    public function getConvertedValue(): ?int
+    {
+        return $this->convertedValue;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
     public function formatted(): string
     {
-        return money($this->value, $this->currency)->format();
+        return money($this->getEffectiveValue(), $this->getCurrency())->format();
     }
 
     public function formattedSimple(): string
     {
-        return money($this->value, $this->currency)->formatSimple();
+        return money($this->getEffectiveValue(), $this->getCurrency())->formatSimple();
     }
 
-    public function formattedForDisplay(): string
+    public function formatWithCode(bool $codeBefore = false): string
     {
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-        $accountCurrency = $this->currency;
+        return money($this->getEffectiveValue(), $this->getCurrency())->formatWithCode($codeBefore);
+    }
 
-        if ($accountCurrency === $defaultCurrency) {
-            return $this->formatted();
+    public function convert(): self
+    {
+        // The journal entry sums are stored in the default currency not the account currency (transaction amounts are stored in the account currency)
+        $fromCurrency = CurrencyAccessor::getDefaultCurrency();
+        $toCurrency = $this->currency;
+
+        if ($fromCurrency !== $toCurrency) {
+            $this->convertedValue = CurrencyConverter::convertBalance($this->value, $fromCurrency, $toCurrency);
         }
 
-        $convertedBalance = CurrencyConverter::convertBalance($this->value, $defaultCurrency, $accountCurrency);
-
-        return money($convertedBalance, $accountCurrency)->formatWithCode();
+        return $this;
     }
 }
