@@ -7,6 +7,7 @@ return [
                 'description' => 'The most liquid assets a company holds. This includes physical currency, bank balances, and short-term investments a company can quickly convert to cash.',
                 'multi_currency' => true,
                 'base_code' => '1000',
+                'bank_account_type' => 'depository',
                 'accounts' => [
                     'Cash on Hand' => [
                         'description' => 'The amount of money held by the company in the form of cash.',
@@ -150,25 +151,23 @@ return [
                 'multi_currency' => true,
                 'base_code' => '3000',
                 'accounts' => [
-                    'Owner\'s Equity' => [
-                        'description' => 'The owner\'s financial interest in the business, representing the residual interest in the assets of the business after deducting liabilities.',
+                    'Owner\'s Investment' => [
+                        'description' => 'The amount of money invested by the owner(s) or shareholders to start or expand the business.',
+                    ],
+                    'Owner\'s Drawings' => [
+                        'description' => 'The amount of money withdrawn by the owner(s) or shareholders from the business for personal use.',
                     ],
                 ],
             ],
-            'Retained Earnings' => [
+            'Retained Earnings: Profit' => [
                 'description' => 'Cumulative profits retained in the business and not distributed as dividends. Indicates the company\'s financial health and profit-generating ability.',
                 'multi_currency' => false,
                 'base_code' => '3100',
-            ],
-            'Drawings' => [
-                'description' => 'The amount of money taken out of the business by the owner(s) for personal use.',
-                'multi_currency' => false,
-                'base_code' => '3200',
-            ],
-            'Equity Reserves and Adjustments' => [
-                'description' => 'Includes adjustments like revaluation reserves, foreign exchange adjustments, or other components of comprehensive income that affect the equity but are not classified under capital, retained earnings, or drawings.',
-                'multi_currency' => true,
-                'base_code' => '3300',
+                'accounts' => [
+                    'Owner\'s Equity' => [
+                        'description' => 'Owner\'s equity is what remains after you subtract business liabilities from business assets. In other words, it\'s what\'s left over for you if you sell all your assets and pay all your debts.',
+                    ],
+                ],
             ],
         ],
         'contra_equity' => [

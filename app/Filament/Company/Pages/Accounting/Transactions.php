@@ -16,6 +16,8 @@ use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Models\Setting\Localization;
+use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Header;
 use Exception;
 use Filament\Actions;
@@ -153,6 +155,17 @@ class Transactions extends Page implements HasTable
                     ->options(fn () => $this->getBankAccountOptions())
                     ->live()
                     ->searchable()
+                    ->afterStateUpdated(function (Set $set, $state, $old, Get $get) {
+                        $amount = CurrencyConverter::convertAndSet(
+                            BankAccount::find($state)->account->currency_code,
+                            BankAccount::find($old)->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(),
+                            $get('amount')
+                        );
+
+                        if ($amount !== null) {
+                            $set('amount', $amount);
+                        }
+                    })
                     ->required(),
                 Forms\Components\Select::make('type')
                     ->label('Type')
@@ -165,7 +178,7 @@ class Transactions extends Page implements HasTable
                     ->afterStateUpdated(static fn (Forms\Set $set, $state) => $set('account_id', static::getUncategorizedAccountByType(TransactionType::parse($state))?->id)),
                 Forms\Components\TextInput::make('amount')
                     ->label('Amount')
-                    ->money(static fn (Forms\Get $get) => BankAccount::find($get('bank_account_id'))?->account?->currency_code ?? 'USD')
+                    ->money(static fn (Forms\Get $get) => BankAccount::find($get('bank_account_id'))?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency())
                     ->required(),
                 Forms\Components\Select::make('account_id')
                     ->label('Category')
@@ -236,7 +249,7 @@ class Transactions extends Page implements HasTable
                         }
                     )
                     ->currency(static fn (Transaction $record) => $record->bankAccount->account->currency_code ?? 'USD', true)
-                    ->state(fn (Transaction $record) => $record->type === TransactionType::Journal ? $record->journalEntries->first()->amount : $record->amount),
+                    ->state(fn (Transaction $record) => $record->type->isJournal() ? $record->journalEntries->first()->amount : $record->amount),
             ])
             ->recordClasses(static fn (Transaction $record) => $record->reviewed ? 'bg-primary-300/10' : null)
             ->defaultSort('posted_at', 'desc')
@@ -342,7 +355,7 @@ class Transactions extends Page implements HasTable
                         ->modalHeading('Edit Transaction')
                         ->modalWidth(MaxWidth::ThreeExtraLarge)
                         ->form(fn (Form $form) => $this->transactionForm($form))
-                        ->hidden(static fn (Transaction $record) => $record->type === TransactionType::Journal),
+                        ->hidden(static fn (Transaction $record) => $record->type->isJournal()),
                     Tables\Actions\EditAction::make('updateJournalTransaction')
                         ->label('Edit Journal Transaction')
                         ->modalHeading('Journal Entry')
@@ -355,7 +368,7 @@ class Transactions extends Page implements HasTable
                             $this->setDebitAmount($debitAmounts);
                             $this->setCreditAmount($creditAmounts);
                         })
-                        ->hidden(static fn (Transaction $record) => $record->type !== TransactionType::Journal),
+                        ->visible(static fn (Transaction $record) => $record->type->isJournal()),
                     Tables\Actions\DeleteAction::make(),
                     Tables\Actions\ReplicateAction::make()
                         ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])

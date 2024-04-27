@@ -28,10 +28,6 @@ class MoneyCast implements CastsAttributes
     {
         $currency_code = $model->getAttribute('currency_code') ?? CurrencyAccessor::getDefaultCurrency();
 
-        if (! $currency_code) {
-            throw new UnexpectedValueException('Currency code is not set');
-        }
-
         if (is_numeric($value)) {
             $value = (string) $value;
         } elseif (! is_string($value)) {

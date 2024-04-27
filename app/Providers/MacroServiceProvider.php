@@ -151,7 +151,7 @@ class MacroServiceProvider extends ServiceProvider
 
             $ratio = $newRate / $oldRate;
 
-            $convertedBalance = money($balanceInMajorUnits, $oldCurrency)->multiply($ratio)->getAmount();
+            $convertedBalance = bcmul($balanceInMajorUnits, $ratio, 2);
 
             return (int) round($convertedBalance);
         });

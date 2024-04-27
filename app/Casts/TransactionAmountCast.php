@@ -29,10 +29,6 @@ class TransactionAmountCast implements CastsAttributes
     {
         $currency_code = $model->bankAccount?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency();
 
-        if (! $currency_code) {
-            throw new UnexpectedValueException('Currency code is not set');
-        }
-
         if (is_numeric($value)) {
             $value = (string) $value;
         } elseif (! is_string($value)) {

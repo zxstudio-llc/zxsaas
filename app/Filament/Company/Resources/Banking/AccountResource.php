@@ -172,7 +172,7 @@ class AccountResource extends Resource
                     ->icon(static fn (BankAccount $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static fn (BankAccount $record) => $record->isEnabled() ? 'Default Account' : null)
                     ->iconPosition('after')
-                    ->description(static fn (BankAccount $record) => $record->mask ?: 'N/A')
+                    ->description(static fn (BankAccount $record) => $record->mask ?? null)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('account.ending_balance')
                     ->localizeLabel('Current Balance')

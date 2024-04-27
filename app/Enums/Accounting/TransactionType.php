@@ -17,4 +17,19 @@ enum TransactionType: string implements HasLabel
     {
         return $this->name;
     }
+
+    public function isDeposit(): bool
+    {
+        return $this === self::Deposit;
+    }
+
+    public function isWithdrawal(): bool
+    {
+        return $this === self::Withdrawal;
+    }
+
+    public function isJournal(): bool
+    {
+        return $this === self::Journal;
+    }
 }
