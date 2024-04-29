@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Forms\Components;
+namespace App\Filament\Forms\Components;
 
 use App\Facades\Accounting;
 use App\Models\Company;

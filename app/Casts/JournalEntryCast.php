@@ -8,11 +8,11 @@ use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
 use UnexpectedValueException;
 
-class MoneyCast implements CastsAttributes
+class JournalEntryCast implements CastsAttributes
 {
     public function get(Model $model, string $key, mixed $value, array $attributes): string
     {
-        $currency_code = $attributes['currency_code'] ?? CurrencyAccessor::getDefaultCurrency();
+        $currency_code = CurrencyAccessor::getDefaultCurrency();
 
         if ($value !== null) {
             return CurrencyConverter::prepareForMutator($value, $currency_code);
@@ -26,7 +26,7 @@ class MoneyCast implements CastsAttributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): int
     {
-        $currency_code = $attributes['currency_code'] ?? CurrencyAccessor::getDefaultCurrency();
+        $currency_code = CurrencyAccessor::getDefaultCurrency();
 
         if (is_numeric($value)) {
             $value = (string) $value;

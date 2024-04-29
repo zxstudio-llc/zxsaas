@@ -2,15 +2,12 @@
 
 namespace App\Filament\Company\Resources\Banking;
 
-use App\Actions\OptionAction\CreateCurrency;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Banking\BankAccountType;
-use App\Facades\Forex;
 use App\Filament\Company\Resources\Banking\AccountResource\Pages;
+use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
-use App\Utilities\Currency\CurrencyAccessor;
-use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -19,7 +16,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Unique;
 use Wallo\FilamentSelectify\Components\ToggleButton;
 
@@ -49,14 +45,14 @@ class AccountResource extends Resource
                             ->columnSpan(1)
                             ->default(BankAccountType::DEFAULT)
                             ->live()
-                            ->afterStateUpdated(static function (Forms\Set $set, $state, ?BankAccount $record, string $operation) {
+                            ->afterStateUpdated(static function (Forms\Set $set, $state, ?BankAccount $bankAccount, string $operation) {
                                 if ($operation === 'create') {
                                     $set('account.subtype_id', null);
-                                } elseif ($operation === 'edit' && $record !== null) {
-                                    if ($state !== $record->type->value) {
+                                } elseif ($operation === 'edit' && $bankAccount !== null) {
+                                    if ($state !== $bankAccount->type->value) {
                                         $set('account.subtype_id', null);
                                     } else {
-                                        $set('account.subtype_id', $record->account->subtype_id);
+                                        $set('account.subtype_id', $bankAccount->account->subtype_id);
                                     }
                                 }
                             })
@@ -66,12 +62,7 @@ class AccountResource extends Resource
                             ->relationship('account')
                             ->schema([
                                 Forms\Components\Select::make('subtype_id')
-                                    ->options(static function (Forms\Get $get) {
-                                        $typeValue = $get('data.type', true); // Bug: $get('type') returns string on edit, but returns Enum type on create
-                                        $typeString = $typeValue instanceof BackedEnum ? $typeValue->value : $typeValue;
-
-                                        return static::groupSubtypesBySubtypeType($typeString);
-                                    })
+                                    ->options(static fn (Forms\Get $get) => static::groupSubtypesBySubtypeType(BankAccountType::parse($get('data.type', true))))
                                     ->localizeLabel()
                                     ->searchable()
                                     ->live()
@@ -79,67 +70,15 @@ class AccountResource extends Resource
                             ]),
                         Forms\Components\Group::make()
                             ->relationship('account')
-                            ->columns(2)
+                            ->columns()
                             ->columnSpanFull()
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->maxLength(100)
                                     ->localizeLabel()
                                     ->required(),
-                                Forms\Components\Select::make('currency_code')
-                                    ->localizeLabel('Currency')
-                                    ->relationship('currency', 'name')
-                                    ->default(CurrencyAccessor::getDefaultCurrency())
-                                    ->preload()
-                                    ->searchable()
-                                    ->live()
-                                    ->required()
-                                    ->createOptionForm([
-                                        Forms\Components\Select::make('code')
-                                            ->localizeLabel()
-                                            ->searchable()
-                                            ->options(CurrencyAccessor::getAvailableCurrencies())
-                                            ->live()
-                                            ->afterStateUpdated(static function (callable $set, $state) {
-                                                if ($state === null) {
-                                                    return;
-                                                }
-
-                                                $currency_code = currency($state);
-                                                $defaultCurrencyCode = currency()->getCurrency();
-                                                $forexEnabled = Forex::isEnabled();
-                                                $exchangeRate = $forexEnabled ? Forex::getCachedExchangeRate($defaultCurrencyCode, $state) : null;
-
-                                                $set('name', $currency_code->getName() ?? '');
-
-                                                if ($forexEnabled && $exchangeRate !== null) {
-                                                    $set('rate', $exchangeRate);
-                                                }
-                                            })
-                                            ->required(),
-                                        Forms\Components\TextInput::make('name')
-                                            ->localizeLabel()
-                                            ->maxLength(100)
-                                            ->required(),
-                                        Forms\Components\TextInput::make('rate')
-                                            ->localizeLabel()
-                                            ->numeric()
-                                            ->required(),
-                                    ])->createOptionAction(static function (Forms\Components\Actions\Action $action) {
-                                        return $action
-                                            ->label('Add Currency')
-                                            ->slideOver()
-                                            ->modalWidth('md')
-                                            ->action(static function (array $data) {
-                                                return DB::transaction(static function () use ($data) {
-                                                    $code = $data['code'];
-                                                    $name = $data['name'];
-                                                    $rate = $data['rate'];
-
-                                                    return (new CreateCurrency())->create($code, $name, $rate);
-                                                });
-                                            });
-                                    }),
+                                CreateCurrencySelect::make('currency_code')
+                                    ->relationship('currency', 'name'),
                             ]),
                         Forms\Components\Group::make()
                             ->columns()
@@ -209,11 +148,11 @@ class AccountResource extends Resource
         ];
     }
 
-    public static function groupSubtypesBySubtypeType($typeString): array
+    public static function groupSubtypesBySubtypeType(BankAccountType $bankAccountType): array
     {
-        $category = match ($typeString) {
-            BankAccountType::Depository->value, BankAccountType::Investment->value => AccountCategory::Asset,
-            BankAccountType::Credit->value, BankAccountType::Loan->value => AccountCategory::Liability,
+        $category = match ($bankAccountType) {
+            BankAccountType::Depository, BankAccountType::Investment => AccountCategory::Asset,
+            BankAccountType::Credit, BankAccountType::Loan => AccountCategory::Liability,
             default => null,
         };
 

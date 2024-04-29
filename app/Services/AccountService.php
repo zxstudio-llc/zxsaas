@@ -13,7 +13,7 @@ use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\Utilities\Currency\CurrencyAccessor;
-use App\ValueObjects\BalanceValue;
+use App\ValueObjects\Money;
 use Illuminate\Database\Eloquent\Collection;
 
 class AccountService implements AccountHandler
@@ -25,30 +25,30 @@ class AccountService implements AccountHandler
         $this->journalEntryRepository = $journalEntryRepository;
     }
 
-    public function getDebitBalance(Account $account, string $startDate, string $endDate): BalanceValue
+    public function getDebitBalance(Account $account, string $startDate, string $endDate): Money
     {
         $amount = $this->journalEntryRepository->sumDebitAmounts($account, $startDate, $endDate);
 
-        return new BalanceValue($amount, $account->currency_code);
+        return new Money($amount, $account->currency_code);
     }
 
-    public function getCreditBalance(Account $account, string $startDate, string $endDate): BalanceValue
+    public function getCreditBalance(Account $account, string $startDate, string $endDate): Money
     {
         $amount = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
 
-        return new BalanceValue($amount, $account->currency_code);
+        return new Money($amount, $account->currency_code);
     }
 
-    public function getNetMovement(Account $account, string $startDate, string $endDate): BalanceValue
+    public function getNetMovement(Account $account, string $startDate, string $endDate): Money
     {
         $debitBalance = $this->journalEntryRepository->sumDebitAmounts($account, $startDate, $endDate);
         $creditBalance = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
         $netMovement = $this->calculateNetMovementByCategory($account->category, $debitBalance, $creditBalance);
 
-        return new BalanceValue($netMovement, $account->currency_code);
+        return new Money($netMovement, $account->currency_code);
     }
 
-    public function getStartingBalance(Account $account, string $startDate): ?BalanceValue
+    public function getStartingBalance(Account $account, string $startDate): ?Money
     {
         if (in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
             return null;
@@ -58,20 +58,20 @@ class AccountService implements AccountHandler
         $creditBalanceBefore = $this->journalEntryRepository->sumCreditAmounts($account, $startDate);
         $startingBalance = $this->calculateNetMovementByCategory($account->category, $debitBalanceBefore, $creditBalanceBefore);
 
-        return new BalanceValue($startingBalance, $account->currency_code);
+        return new Money($startingBalance, $account->currency_code);
     }
 
-    public function getEndingBalance(Account $account, string $startDate, string $endDate): ?BalanceValue
+    public function getEndingBalance(Account $account, string $startDate, string $endDate): ?Money
     {
         if (in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
             return null;
         }
 
-        $startingBalance = $this->getStartingBalance($account, $startDate)?->getValue();
-        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getValue();
+        $startingBalance = $this->getStartingBalance($account, $startDate)?->getAmount();
+        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getAmount();
         $endingBalance = $startingBalance + $netMovement;
 
-        return new BalanceValue($endingBalance, $account->currency_code);
+        return new Money($endingBalance, $account->currency_code);
     }
 
     public function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
@@ -84,9 +84,9 @@ class AccountService implements AccountHandler
 
     public function getBalances(Account $account, string $startDate, string $endDate): array
     {
-        $debitBalance = $this->getDebitBalance($account, $startDate, $endDate)->getValue();
-        $creditBalance = $this->getCreditBalance($account, $startDate, $endDate)->getValue();
-        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getValue();
+        $debitBalance = $this->getDebitBalance($account, $startDate, $endDate)->getAmount();
+        $creditBalance = $this->getCreditBalance($account, $startDate, $endDate)->getAmount();
+        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getAmount();
 
         $balances = [
             'debit_balance' => $debitBalance,
@@ -95,8 +95,8 @@ class AccountService implements AccountHandler
         ];
 
         if (! in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
-            $balances['starting_balance'] = $this->getStartingBalance($account, $startDate)?->getValue();
-            $balances['ending_balance'] = $this->getEndingBalance($account, $startDate, $endDate)?->getValue();
+            $balances['starting_balance'] = $this->getStartingBalance($account, $startDate)?->getAmount();
+            $balances['ending_balance'] = $this->getEndingBalance($account, $startDate, $endDate)?->getAmount();
         }
 
         return $balances;
@@ -187,7 +187,7 @@ class AccountService implements AccountHandler
         return new AccountBalanceReportDTO($accountCategories, $formattedReportTotalBalances);
     }
 
-    public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): BalanceValue
+    public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money
     {
         $bankAccountsAccounts = Account::where('accountable_type', BankAccount::class)
             ->get();
@@ -196,11 +196,11 @@ class AccountService implements AccountHandler
 
         // Get ending balance for each bank account
         foreach ($bankAccountsAccounts as $account) {
-            $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getValue() ?? 0;
+            $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
             $totalBalance += $endingBalance;
         }
 
-        return new BalanceValue($totalBalance, CurrencyAccessor::getDefaultCurrency());
+        return new Money($totalBalance, CurrencyAccessor::getDefaultCurrency());
     }
 
     public function getAccountCategoryOrder(): array

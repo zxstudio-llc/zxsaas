@@ -36,7 +36,7 @@ class UpdateAccountBalances
                 /** @var BankAccount $bankAccount */
                 $account = $bankAccount->account;
 
-                $oldConvertedBalanceInCents = $account->ending_balance->convert()->getConvertedValue();
+                $oldConvertedBalanceInCents = $account->ending_balance->convert()->getConvertedAmount();
                 $ratio = $event->newRate / $event->oldRate;
                 $newConvertedBalance = bcmul($oldConvertedBalanceInCents, $ratio, 2);
                 $newConvertedBalanceInCents = (int) round($newConvertedBalance);

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Forms\Components;
+namespace App\Filament\Forms\Components;
 
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Closure;
@@ -30,6 +30,6 @@ class JournalEntryRepeater extends TableRepeater
 
     public function getView(): string
     {
-        return 'forms.components.journal-entry-repeater';
+        return 'filament.forms.components.journal-entry-repeater';
     }
 }

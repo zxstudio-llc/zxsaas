@@ -2,6 +2,9 @@
 
 namespace App\Utilities\Currency;
 
+use App\Facades\Forex;
+use Filament\Forms\Set;
+
 class CurrencyConverter
 {
     public static function convertAndSet($newCurrency, $oldCurrency, $amount): ?string
@@ -30,5 +33,19 @@ class CurrencyConverter
     public static function prepareForAccessor(string $balance, string $currency): int
     {
         return money($balance, $currency, true)->getAmount();
+    }
+
+    public static function handleCurrencyChange(Set $set, $state): void
+    {
+        $currency = currency($state);
+        $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
+        $forexEnabled = Forex::isEnabled();
+        $exchangeRate = $forexEnabled ? Forex::getCachedExchangeRate($defaultCurrencyCode, $state) : null;
+
+        $set('name', $currency->getName() ?? '');
+
+        if ($forexEnabled && $exchangeRate !== null) {
+            $set('rate', $exchangeRate);
+        }
     }
 }

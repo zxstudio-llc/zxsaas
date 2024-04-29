@@ -2,7 +2,8 @@
 
 namespace App\Models\Accounting;
 
-use App\Casts\MoneyCast;
+use App\Casts\JournalEntryCast;
+use App\Collections\Accounting\JournalEntryCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\JournalEntryType;
@@ -10,7 +11,6 @@ use App\Models\Banking\BankAccount;
 use App\Observers\JournalEntryObserver;
 use Database\Factories\Accounting\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -36,7 +36,7 @@ class JournalEntry extends Model
 
     protected $casts = [
         'type' => JournalEntryType::class,
-        'amount' => MoneyCast::class,
+        'amount' => JournalEntryCast::class,
     ];
 
     public function account(): BelongsTo
@@ -59,18 +59,13 @@ class JournalEntry extends Model
         return $this->account->isUncategorized();
     }
 
-    public function scopeDebit(Builder $query): Builder
-    {
-        return $query->where('type', JournalEntryType::Debit);
-    }
-
-    public function scopeCredit(Builder $query): Builder
-    {
-        return $query->where('type', JournalEntryType::Credit);
-    }
-
     protected static function newFactory(): Factory
     {
         return JournalEntryFactory::new();
+    }
+
+    public function newCollection(array $models = []): JournalEntryCollection
+    {
+        return new JournalEntryCollection($models);
     }
 }

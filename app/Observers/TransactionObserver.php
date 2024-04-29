@@ -35,6 +35,8 @@ class TransactionObserver
      */
     public function updated(Transaction $transaction): void
     {
+        $transaction->refresh(); // DO NOT REMOVE
+
         if ($transaction->type->isJournal() || $this->hasRelevantChanges($transaction) === false) {
             return;
         }
@@ -105,10 +107,13 @@ class TransactionObserver
     private function getConvertedTransactionAmount(Transaction $transaction): string
     {
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-        $transactionCurrency = $transaction->bankAccount->account->currency_code; // only account which would have a different currency compared to the default currency
+        $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+        $chartAccountCurrency = $transaction->account->currency_code;
 
-        if ($transactionCurrency !== $defaultCurrency) {
-            return $this->convertToDefaultCurrency($transaction->amount, $transactionCurrency, $defaultCurrency);
+        if ($bankAccountCurrency !== $defaultCurrency) {
+            return $this->convertToDefaultCurrency($transaction->amount, $bankAccountCurrency, $defaultCurrency);
+        } elseif ($chartAccountCurrency !== $defaultCurrency) {
+            return $this->convertToDefaultCurrency($transaction->amount, $chartAccountCurrency, $defaultCurrency);
         }
 
         return $transaction->amount;

@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use Akaunting\Money\Currency;
 use Akaunting\Money\Money;
+use App\Enums\Setting\DateFormat;
 use App\Models\Accounting\AccountSubtype;
+use App\Models\Setting\Localization;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
@@ -12,6 +14,7 @@ use Closure;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -47,6 +50,17 @@ class MacroServiceProvider extends ServiceProvider
 
                     return moneyMask($currency);
                 });
+
+            return $this;
+        });
+
+        TextColumn::macro('localizeDate', function (): static {
+            $localization = Localization::firstOrFail();
+
+            $dateFormat = $localization->date_format->value ?? DateFormat::DEFAULT;
+            $timezone = $localization->timezone ?? Carbon::now()->timezoneName;
+
+            $this->date($dateFormat, $timezone);
 
             return $this;
         });

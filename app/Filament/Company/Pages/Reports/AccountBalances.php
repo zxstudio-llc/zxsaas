@@ -3,7 +3,7 @@
 namespace App\Filament\Company\Pages\Reports;
 
 use App\DTO\AccountBalanceReportDTO;
-use App\Forms\Components\DateRangeSelect;
+use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
 use App\Services\AccountBalancesExportService;
 use App\Services\AccountService;

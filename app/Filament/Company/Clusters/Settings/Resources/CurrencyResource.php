@@ -12,7 +12,6 @@ use App\Models\Setting\Currency;
 use App\Models\Setting\Currency as CurrencyModel;
 use App\Utilities\Currency\CurrencyAccessor;
 use Closure;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -38,15 +37,6 @@ class CurrencyResource extends Resource
         $modelLabel = static::$modelLabel;
 
         return translate($modelLabel);
-    }
-
-    public static function getNavigationParentItem(): ?string
-    {
-        if (Filament::hasTopNavigation()) {
-            return translate('Finance');
-        }
-
-        return null;
     }
 
     public static function form(Form $form): Form

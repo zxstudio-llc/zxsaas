@@ -3,61 +3,105 @@
 namespace App\Concerns;
 
 use App\Enums\Accounting\JournalEntryType;
+use App\Utilities\Currency\CurrencyAccessor;
 
 trait HasJournalEntryActions
 {
-    public string $debitAmount = '0.00';
+    public int $debitAmount = 0;
 
-    public string $creditAmount = '0.00';
+    public int $creditAmount = 0;
 
-    public function setDebitAmount(string $amount): void
+    private function formatMoney(int $amount): string
+    {
+        return money($amount, CurrencyAccessor::getDefaultCurrency())->format();
+    }
+
+    /**
+     * Expects formatted simple amount: e.g. 1,000.00 or 1.000,00
+     *
+     * Sets debit amount in cents as integer: e.g. 100000
+     */
+    public function setDebitAmount(int $amount): void
     {
         $this->debitAmount = $amount;
     }
 
-    public function getDebitAmount(): string
-    {
-        return $this->debitAmount;
-    }
-
-    public function getFormattedDebitAmount(): string
-    {
-        return money($this->getDebitAmount(), 'USD', true)->format();
-    }
-
-    public function setCreditAmount(string $amount): void
+    /**
+     * Expects formatted simple amount: e.g. 1,000.00 or 1.000,00
+     *
+     * Sets credit amount in cents as integer: e.g. 100000
+     */
+    public function setCreditAmount(int $amount): void
     {
         $this->creditAmount = $amount;
     }
 
-    public function getCreditAmount(): string
+    /**
+     * Returns debit amount in cents as integer: e.g. 100000
+     */
+    public function getDebitAmount(): int
+    {
+        return $this->debitAmount;
+    }
+
+    /**
+     * Returns credit amount in cents as integer: e.g. 100000
+     */
+    public function getCreditAmount(): int
     {
         return $this->creditAmount;
     }
 
+    /**
+     * Expects debit amount in cents as string integer: e.g. 100000
+     *
+     * Returns formatted amount: e.g. $1,000.00 or €1.000,00
+     */
+    public function getFormattedDebitAmount(): string
+    {
+        return $this->formatMoney($this->getDebitAmount());
+    }
+
+    /**
+     * Expects credit amount in cents as integer: e.g. 100000
+     *
+     * Returns formatted amount: e.g. $1,000.00 or €1.000,00
+     */
     public function getFormattedCreditAmount(): string
     {
-        return money($this->getCreditAmount(), 'USD', true)->format();
+        return $this->formatMoney($this->getCreditAmount());
     }
 
-    public function getBalanceDifference(): string
+    /**
+     * Returns balance difference in cents as integer: e.g. 100000
+     */
+    public function getBalanceDifference(): int
     {
-        return bcsub($this->getDebitAmount(), $this->getCreditAmount(), 2);
+        return $this->getDebitAmount() - $this->getCreditAmount();
     }
 
+    /**
+     * Returns formatted balance difference: e.g. $1,000.00 or €1.000,00
+     */
     public function getFormattedBalanceDifference(): string
     {
-        $difference = $this->getBalanceDifference();
-        $absoluteDifference = abs((float) $difference);
+        $absoluteDifference = abs($this->getBalanceDifference());
 
-        return money($absoluteDifference, 'USD', true)->format();
+        return $this->formatMoney($absoluteDifference);
     }
 
+    /**
+     * Returns boolean indicating whether the journal entry is balanced
+     * using the debit and credit integer amounts
+     */
     public function isJournalEntryBalanced(): bool
     {
-        return bccomp($this->getDebitAmount(), $this->getCreditAmount(), 2) === 0;
+        return $this->getDebitAmount() === $this->getCreditAmount();
     }
 
+    /**
+     * Resets debit and credit amounts to '0.00'
+     */
     public function resetJournalEntryAmounts(): void
     {
         $this->reset(['debitAmount', 'creditAmount']);
@@ -65,47 +109,75 @@ trait HasJournalEntryActions
 
     public function adjustJournalEntryAmountsForTypeChange(JournalEntryType $newType, JournalEntryType $oldType, ?string $amount): void
     {
-        if ($newType !== $oldType) {
-            $normalizedAmount = $amount === null ? '0.00' : rtrim($amount, '.');
-            $normalizedAmount = $this->sanitizeAndFormatAmount($normalizedAmount);
+        if ($newType === $oldType) {
+            return;
+        }
 
-            if (bccomp($normalizedAmount, '0.00', 2) === 0) {
-                return;
-            }
+        $amountComplete = $this->ensureCompleteDecimal($amount);
+        $normalizedAmount = $this->convertAmountToCents($amountComplete);
 
-            if ($oldType->isDebit() && $newType->isCredit()) {
-                $this->setDebitAmount(bcsub($this->getDebitAmount(), $normalizedAmount, 2));
-                $this->setCreditAmount(bcadd($this->getCreditAmount(), $normalizedAmount, 2));
-            } elseif ($oldType->isCredit() && $newType->isDebit()) {
-                $this->setDebitAmount(bcadd($this->getDebitAmount(), $normalizedAmount, 2));
-                $this->setCreditAmount(bcsub($this->getCreditAmount(), $normalizedAmount, 2));
-            }
+        if ($normalizedAmount === 0) {
+            return;
+        }
+
+        if ($oldType->isDebit() && $newType->isCredit()) {
+            $this->debitAmount -= $normalizedAmount;
+            $this->creditAmount += $normalizedAmount;
+        } elseif ($oldType->isCredit() && $newType->isDebit()) {
+            $this->debitAmount += $normalizedAmount;
+            $this->creditAmount -= $normalizedAmount;
         }
     }
 
+    /**
+     * Expects the journal entry type,
+     * the new amount and the old amount as formatted simple amounts: e.g. 1,000.00 or 1.000,00
+     * It can expect the amounts as partial amounts: e.g. 1,000. or 1.000, (this needs to be handled by this method)
+     */
     public function updateJournalEntryAmount(JournalEntryType $journalEntryType, ?string $newAmount, ?string $oldAmount): void
     {
         if ($newAmount === $oldAmount) {
             return;
         }
 
-        $normalizedNewAmount = $newAmount === null ? '0.00' : rtrim($newAmount, '.');
-        $normalizedOldAmount = $oldAmount === null ? '0.00' : rtrim($oldAmount, '.');
+        $newAmountComplete = $this->ensureCompleteDecimal($newAmount);
+        $oldAmountComplete = $this->ensureCompleteDecimal($oldAmount);
 
-        $formattedNewAmount = $this->sanitizeAndFormatAmount($normalizedNewAmount);
-        $formattedOldAmount = $this->sanitizeAndFormatAmount($normalizedOldAmount);
+        $formattedNewAmount = $this->convertAmountToCents($newAmountComplete);
+        $formattedOldAmount = $this->convertAmountToCents($oldAmountComplete);
 
-        $difference = bcsub($formattedNewAmount, $formattedOldAmount, 2);
+        $difference = $formattedNewAmount - $formattedOldAmount;
 
         if ($journalEntryType->isDebit()) {
-            $this->setDebitAmount(bcadd($this->getDebitAmount(), $difference, 2));
+            $this->debitAmount += $difference;
         } else {
-            $this->setCreditAmount(bcadd($this->getCreditAmount(), $difference, 2));
+            $this->creditAmount += $difference;
         }
     }
 
-    protected function sanitizeAndFormatAmount(string $amount): string
+    private function ensureCompleteDecimal(?string $amount): string
     {
-        return (string) money($amount, 'USD')->getAmount();
+        if ($amount === null) {
+            return '0';
+        }
+
+        $currency = currency(CurrencyAccessor::getDefaultCurrency());
+        $decimal = $currency->getDecimalMark();
+
+        if (substr($amount, -1) === $decimal) {
+            return '0';
+        }
+
+        return $amount;
+    }
+
+    /**
+     * Expects formatted simple amount: e.g. 1,000.00 or 1.000,00
+     *
+     * Returns sanitized amount in cents as integer: e.g. 100000
+     */
+    protected function convertAmountToCents(string $amount): int
+    {
+        return money($amount, CurrencyAccessor::getDefaultCurrency(), true)->getAmount();
     }
 }

@@ -15,6 +15,14 @@ class JournalEntryObserver
     }
 
     /**
+     * Handle the JournalEntry "updated" event.
+     */
+    public function updated(JournalEntry $journalEntry): void
+    {
+        //
+    }
+
+    /**
      * Handle the JournalEntry "deleting" event.
      */
     public function deleting(JournalEntry $journalEntry): void
@@ -26,22 +34,6 @@ class JournalEntryObserver
      * Handle the JournalEntry "deleted" event.
      */
     public function deleted(JournalEntry $journalEntry): void
-    {
-        //
-    }
-
-    /**
-     * Handle the JournalEntry "restored" event.
-     */
-    public function restored(JournalEntry $journalEntry): void
-    {
-        //
-    }
-
-    /**
-     * Handle the JournalEntry "force deleted" event.
-     */
-    public function forceDeleted(JournalEntry $journalEntry): void
     {
         //
     }

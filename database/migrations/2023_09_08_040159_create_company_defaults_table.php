@@ -14,20 +14,15 @@ return new class extends Migration
         Schema::create('company_defaults', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->restrictOnDelete();
+            $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->nullOnDelete();
             $table->string('currency_code')->nullable();
-            $table->foreignId('sales_tax_id')->nullable()->constrained('taxes')->cascadeOnDelete();
-            $table->foreignId('purchase_tax_id')->nullable()->constrained('taxes')->cascadeOnDelete();
-            $table->foreignId('sales_discount_id')->nullable()->constrained('discounts')->cascadeOnDelete();
-            $table->foreignId('purchase_discount_id')->nullable()->constrained('discounts')->cascadeOnDelete();
-            $table->foreignId('created_by')->nullable()->constrained('users')->restrictOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('users')->restrictOnDelete();
+            $table->foreignId('sales_tax_id')->nullable()->constrained('taxes')->nullOnDelete();
+            $table->foreignId('purchase_tax_id')->nullable()->constrained('taxes')->nullOnDelete();
+            $table->foreignId('sales_discount_id')->nullable()->constrained('discounts')->nullOnDelete();
+            $table->foreignId('purchase_discount_id')->nullable()->constrained('discounts')->nullOnDelete();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-
-            $table->foreign(['company_id', 'currency_code'])
-                ->references(['company_id', 'code'])
-                ->on('currencies')
-                ->restrictOnDelete();
         });
     }
 

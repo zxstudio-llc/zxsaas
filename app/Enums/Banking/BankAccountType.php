@@ -2,10 +2,13 @@
 
 namespace App\Enums\Banking;
 
+use App\Enums\Concerns\ParsesEnum;
 use Filament\Support\Contracts\HasLabel;
 
 enum BankAccountType: string implements HasLabel
 {
+    use ParsesEnum;
+
     case Investment = 'investment';
     case Credit = 'credit';
     case Depository = 'depository';

@@ -6,16 +6,14 @@ use App\Concerns\HasJournalEntryActions;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
-use App\Enums\Setting\DateFormat;
 use App\Facades\Accounting;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
-use App\Forms\Components\DateRangeSelect;
-use App\Forms\Components\JournalEntryRepeater;
+use App\Filament\Forms\Components\DateRangeSelect;
+use App\Filament\Forms\Components\JournalEntryRepeater;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
-use App\Models\Setting\Localization;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Header;
@@ -41,7 +39,6 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\MaxWidth;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -108,7 +105,8 @@ class Transactions extends Page implements HasTable
                     ->groupedIcon(null)
                     ->modalHeading('Journal Entry')
                     ->mutateFormDataUsing(static fn (array $data) => array_merge($data, ['type' => TransactionType::Journal]))
-                    ->afterFormFilled(fn () => $this->resetJournalEntryAmounts()),
+                    ->afterFormFilled(fn () => $this->resetJournalEntryAmounts())
+                    ->after(fn (Transaction $transaction) => $transaction->updateAmountIfBalanced()),
                 Actions\Action::make('connectBank')
                     ->label('Connect Your Bank')
                     ->url(ConnectedAccount::getUrl()),
@@ -146,8 +144,7 @@ class Transactions extends Page implements HasTable
             ->schema([
                 Forms\Components\DatePicker::make('posted_at')
                     ->label('Date')
-                    ->required()
-                    ->displayFormat('Y-m-d'),
+                    ->required(),
                 Forms\Components\TextInput::make('description')
                     ->label('Description'),
                 Forms\Components\Select::make('bank_account_id')
@@ -225,11 +222,7 @@ class Transactions extends Page implements HasTable
                 Tables\Columns\TextColumn::make('posted_at')
                     ->label('Date')
                     ->sortable()
-                    ->formatStateUsing(static function ($state) {
-                        $dateFormat = Localization::firstOrFail()->date_format->value ?? DateFormat::DEFAULT;
-
-                        return Carbon::parse($state)->translatedFormat($dateFormat);
-                    }),
+                    ->localizeDate(),
                 Tables\Columns\TextColumn::make('description')
                     ->limit(30)
                     ->label('Description'),
@@ -237,21 +230,20 @@ class Transactions extends Page implements HasTable
                     ->label('Account'),
                 Tables\Columns\TextColumn::make('account.name')
                     ->label('Category')
-                    ->state(static fn (Transaction $record) => $record->account->name ?? 'Journal Entry'),
+                    ->state(static fn (Transaction $transaction) => $transaction->account->name ?? 'Journal Entry'),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Amount')
-                    ->weight(static fn (Transaction $record) => $record->reviewed ? null : FontWeight::SemiBold)
+                    ->weight(static fn (Transaction $transaction) => $transaction->reviewed ? null : FontWeight::SemiBold)
                     ->color(
-                        static fn (Transaction $record) => match ($record->type) {
+                        static fn (Transaction $transaction) => match ($transaction->type) {
                             TransactionType::Deposit => Color::rgb('rgb(' . Color::Green[700] . ')'),
                             TransactionType::Journal => 'primary',
                             default => null,
                         }
                     )
-                    ->currency(static fn (Transaction $record) => $record->bankAccount->account->currency_code ?? 'USD', true)
-                    ->state(fn (Transaction $record) => $record->type->isJournal() ? $record->journalEntries->first()->amount : $record->amount),
+                    ->currency(static fn (Transaction $transaction) => $transaction->bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(), true),
             ])
-            ->recordClasses(static fn (Transaction $record) => $record->reviewed ? 'bg-primary-300/10' : null)
+            ->recordClasses(static fn (Transaction $transaction) => $transaction->reviewed ? 'bg-primary-300/10' : null)
             ->defaultSort('posted_at', 'desc')
             ->filters([
                 Tables\Filters\Filter::make('filters')
@@ -336,45 +328,47 @@ class Transactions extends Page implements HasTable
                 Tables\Actions\Action::make('markAsReviewed')
                     ->label('Mark as Reviewed')
                     ->view('filament.company.components.tables.actions.mark-as-reviewed')
-                    ->icon(static fn (Transaction $record) => $record->reviewed ? 'heroicon-s-check-circle' : 'heroicon-o-check-circle')
-                    ->color(static fn (Transaction $record, Tables\Actions\Action $action) => match (static::determineTransactionState($record, $action)) {
+                    ->icon(static fn (Transaction $transaction) => $transaction->reviewed ? 'heroicon-s-check-circle' : 'heroicon-o-check-circle')
+                    ->color(static fn (Transaction $transaction, Tables\Actions\Action $action) => match (static::determineTransactionState($transaction, $action)) {
                         'reviewed' => 'primary',
                         'unreviewed' => Color::rgb('rgb(' . Color::Gray[600] . ')'),
                         'uncategorized' => 'gray',
                     })
-                    ->tooltip(static fn (Transaction $record, Tables\Actions\Action $action) => match (static::determineTransactionState($record, $action)) {
+                    ->tooltip(static fn (Transaction $transaction, Tables\Actions\Action $action) => match (static::determineTransactionState($transaction, $action)) {
                         'reviewed' => 'Reviewed',
                         'unreviewed' => 'Mark as Reviewed',
                         'uncategorized' => 'Categorize first to mark as reviewed',
                     })
-                    ->disabled(fn (Transaction $record): bool => $record->isUncategorized())
-                    ->action(fn (Transaction $record) => $record->update(['reviewed' => ! $record->reviewed])),
+                    ->disabled(fn (Transaction $transaction): bool => $transaction->isUncategorized())
+                    ->action(fn (Transaction $transaction) => $transaction->update(['reviewed' => ! $transaction->reviewed])),
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make('updateTransaction')
                         ->label('Edit Transaction')
                         ->modalHeading('Edit Transaction')
                         ->modalWidth(MaxWidth::ThreeExtraLarge)
                         ->form(fn (Form $form) => $this->transactionForm($form))
-                        ->hidden(static fn (Transaction $record) => $record->type->isJournal()),
+                        ->hidden(static fn (Transaction $transaction) => $transaction->type->isJournal()),
                     Tables\Actions\EditAction::make('updateJournalTransaction')
                         ->label('Edit Journal Transaction')
                         ->modalHeading('Journal Entry')
                         ->modalWidth(MaxWidth::Screen)
                         ->form(fn (Form $form) => $this->journalTransactionForm($form))
-                        ->afterFormFilled(function (Transaction $record) {
-                            $debitAmounts = $record->journalEntries->where('type', JournalEntryType::Debit)->sum('amount');
-                            $creditAmounts = $record->journalEntries->where('type', JournalEntryType::Credit)->sum('amount');
+                        ->afterFormFilled(function (Transaction $transaction) {
+                            $debitAmounts = $transaction->journalEntries->sumDebits()->getAmount();
+                            $creditAmounts = $transaction->journalEntries->sumCredits()->getAmount();
 
                             $this->setDebitAmount($debitAmounts);
                             $this->setCreditAmount($creditAmounts);
                         })
-                        ->visible(static fn (Transaction $record) => $record->type->isJournal()),
+                        ->modalSubmitAction(fn (Actions\StaticAction $action) => $action->disabled(! $this->isJournalEntryBalanced()))
+                        ->after(fn (Transaction $transaction) => $transaction->updateAmountIfBalanced())
+                        ->visible(static fn (Transaction $transaction) => $transaction->type->isJournal()),
                     Tables\Actions\DeleteAction::make(),
                     Tables\Actions\ReplicateAction::make()
                         ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
                         ->modal(false)
-                        ->beforeReplicaSaved(static function (Transaction $replica) {
-                            $replica->description = '(Copy of) ' . $replica->description;
+                        ->beforeReplicaSaved(static function (Transaction $transaction) {
+                            $transaction->description = '(Copy of) ' . $transaction->description;
                         }),
                 ])
                     ->dropdownPlacement('bottom-start')
@@ -503,6 +497,23 @@ class Transactions extends Page implements HasTable
             ->schema($this->getJournalEntriesTableRepeaterSchema())
             ->streamlined()
             ->deletable(fn (JournalEntryRepeater $repeater) => $repeater->getItemsCount() > 2)
+            ->deleteAction(function (Forms\Components\Actions\Action $action) {
+                return $action
+                    ->action(function (array $arguments, JournalEntryRepeater $component): void {
+                        $items = $component->getState();
+
+                        $amount = $items[$arguments['item']]['amount'];
+                        $type = $items[$arguments['item']]['type'];
+
+                        $this->updateJournalEntryAmount(JournalEntryType::parse($type), '0.00', $amount);
+
+                        unset($items[$arguments['item']]);
+
+                        $component->state($items);
+
+                        $component->callAfterStateUpdated();
+                    });
+            })
             ->minItems(2)
             ->defaultItems(2)
             ->addable(false)
@@ -553,7 +564,7 @@ class Transactions extends Page implements HasTable
             TextInput::make('amount')
                 ->label('Amount')
                 ->live()
-                ->mask(RawJs::make('$money($input)'))
+                ->mask(moneyMask(CurrencyAccessor::getDefaultCurrency()))
                 ->afterStateUpdated(function (Get $get, Set $set, ?string $state, ?string $old) {
                     $this->updateJournalEntryAmount(JournalEntryType::parse($get('type')), $state, $old);
                 })
@@ -683,13 +694,13 @@ class Transactions extends Page implements HasTable
         }
     }
 
-    protected static function determineTransactionState(Transaction $record, Tables\Actions\Action $action): string
+    protected static function determineTransactionState(Transaction $transaction, Tables\Actions\Action $action): string
     {
-        if ($record->reviewed) {
+        if ($transaction->reviewed) {
             return 'reviewed';
         }
 
-        if ($record->reviewed === false && $action->isEnabled()) {
+        if ($transaction->reviewed === false && $action->isEnabled()) {
             return 'unreviewed';
         }
 
@@ -743,6 +754,6 @@ class Transactions extends Page implements HasTable
 
     protected function getBalanceForAllAccounts(): string
     {
-        return Accounting::getTotalBalanceForAllBankAccounts($this->fiscalYearStartDate, $this->fiscalYearEndDate)->formatted();
+        return Accounting::getTotalBalanceForAllBankAccounts($this->fiscalYearStartDate, $this->fiscalYearEndDate)->format();
     }
 }
