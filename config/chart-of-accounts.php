@@ -31,7 +31,7 @@ return [
             ],
             'Prepaid and Deferred Charges' => [
                 'description' => 'Payments made in advance for future goods or services, such as insurance premiums, rent, and prepaid taxes.',
-                'multi_currency' => false,
+                'multi_currency' => true,
                 'base_code' => '1300',
             ],
             'Other Current Assets' => [
@@ -48,12 +48,12 @@ return [
             ],
             'Fixed Assets' => [
                 'description' => 'Physical, tangible assets used in the business\'s operations with a useful life exceeding one year, such as buildings, machinery, and vehicles. These assets are subject to depreciation.',
-                'multi_currency' => false,
+                'multi_currency' => true,
                 'base_code' => '1600',
             ],
             'Intangible Assets' => [
                 'description' => 'Assets lacking physical substance but offering value to the business, like patents, copyrights, trademarks, software, and goodwill.',
-                'multi_currency' => false,
+                'multi_currency' => true,
                 'base_code' => '1700',
             ],
             'Other Non-Current Assets' => [
@@ -69,7 +69,7 @@ return [
                 'base_code' => '1900',
             ],
             'Allowances for Receivables' => [
-                'description' => 'Accounts representing estimated uncollectible receivables, used to adjust the value of gross receivables to a realistic collectible amount.',
+                'description' => 'Accounts representing estimated uncollected receivables, used to adjust the value of gross receivables to a realistic collectible amount.',
                 'multi_currency' => false,
                 'base_code' => '1940',
             ],

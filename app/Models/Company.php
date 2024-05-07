@@ -8,7 +8,6 @@ use App\Models\Banking\BankAccount;
 use App\Models\Banking\ConnectedBankAccount;
 use App\Models\Common\Contact;
 use App\Models\Core\Department;
-use App\Models\History\AccountHistory;
 use App\Models\Setting\Appearance;
 use App\Models\Setting\CompanyDefault;
 use App\Models\Setting\CompanyProfile;
@@ -73,11 +72,6 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
     public function accounts(): HasMany
     {
         return $this->hasMany(Accounting\Account::class, 'company_id');
-    }
-
-    public function accountHistories(): HasMany
-    {
-        return $this->hasMany(AccountHistory::class, 'company_id');
     }
 
     public function bankAccounts(): HasMany

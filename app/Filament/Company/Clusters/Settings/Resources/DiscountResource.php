@@ -101,11 +101,11 @@ class DiscountResource extends Resource
                         Forms\Components\DateTimePicker::make('start_date')
                             ->localizeLabel()
                             ->minDate(static function ($context, ?Discount $record = null) {
-                                if ($context === 'create') {
+                                if ($context === 'create' || $record?->start_date?->isFuture()) {
                                     return today()->addDay();
                                 }
 
-                                return $record?->start_date?->isFuture() ? today()->addDay() : $record?->start_date;
+                                return $record?->start_date;
                             })
                             ->maxDate(static function (callable $get, ?Discount $record = null) {
                                 $end_date = $get('end_date') ?? $record?->end_date;

@@ -9,7 +9,6 @@ use App\Concerns\HasDefault;
 use App\Concerns\SyncsWithCompanyDefaults;
 use App\Facades\Forex;
 use App\Models\Accounting\Account;
-use App\Models\History\AccountHistory;
 use App\Observers\CurrencyObserver;
 use App\Utilities\Currency\CurrencyAccessor;
 use Database\Factories\Setting\CurrencyFactory;
@@ -79,11 +78,6 @@ class Currency extends Model
     public function accounts(): HasMany
     {
         return $this->hasMany(Account::class, 'currency_code', 'code');
-    }
-
-    public function accountHistories(): HasMany
-    {
-        return $this->hasMany(AccountHistory::class, 'currency_code', 'code');
     }
 
     protected static function newFactory(): Factory

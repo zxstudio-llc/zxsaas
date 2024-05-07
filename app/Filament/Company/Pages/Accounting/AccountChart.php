@@ -3,13 +3,14 @@
 namespace App\Filament\Company\Pages\Accounting;
 
 use App\Enums\Accounting\AccountCategory;
-use App\Models\Accounting\Account as ChartModel;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -30,8 +31,6 @@ class AccountChart extends Page
 
     protected static string $view = 'filament.company.pages.accounting.chart';
 
-    public ?ChartModel $chart = null;
-
     #[Url]
     public ?string $activeTab = null;
 
@@ -43,9 +42,8 @@ class AccountChart extends Page
     protected function configureAction(Action $action): void
     {
         $action
-            ->modalWidth(MaxWidth::TwoExtraLarge)
-            ->stickyModalHeader()
-            ->stickyModalFooter();
+            ->modal()
+            ->modalWidth(MaxWidth::TwoExtraLarge);
     }
 
     #[Computed]
@@ -60,21 +58,12 @@ class AccountChart extends Page
     {
         return EditAction::make()
             ->iconButton()
-            ->record($this->chart)
             ->name('editChart')
             ->label('Edit account')
             ->modalHeading('Edit Account')
             ->icon('heroicon-m-pencil-square')
-            ->mountUsing(function (array $arguments, Form $form) {
-                $chartId = $arguments['chart'];
-                $this->chart = ChartModel::find($chartId);
-
-                $form
-                    ->fill($this->chart->toArray())
-                    ->operation('edit')
-                    ->model($this->chart); // This is needed for form relationships to work (maybe a bug in Filament regarding passed arguments related to timing)
-            })
-            ->form($this->getChartForm());
+            ->record(fn (array $arguments) => Account::find($arguments['chart']))
+            ->form(fn (Form $form) => $this->getChartForm($form)->operation('edit'));
     }
 
     public function createChartAction(): Action
@@ -82,66 +71,94 @@ class AccountChart extends Page
         return CreateAction::make()
             ->link()
             ->name('createChart')
-            ->form($this->getChartForm())
-            ->model(ChartModel::class)
+            ->model(Account::class)
             ->label('Add a new account')
             ->icon('heroicon-o-plus-circle')
-            ->mountUsing(function (array $arguments, Form $form) {
-                $subtypeId = $arguments['subtype'];
-                $this->chart = new ChartModel([
-                    'subtype_id' => $subtypeId,
-                ]);
+            ->form(fn (Form $form) => $this->getChartForm($form)->operation('create'))
+            ->fillForm(fn (array $arguments): array => $this->getChartFormDefaults($arguments['subtype']));
+    }
 
-                if ($subtypeId) {
-                    $companyId = auth()->user()->currentCompany->id;
-                    $generatedCode = AccountCode::generate($companyId, $subtypeId);
-                    $this->chart->code = $generatedCode;
+    private function getChartFormDefaults(int $subtypeId): array
+    {
+        $accountSubtype = AccountSubtype::find($subtypeId);
+        $generatedCode = AccountCode::generate($accountSubtype);
+
+        return [
+            'subtype_id' => $subtypeId,
+            'code' => $generatedCode,
+        ];
+    }
+
+    private function getChartForm(Form $form, bool $useActiveTab = true): Form
+    {
+        return $form
+            ->schema([
+                $this->getTypeFormComponent($useActiveTab),
+                $this->getCodeFormComponent(),
+                $this->getNameFormComponent(),
+                $this->getCurrencyFormComponent(),
+                $this->getDescriptionFormComponent(),
+            ]);
+    }
+
+    protected function getTypeFormComponent(bool $useActiveTab = true): Component
+    {
+        return Select::make('subtype_id')
+            ->label('Type')
+            ->required()
+            ->live()
+            ->disabled(static function (string $operation): bool {
+                return $operation === 'edit';
+            })
+            ->options($this->getChartSubtypeOptions($useActiveTab))
+            ->afterStateUpdated(static function (?string $state, Set $set): void {
+                if ($state) {
+                    $accountSubtype = AccountSubtype::find($state);
+                    $generatedCode = AccountCode::generate($accountSubtype);
+                    $set('code', $generatedCode);
                 }
-
-                $form->fill($this->chart->toArray())
-                    ->operation('create');
             });
     }
 
-    private function getChartForm(bool $useActiveTab = true): array
+    protected function getCodeFormComponent(): Component
     {
-        return [
-            Select::make('subtype_id')
-                ->label('Type')
-                ->required()
-                ->live()
-                ->disabled(static fn (string $operation, ?ChartModel $record) => $operation === 'edit' && $record?->default === true)
-                ->options($this->getChartSubtypeOptions($useActiveTab))
-                ->afterStateUpdated(static function (?string $state, Set $set): void {
-                    if ($state) {
-                        $companyId = auth()->user()->currentCompany->id;
-                        $generatedCode = AccountCode::generate($companyId, $state);
-                        $set('code', $generatedCode);
-                    }
-                }),
-            TextInput::make('code')
-                ->label('Code')
-                ->required()
-                ->validationAttribute('account code')
-                ->unique(table: ChartModel::class, column: 'code', ignoreRecord: true)
-                ->validateAccountCode(static fn (Get $get) => $get('subtype_id')),
-            TextInput::make('name')
-                ->label('Name')
-                ->required(),
-            Select::make('currency_code')
-                ->localizeLabel('Currency')
-                ->relationship('currency', 'name')
-                ->default(CurrencyAccessor::getDefaultCurrency())
-                ->preload()
-                ->searchable()
-                ->visible(function (Get $get): bool {
-                    return filled($get('subtype_id')) && AccountSubtype::find($get('subtype_id'))->multi_currency;
-                })
-                ->live(),
-            Textarea::make('description')
-                ->label('Description')
-                ->autosize(),
-        ];
+        return TextInput::make('code')
+            ->label('Code')
+            ->required()
+            ->validationAttribute('account code')
+            ->unique(table: Account::class, column: 'code', ignoreRecord: true)
+            ->validateAccountCode(static fn (Get $get) => $get('subtype_id'));
+    }
+
+    protected function getNameFormComponent(): Component
+    {
+        return TextInput::make('name')
+            ->label('Name')
+            ->required();
+    }
+
+    protected function getCurrencyFormComponent()
+    {
+        return Select::make('currency_code')
+            ->localizeLabel('Currency')
+            ->relationship('currency', 'name')
+            ->default(CurrencyAccessor::getDefaultCurrency())
+            ->preload()
+            ->searchable()
+            ->disabled(static function (string $operation): bool {
+                return $operation === 'edit';
+            })
+            ->visible(function (Get $get): bool {
+                return filled($get('subtype_id')) && AccountSubtype::find($get('subtype_id'))->multi_currency;
+            })
+            ->live();
+    }
+
+    protected function getDescriptionFormComponent(): Component
+    {
+        return Textarea::make('description')
+            ->label('Description')
+            ->autosize();
     }
 
     private function getChartSubtypeOptions($useActiveTab = true): array
@@ -161,8 +178,8 @@ class AccountChart extends Page
             CreateAction::make()
                 ->button()
                 ->label('Add New Account')
-                ->model(ChartModel::class)
-                ->form($this->getChartForm(false)),
+                ->model(Account::class)
+                ->form(fn (Form $form) => $this->getChartForm($form, false)->operation('create')),
         ];
     }
 

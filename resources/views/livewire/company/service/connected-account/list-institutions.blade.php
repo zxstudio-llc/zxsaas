@@ -56,7 +56,7 @@
 
                             @if($account?->ending_balance)
                                 <div class="account-balance flex text-base leading-6 text-gray-700 dark:text-gray-200 space-x-1">
-                                    <strong wire:poll.visible>{{ $account->ending_balance->formatted() }}</strong>
+                                    <strong wire:poll.visible>{{ $account->ending_balance->format() }}</strong>
                                     <p>{{ $account->currency_code }}</p>
                                 </div>
                             @endif

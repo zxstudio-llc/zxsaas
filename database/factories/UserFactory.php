@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Events\CompanyGenerated;
 use App\Models\Company;
-use App\Models\Setting\CompanyDefault;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -56,7 +56,7 @@ class UserFactory extends Factory
     /**
      * Indicate that the user should have a personal company.
      */
-    public function withPersonalCompany(?callable $callback = null): static
+    public function withPersonalCompany(): static
     {
         if (! FilamentCompanies::hasCompanyFeatures()) {
             return $this->state([]);
@@ -64,19 +64,35 @@ class UserFactory extends Factory
 
         $countryCode = $this->faker->countryCode;
 
-        return $this->afterCreating(function (User $user) use ($countryCode, $callback) {
+        return $this->afterCreating(function (User $user) use ($countryCode) {
             Company::factory()
-                ->state(static fn (array $attributes, User $user) => [
+                ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
+                ->afterCreating(function (Company $company) use ($user, $countryCode) {
+                    CompanyGenerated::dispatch($user, $company, $countryCode);
+
+                    $defaultBankAccount = $company->bankAccounts()->where('enabled', true)->first();
+                    $defaultCurrency = $company->currencies()->where('enabled', true)->first();
+                    $defaultSalesTax = $company->taxes()->where('type', 'sales')->where('enabled', true)->first();
+                    $defaultPurchaseTax = $company->taxes()->where('type', 'purchase')->where('enabled', true)->first();
+                    $defaultSalesDiscount = $company->discounts()->where('type', 'sales')->where('enabled', true)->first();
+                    $defaultPurchaseDiscount = $company->discounts()->where('type', 'purchase')->where('enabled', true)->first();
+
+                    $company->default()->create([
+                        'bank_account_id' => $defaultBankAccount?->id,
+                        'currency_code' => $defaultCurrency?->code,
+                        'sales_tax_id' => $defaultSalesTax?->id,
+                        'purchase_tax_id' => $defaultPurchaseTax?->id,
+                        'sales_discount_id' => $defaultSalesDiscount?->id,
+                        'purchase_discount_id' => $defaultPurchaseDiscount?->id,
+                        'created_by' => $user->id,
+                        'updated_by' => $user->id,
+                    ]);
+                })
+                ->create([
                     'name' => $user->name . '\'s Company',
                     'user_id' => $user->id,
                     'personal_company' => true,
-                ])
-                ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
-                ->afterCreating(function (Company $company) use ($user, $countryCode) {
-                    CompanyDefault::factory()->withDefault($user, $company, $countryCode)->create();
-                })
-                ->when(is_callable($callback), $callback)
-                ->create();
+                ]);
         });
     }
 }

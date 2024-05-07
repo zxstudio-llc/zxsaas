@@ -3,7 +3,6 @@
 namespace App\Utilities\Accounting;
 
 use App\Enums\Accounting\AccountType;
-use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use RuntimeException;
 
@@ -49,32 +48,34 @@ class AccountCode
         };
     }
 
-    public static function generate(int $companyId, string $subtypeId): string
+    public static function generate(AccountSubtype $accountSubtype): string
     {
-        $subtype = AccountSubtype::find($subtypeId);
-        $subtypeName = $subtype->name;
-        $typeEnum = $subtype->type;
+        $subtypeName = $accountSubtype->name;
+        $typeEnum = $accountSubtype->type;
         $typeValue = $typeEnum->value;
 
         $baseCode = config("chart-of-accounts.default.{$typeValue}.{$subtypeName}.base_code");
         $range = self::getRangeForType($typeEnum);
 
-        $lastAccount = Account::where('subtype_id', $subtypeId)
-            ->where('company_id', $companyId)
+        $lastAccount = $accountSubtype->accounts()
             ->whereNotNull('code')
             ->orderBy('code', 'desc')
             ->first();
 
-        $numericValue = $lastAccount ? (int) explode('-', $lastAccount->code)[0] + 1 : (int) $baseCode;
+        $nextNumericValue = $lastAccount ? (int) explode('-', $lastAccount->code)[0] + 1 : (int) $baseCode;
 
-        // Ensure the new code does not exist and is within the acceptable range
-        while (Account::where('company_id', $companyId)->where('code', '=', (string) $numericValue)->exists() || $numericValue > $range[1]) {
-            if ($numericValue > $range[1]) {
-                throw new RuntimeException('No more account codes available within the allowed range for this type.');
-            }
-            $numericValue++;
+        if ($nextNumericValue > $range[1]) {
+            throw new RuntimeException("The account code range for a {$typeEnum->getLabel()} has been exceeded.");
         }
 
-        return (string) $numericValue;
+        while ($accountSubtype->accounts()->where('code', '=', (string) $nextNumericValue)->exists()) {
+            $nextNumericValue++;
+
+            if ($nextNumericValue > $range[1]) {
+                throw new RuntimeException("The account code range for a {$typeEnum->getLabel()} has been exceeded.");
+            }
+        }
+
+        return (string) $nextNumericValue;
     }
 }

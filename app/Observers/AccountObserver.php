@@ -38,7 +38,7 @@ class AccountObserver
 
     private function setFieldsForBankAccount(Account $account): void
     {
-        $generatedAccountCode = AccountCode::generate($account->company_id, $account->subtype_id);
+        $generatedAccountCode = AccountCode::generate($account->subtype_id);
 
         $account->code = $generatedAccountCode;
 
@@ -53,37 +53,5 @@ class AccountObserver
         if (($account->accountable_type === BankAccount::class) && $account->code === null) {
             $this->setFieldsForBankAccount($account);
         }
-    }
-
-    /**
-     * Handle the Account "updated" event.
-     */
-    public function updated(Account $account): void
-    {
-        //
-    }
-
-    /**
-     * Handle the Account "deleted" event.
-     */
-    public function deleted(Account $account): void
-    {
-        //
-    }
-
-    /**
-     * Handle the Account "restored" event.
-     */
-    public function restored(Account $account): void
-    {
-        //
-    }
-
-    /**
-     * Handle the Account "force deleted" event.
-     */
-    public function forceDeleted(Account $account): void
-    {
-        //
     }
 }
