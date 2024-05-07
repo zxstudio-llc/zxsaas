@@ -13,7 +13,6 @@ use App\Filament\Company\Clusters\Settings\Resources\DiscountResource\Pages;
 use App\Models\Setting\Discount;
 use App\Models\Setting\Localization;
 use Closure;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -37,15 +36,6 @@ class DiscountResource extends Resource
         $modelLabel = static::$modelLabel;
 
         return translate($modelLabel);
-    }
-
-    public static function getNavigationParentItem(): ?string
-    {
-        if (Filament::hasTopNavigation()) {
-            return translate('Finance');
-        }
-
-        return null;
     }
 
     public static function form(Form $form): Form

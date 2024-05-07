@@ -10,7 +10,6 @@ use App\Filament\Company\Clusters\Settings;
 use App\Filament\Company\Clusters\Settings\Resources\TaxResource\Pages;
 use App\Models\Setting\Tax;
 use Closure;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -34,15 +33,6 @@ class TaxResource extends Resource
         $modelLabel = static::$modelLabel;
 
         return translate($modelLabel);
-    }
-
-    public static function getNavigationParentItem(): ?string
-    {
-        if (Filament::hasTopNavigation()) {
-            return translate('Finance');
-        }
-
-        return null;
     }
 
     public static function form(Form $form): Form
