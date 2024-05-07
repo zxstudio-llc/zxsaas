@@ -38,7 +38,7 @@ class AccountObserver
 
     private function setFieldsForBankAccount(Account $account): void
     {
-        $generatedAccountCode = AccountCode::generate($account->subtype_id);
+        $generatedAccountCode = AccountCode::generate($account->subtype);
 
         $account->code = $generatedAccountCode;
 
