@@ -5,7 +5,8 @@
 <img width="1920" alt="Screenshot 2024-05-07 at 10 23 31 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c85862ac-62ff-4c0d-9b2a-f7393ad977ef">
 <img width="1920" alt="Screenshot 2024-05-07 at 10 24 11 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/3a4deebc-528c-4b84-91db-9f0515de883d">
 <img width="1920" alt="Screenshot 2024-05-07 at 10 24 46 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c50a899d-ee6f-4300-92a9-4a41c5433972">
-<img width="1920" alt="Screenshot 2024-05-07 at 10 25 19 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/cfdab106-5d3d-4053-ac69-a2a1b0ca90d0">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 55 56 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/6395030a-6688-4b08-bf6c-b12b5e591b31">
+
 
 
 This repo is currently a work in progress — PRs and issues welcome!
@@ -150,6 +151,25 @@ public static function getAllLanguages(): array
 }
 ```
 
+## Plaid Integration
+
+To integrate [Plaid](https://plaid.com/) with your application for enhanced financial data connectivity, you must first create an account with Plaid and obtain your credentials. Set your credentials in the `.env` file as follows:
+
+```env
+PLAID_CLIENT_ID=your-client-id
+PLAID_CLIENT_SECRET=your-secret
+PLAID_ENVIRONMENT=sandbox # Can be sandbox, development, or production
+PLAID_WEBHOOK_URL=https://my-static-domain.ngrok-free.app/api/plaid/webhook # Must have /api/plaid/webhook appended
+```
+
+The `PLAID_WEBHOOK_URL` is essential as it enables your application to receive real-time updates on transactions from connected bank accounts. This webhook URL must contain a static domain, which can be obtained from services like ngrok that offer a free static domain upon signup. Alternatively, you may use any other service that provides a static domain.
+
+After integrating Plaid, you can connect your account on the "Connected Accounts" page and link your financial institution. Before importing transactions, ensure to run the following command to process the queued transactions:
+
+```bash
+php artisan queue:work --queue=transactions
+```
+
 ## Dependencies
 
 - [filamentphp/filament](https://github.com/filamentphp/filament) - A collection of beautiful full-stack components
@@ -157,6 +177,7 @@ public static function getAllLanguages(): array
 - [andrewdwallo/transmatic](https://github.com/andrewdwallo/transmatic) - A package for automatic translation using machine translation services
 - [akaunting/laravel-money](https://github.com/akaunting/laravel-money) - Currency formatting and conversion package for Laravel
 - [squirephp/squire](https://github.com/squirephp/squire) - A library of static Eloquent models for common fixture data
+- [awcodes/filament-table-repeater](https://github.com/awcodes/filament-table-repeater) - A modified version of the Filament Forms Repeater to display it as a table. 
 
 ***Note*** : It is recommended to read the documentation for all dependencies to get yourself familiar with how the application works.
 
