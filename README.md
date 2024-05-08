@@ -1,9 +1,11 @@
 # ERPSAAS
 
-![Screenshot 2023-11-25 at 3 29 26 AM](https://github.com/andrewdwallo/erpsaas/assets/104294090/d1c8ed6d-4fd2-4c88-a02b-0f1534700b0f)
-![Screenshot 2023-12-06 at 3 33 25 AM](https://github.com/andrewdwallo/erpsaas/assets/104294090/d543681b-4d53-40e3-8d01-5b55b6b97c86)
-![Screenshot 2023-12-06 at 3 28 46 AM](https://github.com/andrewdwallo/erpsaas/assets/104294090/33beed6c-3ff5-4819-a8ae-71feaa6b95da)
-![Screenshot 2023-12-07 at 11 12 30 PM](https://github.com/andrewdwallo/erpsaas/assets/104294090/bdef3b98-f456-4b70-bf76-4a5b435c0939)
+<img width="1920" alt="Screenshot 2024-05-07 at 10 01 46 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/5146c4db-dffc-4207-9095-2ebb80d452e1">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 04 05 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/d7115830-6912-4267-ab54-17f7dbcc21cd">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 23 31 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c85862ac-62ff-4c0d-9b2a-f7393ad977ef">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 24 11 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/3a4deebc-528c-4b84-91db-9f0515de883d">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 24 46 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c50a899d-ee6f-4300-92a9-4a41c5433972">
+<img width="1920" alt="Screenshot 2024-05-07 at 10 25 19 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/cfdab106-5d3d-4053-ac69-a2a1b0ca90d0">
 
 
 This repo is currently a work in progress — PRs and issues welcome!
