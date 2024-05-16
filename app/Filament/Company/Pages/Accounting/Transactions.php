@@ -127,15 +127,16 @@ class Transactions extends Page implements HasTable
         return $form
             ->schema([
                 Forms\Components\Select::make('bankAccountIdFiltered')
-                    ->label('Account')
-                    ->hiddenLabel()
-                    ->allowHtml()
-                    ->options(fn () => $this->getBankAccountOptions(true, true))
                     ->live()
+                    ->allowHtml()
+                    ->hiddenLabel()
+                    ->columnSpan(2)
+                    ->label('Account')
                     ->selectablePlaceholder(false)
-                    ->columnSpan(4),
+                    ->extraAttributes(['wire:key' => Str::random()])
+                    ->options(fn () => $this->getBankAccountOptions(true, true)),
             ])
-            ->columns(14);
+            ->columns(7);
     }
 
     public function transactionForm(Form $form): Form
