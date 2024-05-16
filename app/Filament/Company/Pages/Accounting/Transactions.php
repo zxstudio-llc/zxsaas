@@ -296,6 +296,7 @@ class Transactions extends Page implements HasTable
                 $this->buildDateRangeFilter('updated_at', 'Last Modified'),
             ], layout: Tables\Enums\FiltersLayout::Modal)
             ->deferFilters()
+            ->deferLoading()
             ->filtersFormColumns(2)
             ->filtersTriggerAction(
                 fn (Tables\Actions\Action $action) => $action

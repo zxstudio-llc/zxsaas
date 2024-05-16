@@ -28,32 +28,32 @@ class CreateCompany extends FilamentCreateCompany
                     ->label(__('filament-companies::default.labels.company_name'))
                     ->autofocus()
                     ->maxLength(255)
-                    ->required(),
+                    ->softRequired(),
                 TextInput::make('profile.email')
                     ->label('Company Email')
                     ->email()
-                    ->required(),
+                    ->softRequired(),
                 Select::make('profile.entity_type')
                     ->label('Entity Type')
                     ->options(EntityType::class)
-                    ->required(),
+                    ->softRequired(),
                 Select::make('profile.country')
                     ->label('Country')
                     ->live()
                     ->searchable()
                     ->options(Country::getAvailableCountryOptions())
-                    ->required(),
+                    ->softRequired(),
                 Select::make('locale.language')
                     ->label('Language')
                     ->searchable()
                     ->options(Localization::getAllLanguages())
-                    ->required(),
+                    ->softRequired(),
                 Select::make('currencies.code')
                     ->label('Currency')
                     ->searchable()
                     ->options(CurrencyAccessor::getAllCurrencyOptions())
                     ->optionsLimit(5)
-                    ->required(),
+                    ->softRequired(),
             ])
             ->model(FilamentCompanies::companyModel())
             ->statePath('data');

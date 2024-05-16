@@ -163,7 +163,8 @@ class Invoice extends Page
                 TextInput::make('subheader')
                     ->localizeLabel()
                     ->nullable(),
-                MarkdownEditor::make('terms')
+                Textarea::make('terms')
+                    ->localizeLabel()
                     ->nullable(),
                 Textarea::make('footer')
                     ->localizeLabel('Footer / Notes')
