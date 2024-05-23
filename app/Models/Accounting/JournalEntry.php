@@ -7,7 +7,6 @@ use App\Collections\Accounting\JournalEntryCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\JournalEntryType;
-use App\Models\Banking\BankAccount;
 use Database\Factories\Accounting\JournalEntryFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,11 +43,6 @@ class JournalEntry extends Model
     public function transaction(): BelongsTo
     {
         return $this->belongsTo(Transaction::class, 'transaction_id');
-    }
-
-    public function bankAccount(): BelongsTo
-    {
-        return $this->account()->where('accountable_type', BankAccount::class);
     }
 
     public function isUncategorized(): bool

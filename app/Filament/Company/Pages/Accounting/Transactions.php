@@ -718,7 +718,7 @@ class Transactions extends Page implements HasTable
         };
 
         return Account::query()
-            ->when($nominalAccountsOnly, fn (Builder $query) => $query->whereNull('accountable_type'))
+            ->when($nominalAccountsOnly, fn (Builder $query) => $query->doesntHave('bankAccount'))
             ->when($excludedCategory, fn (Builder $query) => $query->whereNot('category', $excludedCategory))
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())

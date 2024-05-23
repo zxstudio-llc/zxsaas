@@ -127,10 +127,10 @@ class Localization extends Page
                     ->options(LocalizationModel::getAllLanguages())
                     ->searchable(),
                 Select::make('timezone')
+                    ->softRequired()
                     ->localizeLabel()
                     ->options(Timezone::getTimezoneOptions(CompanyProfileModel::first()->country))
-                    ->searchable()
-                    ->nullable(),
+                    ->searchable(),
             ])->columns();
     }
 

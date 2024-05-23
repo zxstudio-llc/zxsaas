@@ -6,7 +6,6 @@ use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
-use App\Models\Banking\BankAccount;
 use App\Utilities\Accounting\AccountCode;
 
 class AccountObserver
@@ -41,8 +40,6 @@ class AccountObserver
         $generatedAccountCode = AccountCode::generate($account->subtype);
 
         $account->code = $generatedAccountCode;
-
-        $account->save();
     }
 
     /**
@@ -50,8 +47,9 @@ class AccountObserver
      */
     public function created(Account $account): void
     {
-        if (($account->accountable_type === BankAccount::class) && $account->code === null) {
+        if ($account->bankAccount && $account->code === null) {
             $this->setFieldsForBankAccount($account);
+            $account->save();
         }
     }
 }

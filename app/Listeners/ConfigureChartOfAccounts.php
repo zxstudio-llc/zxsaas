@@ -79,7 +79,7 @@ class ConfigureChartOfAccounts
                 ]);
 
                 if ($bankAccount) {
-                    $account->accountable()->associate($bankAccount);
+                    $account->bankAccount()->associate($bankAccount);
                 }
 
                 $account->save();

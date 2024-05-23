@@ -189,15 +189,19 @@ class AccountService implements AccountHandler
 
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money
     {
-        $bankAccountsAccounts = Account::where('accountable_type', BankAccount::class)
+        $bankAccounts = BankAccount::with('account')
             ->get();
 
         $totalBalance = 0;
 
         // Get ending balance for each bank account
-        foreach ($bankAccountsAccounts as $account) {
-            $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
-            $totalBalance += $endingBalance;
+        foreach ($bankAccounts as $bankAccount) {
+            $account = $bankAccount->account;
+
+            if ($account) {
+                $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
+                $totalBalance += $endingBalance;
+            }
         }
 
         return new Money($totalBalance, CurrencyAccessor::getDefaultCurrency());
