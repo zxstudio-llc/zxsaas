@@ -2,73 +2,40 @@
 
 namespace App\Filament\Company\Pages\Reports;
 
-use App\DTO\AccountBalanceReportDTO;
-use App\Filament\Forms\Components\DateRangeSelect;
-use App\Models\Company;
+use App\DTO\ReportDTO;
 use App\Services\AccountBalancesExportService;
-use App\Services\AccountService;
+use App\Services\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Split;
-use Filament\Forms\Form;
-use Filament\Forms\Set;
-use Filament\Pages\Page;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class AccountBalances extends Page
+class AccountBalances extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.account-balances';
 
     protected static ?string $slug = 'reports/account-balances';
 
-    public string $startDate = '';
+    protected static bool $shouldRegisterNavigation = false;
 
-    public string $endDate = '';
+    protected ReportService $reportService;
 
-    public string $dateRange = '';
-
-    public string $fiscalYearStartDate = '';
-
-    public string $fiscalYearEndDate = '';
-
-    public Company $company;
-
-    public AccountBalanceReportDTO $accountBalanceReport;
-
-    protected AccountService $accountService;
+    public ReportDTO $accountBalanceReport;
 
     protected AccountBalancesExportService $accountBalancesExportService;
 
-    public function boot(AccountService $accountService, AccountBalancesExportService $accountBalancesExportService): void
+    public function boot(ReportService $reportService, AccountBalancesExportService $accountBalancesExportService): void
     {
-        $this->accountService = $accountService;
+        $this->reportService = $reportService;
         $this->accountBalancesExportService = $accountBalancesExportService;
     }
 
-    public function mount(): void
+    public function loadReportData(): void
     {
-        $this->company = auth()->user()->currentCompany;
-        $this->fiscalYearStartDate = $this->company->locale->fiscalYearStartDate();
-        $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
-        $this->dateRange = $this->getDefaultDateRange();
-        $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
-
-        $this->loadAccountBalances();
-    }
-
-    public function getDefaultDateRange(): string
-    {
-        return 'FY-' . now()->year;
-    }
-
-    public function loadAccountBalances(): void
-    {
-        $this->accountBalanceReport = $this->accountService->buildAccountBalanceReport($this->startDate, $this->endDate);
+        $this->accountBalanceReport = $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate);
     }
 
     protected function getHeaderActions(): array
@@ -109,42 +76,5 @@ class AccountBalances extends Page
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->stream();
         }, 'account-balances.pdf');
-    }
-
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Split::make([
-                    DateRangeSelect::make('dateRange')
-                        ->label('Date Range')
-                        ->selectablePlaceholder(false)
-                        ->startDateField('startDate')
-                        ->endDateField('endDate'),
-                    DatePicker::make('startDate')
-                        ->label('Start Date')
-                        ->displayFormat('Y-m-d')
-                        ->afterStateUpdated(static function (Set $set) {
-                            $set('dateRange', 'Custom');
-                        }),
-                    DatePicker::make('endDate')
-                        ->label('End Date')
-                        ->displayFormat('Y-m-d')
-                        ->afterStateUpdated(static function (Set $set) {
-                            $set('dateRange', 'Custom');
-                        }),
-                ])->live(),
-            ]);
-    }
-
-    public function setDateRange(Carbon $start, Carbon $end): void
-    {
-        $this->startDate = $start->format('Y-m-d');
-        $this->endDate = $end->isFuture() ? now()->format('Y-m-d') : $end->format('Y-m-d');
-    }
-
-    public static function shouldRegisterNavigation(): bool
-    {
-        return false;
     }
 }

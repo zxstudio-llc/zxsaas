@@ -13,13 +13,11 @@ class CompanyDefaultEvent
     use InteractsWithSockets;
     use SerializesModels;
 
-    public Model $model;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(Model $model)
-    {
-        $this->model = $model;
+    public function __construct(
+        public Model $model
+    ) {
     }
 }

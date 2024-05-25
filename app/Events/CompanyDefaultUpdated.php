@@ -13,16 +13,12 @@ class CompanyDefaultUpdated
     use InteractsWithSockets;
     use SerializesModels;
 
-    public Model $record;
-
-    public array $data;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(Model $record, array $data)
-    {
-        $this->record = $record;
-        $this->data = $data;
+    public function __construct(
+        public Model $record,
+        public array $data
+    ) {
     }
 }

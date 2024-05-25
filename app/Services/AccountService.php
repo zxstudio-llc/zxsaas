@@ -3,10 +3,6 @@
 namespace App\Services;
 
 use App\Contracts\AccountHandler;
-use App\DTO\AccountBalanceDTO;
-use App\DTO\AccountBalanceReportDTO;
-use App\DTO\AccountCategoryDTO;
-use App\DTO\AccountDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
@@ -14,15 +10,12 @@ use App\Models\Banking\BankAccount;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\Money;
-use Illuminate\Database\Eloquent\Collection;
 
 class AccountService implements AccountHandler
 {
-    protected JournalEntryRepository $journalEntryRepository;
-
-    public function __construct(JournalEntryRepository $journalEntryRepository)
-    {
-        $this->journalEntryRepository = $journalEntryRepository;
+    public function __construct(
+        protected JournalEntryRepository $journalEntryRepository
+    ) {
     }
 
     public function getDebitBalance(Account $account, string $startDate, string $endDate): Money
@@ -63,18 +56,19 @@ class AccountService implements AccountHandler
 
     public function getEndingBalance(Account $account, string $startDate, string $endDate): ?Money
     {
+        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getAmount();
+
         if (in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
-            return null;
+            return new Money($netMovement, $account->currency_code);
         }
 
         $startingBalance = $this->getStartingBalance($account, $startDate)?->getAmount();
-        $netMovement = $this->getNetMovement($account, $startDate, $endDate)->getAmount();
         $endingBalance = $startingBalance + $netMovement;
 
         return new Money($endingBalance, $account->currency_code);
     }
 
-    public function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
+    private function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
     {
         return match ($category) {
             AccountCategory::Asset, AccountCategory::Expense => $debitBalance - $creditBalance,
@@ -102,91 +96,6 @@ class AccountService implements AccountHandler
         return $balances;
     }
 
-    public function formatBalances(array $balances): AccountBalanceDTO
-    {
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-
-        foreach ($balances as $key => $balance) {
-            $balances[$key] = money($balance, $defaultCurrency)->format();
-        }
-
-        return new AccountBalanceDTO(
-            startingBalance: $balances['starting_balance'] ?? null,
-            debitBalance: $balances['debit_balance'],
-            creditBalance: $balances['credit_balance'],
-            netMovement: $balances['net_movement'] ?? null,
-            endingBalance: $balances['ending_balance'] ?? null,
-        );
-    }
-
-    public function buildAccountBalanceReport(string $startDate, string $endDate): AccountBalanceReportDTO
-    {
-        $allCategories = $this->getAccountCategoryOrder();
-
-        $categoryGroupedAccounts = Account::whereHas('journalEntries')
-            ->select('id', 'name', 'currency_code', 'category', 'code')
-            ->get()
-            ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
-            ->sortBy(static fn (Collection $groupedAccounts, string $key) => array_search($key, $allCategories, true));
-
-        $accountCategories = [];
-        $reportTotalBalances = [
-            'debit_balance' => 0,
-            'credit_balance' => 0,
-        ];
-
-        foreach ($allCategories as $categoryName) {
-            $accountsInCategory = $categoryGroupedAccounts[$categoryName] ?? collect();
-            $categorySummaryBalances = [
-                'debit_balance' => 0,
-                'credit_balance' => 0,
-                'net_movement' => 0,
-            ];
-
-            if (! in_array($categoryName, [AccountCategory::Expense->getPluralLabel(), AccountCategory::Revenue->getPluralLabel()], true)) {
-                $categorySummaryBalances['starting_balance'] = 0;
-                $categorySummaryBalances['ending_balance'] = 0;
-            }
-
-            $categoryAccounts = [];
-
-            foreach ($accountsInCategory as $account) {
-                /** @var Account $account */
-                $accountBalances = $this->getBalances($account, $startDate, $endDate);
-
-                if (array_sum($accountBalances) === 0) {
-                    continue;
-                }
-
-                foreach ($accountBalances as $accountBalanceType => $accountBalance) {
-                    $categorySummaryBalances[$accountBalanceType] += $accountBalance;
-                }
-
-                $formattedAccountBalances = $this->formatBalances($accountBalances);
-
-                $categoryAccounts[] = new AccountDTO(
-                    $account->name,
-                    $account->code,
-                    $formattedAccountBalances,
-                );
-            }
-
-            $reportTotalBalances['debit_balance'] += $categorySummaryBalances['debit_balance'];
-            $reportTotalBalances['credit_balance'] += $categorySummaryBalances['credit_balance'];
-
-            $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
-
-            $accountCategories[$categoryName] = new AccountCategoryDTO(
-                $categoryAccounts,
-                $formattedCategorySummaryBalances,
-            );
-        }
-
-        $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
-
-        return new AccountBalanceReportDTO($accountCategories, $formattedReportTotalBalances);
-    }
-
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money
     {
         $bankAccounts = BankAccount::with('account')
@@ -194,7 +103,6 @@ class AccountService implements AccountHandler
 
         $totalBalance = 0;
 
-        // Get ending balance for each bank account
         foreach ($bankAccounts as $bankAccount) {
             $account = $bankAccount->account;
 

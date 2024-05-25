@@ -20,17 +20,10 @@ class ProcessTransactionUpdate implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    protected Company $company;
-
-    protected string $item_id;
-
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(Company $company, string $item_id)
-    {
-        $this->company = $company;
-        $this->item_id = $item_id;
+    public function __construct(
+        protected Company $company,
+        protected string $itemId
+    ) {
     }
 
     /**
@@ -39,7 +32,7 @@ class ProcessTransactionUpdate implements ShouldQueue
     public function handle(PlaidService $plaidService, TransactionService $transactionService): void
     {
         $connectedBankAccounts = $this->company->connectedBankAccounts()
-            ->where('item_id', $this->item_id)
+            ->where('item_id', $this->itemId)
             ->where('import_transactions', true)
             ->get();
 

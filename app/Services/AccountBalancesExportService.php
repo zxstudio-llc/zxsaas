@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\DTO\AccountBalanceReportDTO;
+use App\DTO\ReportDTO;
 use App\Models\Company;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountBalancesExportService
 {
-    public function exportToCsv(Company $company, AccountBalanceReportDTO $accountBalanceReport, string $startDate, string $endDate): StreamedResponse
+    public function exportToCsv(Company $company, ReportDTO $accountBalanceReport, string $startDate, string $endDate): StreamedResponse
     {
         // Construct the filename
         $filename = $company->name . ' Account Balances ' . $startDate . ' to ' . $endDate . '.csv';

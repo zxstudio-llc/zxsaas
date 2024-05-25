@@ -10,14 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 class CreateConnectedAccount
 {
-    protected PlaidService $plaid;
-
     /**
      * Create the event listener.
      */
-    public function __construct(PlaidService $plaid)
-    {
-        $this->plaid = $plaid;
+    public function __construct(
+        protected PlaidService $plaidService
+    ) {
     }
 
     /**
@@ -36,9 +34,9 @@ class CreateConnectedAccount
 
         $company = $event->company;
 
-        $authResponse = $this->plaid->getAccounts($accessToken);
+        $authResponse = $this->plaidService->getAccounts($accessToken);
 
-        $institutionResponse = $this->plaid->getInstitution($authResponse->item->institution_id, $company->profile->country);
+        $institutionResponse = $this->plaidService->getInstitution($authResponse->item->institution_id, $company->profile->country);
 
         $this->processInstitution($authResponse, $institutionResponse, $company, $accessToken);
     }

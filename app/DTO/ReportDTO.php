@@ -4,7 +4,7 @@ namespace App\DTO;
 
 use Livewire\Wireable;
 
-class AccountBalanceReportDTO implements Wireable
+class ReportDTO implements Wireable
 {
     public function __construct(
         /**
