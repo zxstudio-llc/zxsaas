@@ -17,8 +17,8 @@ class EditDepartment extends EditRecord
         ];
     }
 
-    protected function getRedirectUrl(): ?string
+    protected function getRedirectUrl(): string
     {
-        return $this->previousUrl;
+        return $this->getResource()::getUrl('index');
     }
 }

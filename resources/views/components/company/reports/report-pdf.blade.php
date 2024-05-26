@@ -3,7 +3,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Account Balances</title>
+    <title>{{ $report->getTitle() }}</title>
     <style>
         @page {
             size: A4;
@@ -21,12 +21,18 @@
         }
 
         /* Align the first column header and data to the left */
-        .table-class th:first-child, .table-class td:first-child {
+        .table-class th:first-child, .table-class td:first-child,
+        .table-class th:nth-child(2), .table-class td:nth-child(2) {
             text-align: left;
         }
 
         .header {
             margin-bottom: 1rem; /* Space between header and table */
+        }
+
+        /* Ensure category name is left-aligned */
+        .category-name-cell {
+            text-align: left;
         }
 
         .header .title,
@@ -61,7 +67,6 @@
 
         .spacer-row > td { height: 0.75rem; }
 
-        .summary-row > td,
         .table-footer-row > td {
             font-weight: 600;
             background-color: #ffffff; /* White background for footer */
@@ -70,58 +75,48 @@
 </head>
 <body>
     <div class="header">
-        <div class="title">Account Balances</div>
-        <div class="company-name">{{ auth()->user()->currentCompany->name }}</div>
+        <div class="title">{{ $report->getTitle() }}</div>
+        <div class="company-name">{{ $company->name }}</div>
         <div class="date-range">Date Range: {{ $startDate }} to {{ $endDate }}</div>
     </div>
     <table class="table-class">
         <thead class="table-head" style="display: table-row-group;">
             <tr>
-                <th>Account</th>
-                <th>Starting Balance</th>
-                <th>Debit</th>
-                <th>Credit</th>
-                <th>Net Movement</th>
-                <th>Ending Balance</th>
+                @foreach($report->getHeaders() as $header)
+                    <th>{{ $header }}</th>
+                @endforeach
             </tr>
         </thead>
-        @foreach($accountBalanceReport->categories as $accountCategoryName => $accountCategory)
-            <tbody>
-            <tr class="category-row">
-                <td colspan="6">{{ $accountCategoryName }}</td>
-            </tr>
-            @foreach($accountCategory->accounts as $account)
-                <tr>
-                    <td>{{ $account->accountName }}</td>
-                    <td>{{ $account->balance->startingBalance ?? '' }}</td>
-                    <td>{{ $account->balance->debitBalance }}</td>
-                    <td>{{ $account->balance->creditBalance }}</td>
-                    <td>{{ $account->balance->netMovement }}</td>
-                    <td>{{ $account->balance->endingBalance ?? '' }}</td>
-                </tr>
+        <tbody>
+            @foreach($report->getData() as $row)
+                @if (count($row) === 2 && empty($row[0]))
+                    <tr class="category-row">
+                        <td></td>
+                        <td class="category-name-cell">{{ $row[1] }}</td>
+                        @for ($i = 2; $i < count($report->getHeaders()); $i++)
+                            <td></td>
+                        @endfor
+                    </tr>
+                @elseif (count($row) > 2)
+                    <tr>
+                        @foreach ($row as $cell)
+                            <td>{{ $cell }}</td>
+                        @endforeach
+                    </tr>
+                @elseif ($row[0] === '')
+                    <tr class="spacer-row">
+                        <td colspan="{{ count($report->getHeaders()) }}"></td>
+                    </tr>
+                @endif
             @endforeach
-            <tr class="summary-row">
-                <td>Total {{ $accountCategoryName }}</td>
-                <td>{{ $accountCategory->summary->startingBalance ?? '' }}</td>
-                <td>{{ $accountCategory->summary->debitBalance }}</td>
-                <td>{{ $accountCategory->summary->creditBalance }}</td>
-                <td>{{ $accountCategory->summary->netMovement }}</td>
-                <td>{{ $accountCategory->summary->endingBalance ?? '' }}</td>
-            </tr>
-            <tr class="spacer-row">
-                <td colspan="6"></td>
-            </tr>
-            </tbody>
-        @endforeach
+        </tbody>
         <tfoot>
             <tr class="table-footer-row">
-                <td>Total for all accounts</td>
-                <td></td>
-                <td>{{ $accountBalanceReport->overallTotal->debitBalance }}</td>
-                <td>{{ $accountBalanceReport->overallTotal->creditBalance }}</td>
-                <td></td>
-                <td></td>
+                @foreach ($report->getOverallTotals() as $total)
+                    <td>{{ $total }}</td>
+                @endforeach
             </tr>
         </tfoot>
     </table>
 </body>
+</html>

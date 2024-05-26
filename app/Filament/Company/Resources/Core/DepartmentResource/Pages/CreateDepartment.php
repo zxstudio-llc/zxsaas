@@ -11,6 +11,6 @@ class CreateDepartment extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->previousUrl;
+        return $this->getResource()::getUrl('index');
     }
 }

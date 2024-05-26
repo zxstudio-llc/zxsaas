@@ -3,14 +3,11 @@
 namespace App\Filament\Company\Pages\Reports;
 
 use App\DTO\ReportDTO;
-use App\Services\AccountBalancesExportService;
+use App\Services\ExportService;
 use App\Services\ReportService;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
-use Filament\Support\Enums\IconPosition;
-use Filament\Support\Enums\IconSize;
-use Illuminate\Support\Carbon;
+use App\Transformers\AccountBalanceReportTransformer;
+use Filament\Forms\Components\Split;
+use Filament\Forms\Form;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountBalances extends BaseReportPage
@@ -25,12 +22,12 @@ class AccountBalances extends BaseReportPage
 
     public ReportDTO $accountBalanceReport;
 
-    protected AccountBalancesExportService $accountBalancesExportService;
+    protected ExportService $exportService;
 
-    public function boot(ReportService $reportService, AccountBalancesExportService $accountBalancesExportService): void
+    public function boot(ReportService $reportService, ExportService $exportService): void
     {
         $this->reportService = $reportService;
-        $this->accountBalancesExportService = $accountBalancesExportService;
+        $this->exportService = $exportService;
     }
 
     public function loadReportData(): void
@@ -38,43 +35,29 @@ class AccountBalances extends BaseReportPage
         $this->accountBalanceReport = $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate);
     }
 
-    protected function getHeaderActions(): array
+    public function form(Form $form): Form
     {
-        return [
-            ActionGroup::make([
-                Action::make('exportCSV')
-                    ->label('CSV')
-                    ->action(fn () => $this->exportCSV()),
-                Action::make('exportPDF')
-                    ->label('PDF')
-                    ->action(fn () => $this->exportPDF()),
-            ])
-                ->label('Export')
-                ->button()
-                ->outlined()
-                ->dropdownWidth('max-w-[7rem]')
-                ->dropdownPlacement('bottom-end')
-                ->icon('heroicon-c-chevron-down')
-                ->iconSize(IconSize::Small)
-                ->iconPosition(IconPosition::After),
-        ];
+        return $form
+            ->schema([
+                Split::make([
+                    $this->getDateRangeFormComponent(),
+                    $this->getStartDateFormComponent(),
+                    $this->getEndDateFormComponent(),
+                ])->live(),
+            ]);
     }
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->accountBalancesExportService->exportToCsv($this->company, $this->accountBalanceReport, $this->startDate, $this->endDate);
+        $transformer = new AccountBalanceReportTransformer($this->accountBalanceReport);
+
+        return $this->exportService->exportToCsv($this->company, $transformer, $this->startDate, $this->endDate);
     }
 
     public function exportPDF(): StreamedResponse
     {
-        $pdf = Pdf::loadView('components.company.reports.account-balances', [
-            'accountBalanceReport' => $this->accountBalanceReport,
-            'startDate' => Carbon::parse($this->startDate)->format('M d, Y'),
-            'endDate' => Carbon::parse($this->endDate)->format('M d, Y'),
-        ])->setPaper('a4');
+        $transformer = new AccountBalanceReportTransformer($this->accountBalanceReport);
 
-        return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
-        }, 'account-balances.pdf');
+        return $this->exportService->exportToPdf($this->company, $transformer, $this->startDate, $this->endDate);
     }
 }

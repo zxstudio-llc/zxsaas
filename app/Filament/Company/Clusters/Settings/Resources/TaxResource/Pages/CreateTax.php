@@ -18,7 +18,7 @@ class CreateTax extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->previousUrl;
+        return $this->getResource()::getUrl('index');
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array

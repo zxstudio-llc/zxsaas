@@ -4,12 +4,16 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Split;
-use Filament\Forms\Form;
 use Filament\Forms\Set;
 use Filament\Pages\Page;
+use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\IconSize;
 use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
 {
@@ -36,42 +40,71 @@ abstract class BaseReportPage extends Page
         $this->loadReportData();
     }
 
-    abstract protected function loadReportData(): void;
+    abstract public function loadReportData(): void;
+
+    abstract public function exportCSV(): StreamedResponse;
+
+    abstract public function exportPDF(): StreamedResponse;
 
     public function getDefaultDateRange(): string
     {
         return 'FY-' . now()->year;
     }
 
-    public function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Split::make([
-                    DateRangeSelect::make('dateRange')
-                        ->label('Date Range')
-                        ->selectablePlaceholder(false)
-                        ->startDateField('startDate')
-                        ->endDateField('endDate'),
-                    DatePicker::make('startDate')
-                        ->label('Start Date')
-                        ->displayFormat('Y-m-d')
-                        ->afterStateUpdated(static function (Set $set) {
-                            $set('dateRange', 'Custom');
-                        }),
-                    DatePicker::make('endDate')
-                        ->label('End Date')
-                        ->displayFormat('Y-m-d')
-                        ->afterStateUpdated(static function (Set $set) {
-                            $set('dateRange', 'Custom');
-                        }),
-                ])->live(),
-            ]);
-    }
-
     public function setDateRange(Carbon $start, Carbon $end): void
     {
         $this->startDate = $start->format('Y-m-d');
         $this->endDate = $end->isFuture() ? now()->format('Y-m-d') : $end->format('Y-m-d');
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            ActionGroup::make([
+                Action::make('exportCSV')
+                    ->label('CSV')
+                    ->action(fn () => $this->exportCSV()),
+                Action::make('exportPDF')
+                    ->label('PDF')
+                    ->action(fn () => $this->exportPDF()),
+            ])
+                ->label('Export')
+                ->button()
+                ->outlined()
+                ->dropdownWidth('max-w-[7rem]')
+                ->dropdownPlacement('bottom-end')
+                ->icon('heroicon-c-chevron-down')
+                ->iconSize(IconSize::Small)
+                ->iconPosition(IconPosition::After),
+        ];
+    }
+
+    protected function getDateRangeFormComponent(): Component
+    {
+        return DateRangeSelect::make('dateRange')
+            ->label('Date Range')
+            ->selectablePlaceholder(false)
+            ->startDateField('startDate')
+            ->endDateField('endDate');
+    }
+
+    protected function getStartDateFormComponent(): Component
+    {
+        return DatePicker::make('startDate')
+            ->label('Start Date')
+            ->displayFormat('Y-m-d')
+            ->afterStateUpdated(static function (Set $set) {
+                $set('dateRange', 'Custom');
+            });
+    }
+
+    protected function getEndDateFormComponent(): Component
+    {
+        return DatePicker::make('endDate')
+            ->label('End Date')
+            ->displayFormat('Y-m-d')
+            ->afterStateUpdated(static function (Set $set) {
+                $set('dateRange', 'Custom');
+            });
     }
 }
