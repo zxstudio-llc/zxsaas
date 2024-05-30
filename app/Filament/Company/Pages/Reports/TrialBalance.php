@@ -2,7 +2,7 @@
 
 namespace App\Filament\Company\Pages\Reports;
 
-use App\DTO\ReportDTO;
+use App\Contracts\ExportableReport;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Transformers\TrialBalanceReportTransformer;
@@ -20,7 +20,7 @@ class TrialBalance extends BaseReportPage
 
     protected ReportService $reportService;
 
-    public ReportDTO $trialBalanceReport;
+    public ExportableReport $trialBalanceReport;
 
     protected ExportService $exportService;
 
@@ -32,7 +32,8 @@ class TrialBalance extends BaseReportPage
 
     public function loadReportData(): void
     {
-        $this->trialBalanceReport = $this->reportService->buildTrialBalanceReport($this->startDate, $this->endDate);
+        $reportDTO = $this->reportService->buildTrialBalanceReport($this->startDate, $this->endDate);
+        $this->trialBalanceReport = new TrialBalanceReportTransformer($reportDTO);
     }
 
     public function form(Form $form): Form
@@ -49,15 +50,11 @@ class TrialBalance extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        $transformer = new TrialBalanceReportTransformer($this->trialBalanceReport);
-
-        return $this->exportService->exportToCsv($this->company, $transformer, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->trialBalanceReport, $this->startDate, $this->endDate);
     }
 
     public function exportPDF(): StreamedResponse
     {
-        $transformer = new TrialBalanceReportTransformer($this->trialBalanceReport);
-
-        return $this->exportService->exportToPdf($this->company, $transformer, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->trialBalanceReport, $this->startDate, $this->endDate);
     }
 }

@@ -12,27 +12,28 @@
 
         .header {
             color: #374151;
+            margin-bottom: 1rem;
+        }
+
+        .table-head {
+            display: table-row-group;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
         }
 
         .table-class th,
         .table-class td {
-            text-align: right;
             color: #374151;
-        }
-
-        /* Align the first column header and data to the left */
-        .table-class th:first-child, .table-class td:first-child,
-        .table-class th:nth-child(2), .table-class td:nth-child(2) {
-            text-align: left;
-        }
-
-        .header {
-            margin-bottom: 1rem; /* Space between header and table */
-        }
-
-        /* Ensure category name is left-aligned */
-        .category-name-cell {
-            text-align: left;
         }
 
         .header .title,
@@ -41,9 +42,18 @@
             margin-bottom: 0.125rem; /* Uniform space between header elements */
         }
 
-        .title { font-size: 1.5rem; }
-        .company-name { font-size: 1.125rem; font-weight: 600; }
-        .date-range { font-size: 0.875rem; }
+        .title {
+            font-size: 1.5rem;
+        }
+
+        .company-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .date-range {
+            font-size: 0.875rem;
+        }
 
         .table-class {
             width: 100%;
@@ -58,15 +68,20 @@
             border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
         }
 
-        .category-row > td {
+        .category-header-row > td {
             background-color: #f3f4f6; /* Gray background for category names */
             font-weight: 600;
         }
 
-        .table-body tr { background-color: #ffffff; /* White background for other rows */ }
+        .table-body tr {
+            background-color: #ffffff; /* White background for other rows */
+        }
 
-        .spacer-row > td { height: 0.75rem; }
+        .spacer-row > td {
+            height: 0.75rem;
+        }
 
+        .category-summary-row > td,
         .table-footer-row > td {
             font-weight: 600;
             background-color: #ffffff; /* White background for footer */
@@ -74,49 +89,60 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">{{ $report->getTitle() }}</div>
-        <div class="company-name">{{ $company->name }}</div>
-        <div class="date-range">Date Range: {{ $startDate }} to {{ $endDate }}</div>
-    </div>
-    <table class="table-class">
-        <thead class="table-head" style="display: table-row-group;">
-            <tr>
-                @foreach($report->getHeaders() as $header)
-                    <th>{{ $header }}</th>
-                @endforeach
-            </tr>
-        </thead>
+<div class="header">
+    <div class="title">{{ $report->getTitle() }}</div>
+    <div class="company-name">{{ $company->name }}</div>
+    <div class="date-range">Date Range: {{ $startDate }} to {{ $endDate }}</div>
+</div>
+<table class="table-class">
+    <thead class="table-head">
+    <tr>
+        @foreach($report->getHeaders() as $index => $header)
+            <th class="{{ $report->getAlignmentClass($index) }}">
+                {{ $header }}
+            </th>
+        @endforeach
+    </tr>
+    </thead>
+    @foreach($report->getCategories() as $category)
         <tbody>
-            @foreach($report->getData() as $row)
-                @if (count($row) === 2 && empty($row[0]))
-                    <tr class="category-row">
-                        <td></td>
-                        <td class="category-name-cell">{{ $row[1] }}</td>
-                        @for ($i = 2; $i < count($report->getHeaders()); $i++)
-                            <td></td>
-                        @endfor
-                    </tr>
-                @elseif (count($row) > 2)
-                    <tr>
-                        @foreach ($row as $cell)
-                            <td>{{ $cell }}</td>
-                        @endforeach
-                    </tr>
-                @elseif ($row[0] === '')
-                    <tr class="spacer-row">
-                        <td colspan="{{ count($report->getHeaders()) }}"></td>
-                    </tr>
-                @endif
+        <tr class="category-header-row">
+            @foreach($category['header'] as $index => $header)
+                <td class="{{ $report->getAlignmentClass($index) }}">
+                    {{ $header }}
+                </td>
             @endforeach
-        </tbody>
-        <tfoot>
-            <tr class="table-footer-row">
-                @foreach ($report->getOverallTotals() as $total)
-                    <td>{{ $total }}</td>
+        </tr>
+        @foreach($category['data'] as $account)
+            <tr>
+                @foreach($account as $index => $cell)
+                    <td class="{{ $report->getAlignmentClass($index) }}">
+                        {{ $cell }}
+                    </td>
                 @endforeach
             </tr>
-        </tfoot>
-    </table>
+        @endforeach
+        <tr class="category-summary-row">
+            @foreach($category['summary'] as $index => $cell)
+                <td class="{{ $report->getAlignmentClass($index) }}">
+                    {{ $cell }}
+                </td>
+            @endforeach
+        </tr>
+        <tr class="spacer-row">
+            <td colspan="{{ count($report->getHeaders()) }}"></td>
+        </tr>
+        </tbody>
+    @endforeach
+    <tfoot>
+    <tr class="table-footer-row">
+        @foreach ($report->getOverallTotals() as $index => $total)
+            <td class="{{ $report->getAlignmentClass($index) }}">
+                {{ $total }}
+            </td>
+        @endforeach
+    </tr>
+    </tfoot>
+</table>
 </body>
 </html>

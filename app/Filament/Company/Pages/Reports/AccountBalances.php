@@ -2,7 +2,7 @@
 
 namespace App\Filament\Company\Pages\Reports;
 
-use App\DTO\ReportDTO;
+use App\Contracts\ExportableReport;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Transformers\AccountBalanceReportTransformer;
@@ -20,7 +20,7 @@ class AccountBalances extends BaseReportPage
 
     protected ReportService $reportService;
 
-    public ReportDTO $accountBalanceReport;
+    public ExportableReport $accountBalanceReport;
 
     protected ExportService $exportService;
 
@@ -32,7 +32,8 @@ class AccountBalances extends BaseReportPage
 
     public function loadReportData(): void
     {
-        $this->accountBalanceReport = $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate);
+        $reportDTO = $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate);
+        $this->accountBalanceReport = new AccountBalanceReportTransformer($reportDTO);
     }
 
     public function form(Form $form): Form
@@ -49,15 +50,11 @@ class AccountBalances extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        $transformer = new AccountBalanceReportTransformer($this->accountBalanceReport);
-
-        return $this->exportService->exportToCsv($this->company, $transformer, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->accountBalanceReport, $this->startDate, $this->endDate);
     }
 
     public function exportPDF(): StreamedResponse
     {
-        $transformer = new AccountBalanceReportTransformer($this->accountBalanceReport);
-
-        return $this->exportService->exportToPdf($this->company, $transformer, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->accountBalanceReport, $this->startDate, $this->endDate);
     }
 }

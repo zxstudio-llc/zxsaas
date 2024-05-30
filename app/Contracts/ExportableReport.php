@@ -8,7 +8,13 @@ interface ExportableReport
 
     public function getHeaders(): array;
 
-    public function getData(): array;
+    public function getCategories(): array;
 
     public function getOverallTotals(): array;
+
+    public function getRightAlignedColumns(): array;
+
+    public function getLeftAlignedColumns(): array;
+
+    public function getCenterAlignedColumns(): array;
 }

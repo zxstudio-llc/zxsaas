@@ -29,8 +29,15 @@ class ExportService
 
             fputcsv($file, $report->getHeaders());
 
-            foreach ($report->getData() as $row) {
-                fputcsv($file, $row);
+            foreach ($report->getCategories() as $category) {
+                fputcsv($file, $category['header']);
+
+                foreach ($category['data'] as $accountRow) {
+                    fputcsv($file, $accountRow);
+                }
+
+                fputcsv($file, $category['summary']);
+                fputcsv($file, []); // Empty row for spacing
             }
 
             fputcsv($file, $report->getOverallTotals());

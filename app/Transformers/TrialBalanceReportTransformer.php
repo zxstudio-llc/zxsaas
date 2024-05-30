@@ -2,18 +2,10 @@
 
 namespace App\Transformers;
 
-use App\Contracts\ExportableReport;
-use App\DTO\ReportDTO;
+use App\DTO\AccountDTO;
 
-class TrialBalanceReportTransformer implements ExportableReport
+class TrialBalanceReportTransformer extends BaseReportTransformer
 {
-    protected ReportDTO $report;
-
-    public function __construct(ReportDTO $report)
-    {
-        $this->report = $report;
-    }
-
     public function getTitle(): string
     {
         return 'Trial Balance';
@@ -21,40 +13,49 @@ class TrialBalanceReportTransformer implements ExportableReport
 
     public function getHeaders(): array
     {
-        return ['ACCOUNT CODE', 'ACCOUNT', 'DEBIT', 'CREDIT'];
+        return ['', 'Account', 'Debit', 'Credit'];
     }
 
-    public function getData(): array
+    public function getRightAlignedColumns(): array
     {
-        $data = [];
+        return [2, 3];
+    }
+
+    public function getLeftAlignedColumns(): array
+    {
+        return [1];
+    }
+
+    public function getCenterAlignedColumns(): array
+    {
+        return [0];
+    }
+
+    public function getCategories(): array
+    {
+        $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            // Category Header row
-            $data[] = ['', $accountCategoryName];
-
-            // Account rows
-            foreach ($accountCategory->accounts as $account) {
-                $data[] = [
-                    $account->accountCode,
-                    $account->accountName,
-                    $account->balance->debitBalance,
-                    $account->balance->creditBalance,
-                ];
-            }
-
-            // Category Summary row
-            $data[] = [
-                '',
-                'Total ' . $accountCategoryName,
-                $accountCategory->summary->debitBalance,
-                $accountCategory->summary->creditBalance,
+            $categories[] = [
+                'header' => ['', $accountCategoryName, '', ''],
+                'data' => array_map(static function (AccountDTO $account) {
+                    return [
+                        $account->accountCode,
+                        $account->accountName,
+                        $account->balance->debitBalance,
+                        $account->balance->creditBalance,
+                    ];
+                }, $accountCategory->accounts),
+                'summary' => [
+                    '',
+                    'Total ' . $accountCategoryName,
+                    $accountCategory->summary->debitBalance,
+                    $accountCategory->summary->creditBalance,
+                ],
             ];
-
-            // Add an empty row after each category
-            $data[] = [''];
         }
 
-        return $data;
+        return $categories;
     }
 
     public function getOverallTotals(): array
