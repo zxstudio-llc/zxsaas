@@ -11,6 +11,7 @@ use App\Models\Banking\BankAccount;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -111,12 +112,16 @@ class AccountResource extends Resource
                     ->icon(static fn (BankAccount $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static fn (BankAccount $record) => $record->isEnabled() ? 'Default Account' : null)
                     ->iconPosition('after')
-                    ->description(static fn (BankAccount $record) => $record->mask ?? null)
-                    ->sortable(),
+                    ->description(static fn (BankAccount $record) => $record->mask ?? null),
+                Tables\Columns\TextColumn::make('account.subtype.name')
+                    ->localizeLabel('Subtype')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('account.ending_balance')
-                    ->localizeLabel('Current Balance')
+                    ->localizeLabel('Ending Balance')
                     ->state(static fn (BankAccount $record) => $record->account->ending_balance->convert()->formatWithCode())
-                    ->sortable(),
+                    ->toggleable()
+                    ->alignment(Alignment::End),
             ])
             ->filters([
                 //

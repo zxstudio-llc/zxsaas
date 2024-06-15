@@ -11,6 +11,7 @@ use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Filament\Forms\Components\JournalEntryRepeater;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
@@ -150,7 +151,7 @@ class Transactions extends Page implements HasTable
                     ->label('Description'),
                 Forms\Components\Select::make('bank_account_id')
                     ->label('Account')
-                    ->options(fn () => $this->getBankAccountOptions())
+                    ->options(fn (?Transaction $transaction) => $this->getBankAccountOptions(currentBankAccountId: $transaction?->bank_account_id))
                     ->live()
                     ->searchable()
                     ->afterStateUpdated(function (Set $set, $state, $old, Get $get) {
@@ -180,7 +181,7 @@ class Transactions extends Page implements HasTable
                     ->required(),
                 Forms\Components\Select::make('account_id')
                     ->label('Category')
-                    ->options(fn (Forms\Get $get) => $this->getChartAccountOptions(type: TransactionType::parse($get('type')), nominalAccountsOnly: true))
+                    ->options(fn (Forms\Get $get, ?Transaction $transaction) => $this->getChartAccountOptions(type: TransactionType::parse($get('type')), nominalAccountsOnly: true, currentAccountId: $transaction?->account_id))
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -225,12 +226,15 @@ class Transactions extends Page implements HasTable
                     ->sortable()
                     ->localizeDate(),
                 Tables\Columns\TextColumn::make('description')
+                    ->label('Description')
                     ->limit(30)
-                    ->label('Description'),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('bankAccount.account.name')
-                    ->label('Account'),
+                    ->label('Account')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('account.name')
                     ->label('Category')
+                    ->toggleable()
                     ->state(static fn (Transaction $transaction) => $transaction->account->name ?? 'Journal Entry'),
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Amount')
@@ -254,7 +258,7 @@ class Transactions extends Page implements HasTable
                             ->schema([
                                 Select::make('account_id')
                                     ->label('Category')
-                                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: true))
+                                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: true, onlyWithTransactions: true))
                                     ->multiple()
                                     ->searchable(),
                                 Select::make('reviewed')
@@ -559,7 +563,7 @@ class Transactions extends Page implements HasTable
                 ->label('Description'),
             Select::make('account_id')
                 ->label('Account')
-                ->options(fn (): array => $this->getChartAccountOptions())
+                ->options(fn (?JournalEntry $journalEntry): array => $this->getChartAccountOptions(currentAccountId: $journalEntry?->account_id))
                 ->live()
                 ->softRequired()
                 ->searchable(),
@@ -709,8 +713,11 @@ class Transactions extends Page implements HasTable
         return 'uncategorized';
     }
 
-    protected function getChartAccountOptions(?TransactionType $type = null, bool $nominalAccountsOnly = false): array
+    protected function getChartAccountOptions(?TransactionType $type = null, ?bool $nominalAccountsOnly = null, ?bool $onlyWithTransactions = null, ?int $currentAccountId = null): array
     {
+        $onlyWithTransactions ??= false;
+        $nominalAccountsOnly ??= false;
+
         $excludedCategory = match ($type) {
             TransactionType::Deposit => AccountCategory::Expense,
             TransactionType::Withdrawal => AccountCategory::Revenue,
@@ -720,14 +727,20 @@ class Transactions extends Page implements HasTable
         return Account::query()
             ->when($nominalAccountsOnly, fn (Builder $query) => $query->doesntHave('bankAccount'))
             ->when($excludedCategory, fn (Builder $query) => $query->whereNot('category', $excludedCategory))
+            ->when($onlyWithTransactions, fn (Builder $query) => $query->has('transactions'))
+            ->where(function (Builder $query) use ($currentAccountId) {
+                $query->where('archived', false)
+                    ->orWhere('id', $currentAccountId);
+            })
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
             ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
             ->toArray();
     }
 
-    protected function getBankAccountOptions(?bool $onlyWithTransactions = null, bool $isFilter = false): array
+    protected function getBankAccountOptions(?bool $onlyWithTransactions = null, ?bool $isFilter = null, ?int $currentBankAccountId = null): array
     {
+        $isFilter ??= false;
         $onlyWithTransactions ??= false;
 
         $options = $isFilter ? [
@@ -735,6 +748,17 @@ class Transactions extends Page implements HasTable
         ] : [];
 
         $bankAccountOptions = BankAccount::with('account.subtype')
+            ->whereHas('account', function (Builder $query) use ($isFilter, $currentBankAccountId) {
+                if ($isFilter === false) {
+                    $query->where('archived', false);
+                }
+
+                if ($currentBankAccountId) {
+                    $query->orWhereHas('bankAccount', function (Builder $query) use ($currentBankAccountId) {
+                        $query->where('id', $currentBankAccountId);
+                    });
+                }
+            })
             ->when($onlyWithTransactions, fn (Builder $query) => $query->has('transactions'))
             ->get()
             ->groupBy('account.subtype.name')

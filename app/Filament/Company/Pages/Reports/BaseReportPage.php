@@ -29,6 +29,8 @@ abstract class BaseReportPage extends Page
 
     public Company $company;
 
+    public array $options = [];
+
     public function mount(): void
     {
         $this->company = auth()->user()->currentCompany;
@@ -36,6 +38,7 @@ abstract class BaseReportPage extends Page
         $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
         $this->dateRange = $this->getDefaultDateRange();
         $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
+        $this->options = ['showAccountCode'];
 
         $this->loadReportData();
     }

@@ -7,12 +7,14 @@ use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use App\Utilities\Accounting\AccountCode;
+use App\Utilities\Currency\CurrencyAccessor;
 
 class AccountObserver
 {
     public function creating(Account $account): void
     {
         $this->setCategoryAndType($account, true);
+        $this->setCurrency($account);
     }
 
     public function updating(Account $account): void
@@ -32,6 +34,13 @@ class AccountObserver
         } elseif ($isCreating) {
             $account->category = AccountCategory::Asset;
             $account->type = AccountType::CurrentAsset;
+        }
+    }
+
+    private function setCurrency(Account $account): void
+    {
+        if ($account->currency_code === null && $account->subtype->multi_currency === false) {
+            $account->currency_code = CurrencyAccessor::getDefaultCurrency();
         }
     }
 

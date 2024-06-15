@@ -10,9 +10,12 @@ abstract class BaseReportTransformer implements ExportableReport, Wireable
 {
     protected ReportDTO $report;
 
-    public function __construct(ReportDTO $report)
+    protected array $options;
+
+    public function __construct(ReportDTO $report, array $options = [])
     {
         $this->report = $report;
+        $this->options = $options;
     }
 
     public function getAlignmentClass(int $index): string

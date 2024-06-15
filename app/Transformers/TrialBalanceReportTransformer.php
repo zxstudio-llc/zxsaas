@@ -3,6 +3,7 @@
 namespace App\Transformers;
 
 use App\DTO\AccountDTO;
+use App\DTO\ReportCategoryDTO;
 
 class TrialBalanceReportTransformer extends BaseReportTransformer
 {
@@ -31,14 +32,17 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
         return [0];
     }
 
+    /**
+     * @return ReportCategoryDTO[]
+     */
     public function getCategories(): array
     {
         $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            $categories[] = [
-                'header' => ['', $accountCategoryName, '', ''],
-                'data' => array_map(static function (AccountDTO $account) {
+            $categories[] = new ReportCategoryDTO(
+                header: ['', $accountCategoryName, '', ''],
+                data: array_map(static function (AccountDTO $account) {
                     return [
                         $account->accountCode,
                         $account->accountName,
@@ -46,13 +50,13 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
                         $account->balance->creditBalance,
                     ];
                 }, $accountCategory->accounts),
-                'summary' => [
+                summary: [
                     '',
                     'Total ' . $accountCategoryName,
                     $accountCategory->summary->debitBalance,
                     $accountCategory->summary->creditBalance,
                 ],
-            ];
+            );
         }
 
         return $categories;

@@ -3,6 +3,7 @@
 namespace App\Transformers;
 
 use App\DTO\AccountDTO;
+use App\DTO\ReportCategoryDTO;
 
 class AccountBalanceReportTransformer extends BaseReportTransformer
 {
@@ -13,52 +14,95 @@ class AccountBalanceReportTransformer extends BaseReportTransformer
 
     public function getHeaders(): array
     {
-        return ['', 'Account', 'Starting Balance', 'Debit', 'Credit', 'Net Movement', 'Ending Balance'];
+        $headers = ['Account', 'Starting Balance', 'Debit', 'Credit', 'Net Movement', 'Ending Balance'];
+
+        if ($this->options['showAccountCode'] ?? false) {
+            array_unshift($headers, 'Account Code');
+        }
+
+        return $headers;
     }
 
     public function getRightAlignedColumns(): array
     {
-        return [2, 3, 4, 5, 6];
+        $columns = [1, 2, 3, 4, 5];
+
+        if ($this->options['showAccountCode'] ?? false) {
+            $columns = [2, 3, 4, 5, 6];
+        }
+
+        return $columns;
     }
 
     public function getLeftAlignedColumns(): array
     {
-        return [1];
+        $columns = [0];
+
+        if ($this->options['showAccountCode'] ?? false) {
+            $columns = [1];
+        }
+
+        return $columns;
     }
 
     public function getCenterAlignedColumns(): array
     {
-        return [0];
+        if ($this->options['showAccountCode'] ?? false) {
+            return [0];
+        }
+
+        return [];
     }
 
+    /**
+     * @return ReportCategoryDTO[]
+     */
     public function getCategories(): array
     {
         $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            $categories[] = [
-                'header' => ['', $accountCategoryName, '', '', '', '', ''],
-                'data' => array_map(static function (AccountDTO $account) {
-                    return [
-                        $account->accountCode,
-                        $account->accountName,
-                        $account->balance->startingBalance ?? '',
-                        $account->balance->debitBalance,
-                        $account->balance->creditBalance,
-                        $account->balance->netMovement,
-                        $account->balance->endingBalance ?? '',
-                    ];
-                }, $accountCategory->accounts),
-                'summary' => [
-                    '',
-                    'Total ' . $accountCategoryName,
-                    $accountCategory->summary->startingBalance ?? '',
-                    $accountCategory->summary->debitBalance,
-                    $accountCategory->summary->creditBalance,
-                    $accountCategory->summary->netMovement,
-                    $accountCategory->summary->endingBalance ?? '',
-                ],
+            $header = [$accountCategoryName, '', '', '', '', ''];
+
+            if ($this->options['showAccountCode'] ?? false) {
+                array_unshift($header, '');
+            }
+
+            $data = array_map(function (AccountDTO $account) {
+                $row = [
+                    $account->accountName,
+                    $account->balance->startingBalance ?? '',
+                    $account->balance->debitBalance,
+                    $account->balance->creditBalance,
+                    $account->balance->netMovement ?? '',
+                    $account->balance->endingBalance ?? '',
+                ];
+
+                if ($this->options['showAccountCode'] ?? false) {
+                    array_unshift($row, $account->accountCode);
+                }
+
+                return $row;
+            }, $accountCategory->accounts);
+
+            $summary = [
+                'Total ' . $accountCategoryName,
+                $accountCategory->summary->startingBalance ?? '',
+                $accountCategory->summary->debitBalance,
+                $accountCategory->summary->creditBalance,
+                $accountCategory->summary->netMovement ?? '',
+                $accountCategory->summary->endingBalance ?? '',
             ];
+
+            if ($this->options['showAccountCode'] ?? false) {
+                array_unshift($summary, '');
+            }
+
+            $categories[] = new ReportCategoryDTO(
+                header: $header,
+                data: $data,
+                summary: $summary,
+            );
         }
 
         return $categories;
@@ -66,8 +110,7 @@ class AccountBalanceReportTransformer extends BaseReportTransformer
 
     public function getOverallTotals(): array
     {
-        return [
-            '',
+        $totals = [
             'Total for all accounts',
             '',
             $this->report->overallTotal->debitBalance,
@@ -75,5 +118,11 @@ class AccountBalanceReportTransformer extends BaseReportTransformer
             '',
             '',
         ];
+
+        if ($this->options['showAccountCode'] ?? false) {
+            array_unshift($totals, '');
+        }
+
+        return $totals;
     }
 }

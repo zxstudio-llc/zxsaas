@@ -54,8 +54,6 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
      * @var array<string, class-string>
      */
     protected $dispatchesEvents = [
-        'created' => CompanyCreated::class,
-        'updated' => CompanyUpdated::class,
         'deleted' => CompanyDeleted::class,
     ];
 

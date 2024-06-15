@@ -30,13 +30,13 @@ class ExportService
             fputcsv($file, $report->getHeaders());
 
             foreach ($report->getCategories() as $category) {
-                fputcsv($file, $category['header']);
+                fputcsv($file, $category->header);
 
-                foreach ($category['data'] as $accountRow) {
+                foreach ($category->data as $accountRow) {
                     fputcsv($file, $accountRow);
                 }
 
-                fputcsv($file, $category['summary']);
+                fputcsv($file, $category->summary);
                 fputcsv($file, []); // Empty row for spacing
             }
 

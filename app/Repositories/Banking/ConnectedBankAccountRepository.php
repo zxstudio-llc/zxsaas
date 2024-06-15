@@ -29,7 +29,6 @@ class ConnectedBankAccountRepository
             'currency_code' => $connectedBankAccount->currency_code,
             'description' => $connectedBankAccount->name,
             'subtype_id' => $accountSubtype->id,
-            'active' => true,
         ]);
     }
 }

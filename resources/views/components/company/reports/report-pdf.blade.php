@@ -107,13 +107,13 @@
     @foreach($report->getCategories() as $category)
         <tbody>
         <tr class="category-header-row">
-            @foreach($category['header'] as $index => $header)
+            @foreach($category->header as $index => $header)
                 <td class="{{ $report->getAlignmentClass($index) }}">
                     {{ $header }}
                 </td>
             @endforeach
         </tr>
-        @foreach($category['data'] as $account)
+        @foreach($category->data as $account)
             <tr>
                 @foreach($account as $index => $cell)
                     <td class="{{ $report->getAlignmentClass($index) }}">
@@ -123,7 +123,7 @@
             </tr>
         @endforeach
         <tr class="category-summary-row">
-            @foreach($category['summary'] as $index => $cell)
+            @foreach($category->summary as $index => $cell)
                 <td class="{{ $report->getAlignmentClass($index) }}">
                     {{ $cell }}
                 </td>

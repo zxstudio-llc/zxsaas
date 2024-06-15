@@ -3,11 +3,11 @@
         <x-filament-tables::container>
             <div class="p-6 divide-y divide-gray-200 dark:divide-white/5">
                 <form wire:submit.prevent="loadReportData" class="w-full">
-                    <div class="flex flex-col md:flex-row items-end justify-center gap-4 md:gap-6">
+                    <div class="flex flex-col md:flex-row items-start justify-center gap-4 md:gap-12">
                         <div class="flex-grow">
                             {{ $this->form }}
                         </div>
-                        <x-filament::button type="submit" class="mt-4 md:mt-0">
+                        <x-filament::button type="submit" class="mt-4 md:mt-0 flex-shrink-0">
                             Update Report
                         </x-filament::button>
                     </div>

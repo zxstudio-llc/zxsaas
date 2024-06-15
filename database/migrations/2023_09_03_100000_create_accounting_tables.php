@@ -59,7 +59,7 @@ return new class extends Migration
             $table->string('name')->nullable()->index();
             $table->string('currency_code')->nullable();
             $table->text('description')->nullable();
-            $table->boolean('active')->default(true);
+            $table->boolean('archived')->default(false);
             $table->boolean('default')->default(false);
             $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->cascadeOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

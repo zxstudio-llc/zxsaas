@@ -13,7 +13,7 @@
     @foreach($report->getCategories() as $category)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <tr class="bg-gray-50 dark:bg-white/5">
-            @foreach($category['header'] as $index => $header)
+            @foreach($category->header as $index => $header)
                 <x-filament-tables::cell class="{{ $report->getAlignmentClass($index) }}">
                     <div class="px-3 py-2 text-sm font-semibold text-gray-950 dark:text-white">
                         {{ $header }}
@@ -21,7 +21,7 @@
                 </x-filament-tables::cell>
             @endforeach
         </tr>
-        @foreach($category['data'] as $account)
+        @foreach($category->data as $account)
             <tr>
                 @foreach($account as $index => $cell)
                     <x-filament-tables::cell class="{{ $report->getAlignmentClass($index) }}">
@@ -33,7 +33,7 @@
             </tr>
         @endforeach
         <tr>
-            @foreach($category['summary'] as $index => $cell)
+            @foreach($category->summary as $index => $cell)
                 <x-filament-tables::cell class="{{ $report->getAlignmentClass($index) }}">
                     <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
                         {{ $cell }}

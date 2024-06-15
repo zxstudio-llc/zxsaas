@@ -6,8 +6,12 @@ use App\Contracts\ExportableReport;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Transformers\AccountBalanceReportTransformer;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Split;
 use Filament\Forms\Form;
+use Guava\FilamentClusters\Forms\Cluster;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountBalances extends BaseReportPage
@@ -33,18 +37,29 @@ class AccountBalances extends BaseReportPage
     public function loadReportData(): void
     {
         $reportDTO = $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate);
-        $this->accountBalanceReport = new AccountBalanceReportTransformer($reportDTO);
+        $options = array_fill_keys($this->options, true);
+        $this->accountBalanceReport = new AccountBalanceReportTransformer($reportDTO, $options);
     }
 
     public function form(Form $form): Form
     {
         return $form
+            ->inlineLabel()
             ->schema([
                 Split::make([
                     $this->getDateRangeFormComponent(),
-                    $this->getStartDateFormComponent(),
-                    $this->getEndDateFormComponent(),
+                    Cluster::make([
+                        $this->getStartDateFormComponent(),
+                        $this->getEndDateFormComponent(),
+                    ])
+                        ->hiddenLabel(),
                 ])->live(),
+                CheckboxList::make('options')
+                    ->options([
+                        'showAccountCode' => 'Show Account Code',
+                        'showZeroBalances' => 'Show Zero Balances',
+                    ])
+                    ->columns(2),
             ]);
     }
 

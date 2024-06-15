@@ -21,16 +21,17 @@
                         <table class="es-table table-fixed w-full divide-y divide-gray-200 text-start text-sm dark:divide-white/5">
                             <colgroup>
                                 <col span="1" style="width: 12.5%;">
-                                <col span="1" style="width: 25%;">
-                                <col span="1" style="width: 40%;">
+                                <col span="1" style="width: 20%;">
+                                <col span="1" style="width: 35%;">
                                 <col span="1" style="width: 15%;">
+                                <col span="1" style="width: 10%;">
                                 <col span="1" style="width: 7.5%;">
                             </colgroup>
                             @foreach($subtypes as $subtype)
                                 <tbody class="es-table__rowgroup divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
                                 <!-- Subtype Name Header Row -->
                                 <tr class="es-table__row--header bg-gray-50 dark:bg-white/5">
-                                    <td colspan="5" class="es-table__cell px-4 py-4">
+                                    <td colspan="6" class="es-table__cell px-4 py-4">
                                         <div class="es-table__row-content flex items-center space-x-2">
                                             <span class="es-table__row-title text-gray-800 dark:text-gray-200 font-semibold tracking-wider">
                                                 {{ $subtype->name }}
@@ -61,6 +62,13 @@
                                             </small>
                                         </td>
                                         <td colspan="2" class="es-table__cell px-4 py-4">{{ $account->description }}</td>
+                                        <td colspan="1" class="es-table__cell px-4 py-4">
+                                            @if($account->archived)
+                                                <x-filament::badge color="gray" size="sm">
+                                                    Archived
+                                                </x-filament::badge>
+                                            @endif
+                                        </td>
                                         <td colspan="1" class="es-table__cell px-4 py-4">
                                             <div>
                                                 @if($account->default === false)

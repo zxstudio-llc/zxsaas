@@ -72,7 +72,6 @@ class ConfigureChartOfAccounts
                     'name' => $accountName,
                     'currency_code' => CurrencyAccessor::getDefaultCurrency(),
                     'description' => $accountDetails['description'] ?? 'No description available.',
-                    'active' => true,
                     'default' => true,
                     'created_by' => $company->owner->id,
                     'updated_by' => $company->owner->id,

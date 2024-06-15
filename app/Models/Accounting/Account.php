@@ -39,7 +39,7 @@ class Account extends Model
         'name',
         'currency_code',
         'description',
-        'active',
+        'archived',
         'default',
         'bank_account_id',
         'created_by',
@@ -49,7 +49,7 @@ class Account extends Model
     protected $casts = [
         'category' => AccountCategory::class,
         'type' => AccountType::class,
-        'active' => 'boolean',
+        'archived' => 'boolean',
         'default' => 'boolean',
     ];
 
