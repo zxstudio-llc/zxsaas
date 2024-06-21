@@ -22,27 +22,13 @@ class ProcessTransactionImport implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    protected Company $company;
-
-    protected Account $account;
-
-    protected BankAccount $bankAccount;
-
-    protected ConnectedBankAccount $connectedBankAccount;
-
-    protected string $startDate;
-
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(Company $company, Account $account, BankAccount $bankAccount, ConnectedBankAccount $connectedBankAccount, string $startDate)
-    {
-        $this->company = $company;
-        $this->account = $account;
-        $this->bankAccount = $bankAccount;
-        $this->connectedBankAccount = $connectedBankAccount;
-        $this->startDate = $startDate;
-    }
+    public function __construct(
+        protected Company $company,
+        protected Account $account,
+        protected BankAccount $bankAccount,
+        protected ConnectedBankAccount $connectedBankAccount,
+        protected string $startDate
+    ) {}
 
     /**
      * Execute the job.

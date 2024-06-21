@@ -7,6 +7,7 @@ use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Facades\Accounting;
+use App\Models\Banking\BankAccount;
 use App\Models\Setting\Currency;
 use App\Observers\AccountObserver;
 use Database\Factories\Accounting\AccountFactory;
@@ -17,7 +18,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(AccountObserver::class)]
@@ -39,10 +39,9 @@ class Account extends Model
         'name',
         'currency_code',
         'description',
-        'active',
+        'archived',
         'default',
-        'accountable_id',
-        'accountable_type',
+        'bank_account_id',
         'created_by',
         'updated_by',
     ];
@@ -50,7 +49,7 @@ class Account extends Model
     protected $casts = [
         'category' => AccountCategory::class,
         'type' => AccountType::class,
-        'active' => 'boolean',
+        'archived' => 'boolean',
         'default' => 'boolean',
     ];
 
@@ -75,9 +74,9 @@ class Account extends Model
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
-    public function accountable(): MorphTo
+    public function bankAccount(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(BankAccount::class, 'bank_account_id');
     }
 
     public function getLastTransactionDate(): ?string

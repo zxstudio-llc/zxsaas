@@ -13,13 +13,10 @@ class DefaultCurrencyChanged
     use InteractsWithSockets;
     use SerializesModels;
 
-    public Currency $currency;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(Currency $currency)
-    {
-        $this->currency = $currency;
-    }
+    public function __construct(
+        public Currency $currency
+    ) {}
 }

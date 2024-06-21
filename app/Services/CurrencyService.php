@@ -10,25 +10,18 @@ use Illuminate\Support\Facades\Log;
 
 class CurrencyService implements CurrencyHandler
 {
-    protected ?string $api_key;
-
-    protected ?string $base_url;
-
-    protected Client $client;
-
-    public function __construct(?string $api_key, ?string $base_url, Client $client)
-    {
-        $this->api_key = $api_key;
-        $this->base_url = $base_url;
-        $this->client = $client;
-    }
+    public function __construct(
+        protected ?string $apiKey,
+        protected ?string $baseUrl,
+        protected Client $client
+    ) {}
 
     /**
      * Determine if the Currency Exchange Rate feature is enabled.
      */
     public function isEnabled(): bool
     {
-        return filled($this->api_key) && filled($this->base_url);
+        return filled($this->apiKey) && filled($this->baseUrl);
     }
 
     public function getSupportedCurrencies(): ?array
@@ -38,7 +31,7 @@ class CurrencyService implements CurrencyHandler
         }
 
         return Cache::remember('supported_currency_codes', now()->addMonth(), function () {
-            $response = $this->client->get("{$this->base_url}/{$this->api_key}/codes");
+            $response = $this->client->get("{$this->baseUrl}/{$this->apiKey}/codes");
 
             if ($response->getStatusCode() === 200) {
                 $responseData = json_decode($response->getBody()->getContents(), true);
@@ -106,7 +99,7 @@ class CurrencyService implements CurrencyHandler
     public function updateCurrencyRatesCache(string $baseCurrency): ?array
     {
         try {
-            $response = $this->client->get("{$this->base_url}/{$this->api_key}/latest/{$baseCurrency}");
+            $response = $this->client->get("{$this->baseUrl}/{$this->apiKey}/latest/{$baseCurrency}");
 
             if ($response->getStatusCode() === 200) {
                 $responseData = json_decode($response->getBody()->getContents(), true);

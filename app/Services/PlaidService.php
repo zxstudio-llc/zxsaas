@@ -15,15 +15,15 @@ class PlaidService
 {
     public const API_VERSION = '2020-09-14';
 
-    protected ?string $client_id;
+    protected ?string $clientId;
 
-    protected ?string $client_secret;
+    protected ?string $clientSecret;
 
     protected ?string $environment;
 
-    protected ?string $webhook_url;
+    protected ?string $webhookUrl;
 
-    protected ?string $base_url;
+    protected ?string $baseUrl;
 
     protected HttpClient $client;
 
@@ -50,18 +50,18 @@ class PlaidService
     {
         $this->client = $client;
         $this->config = $config;
-        $this->client_id = $this->config->get('plaid.client_id');
-        $this->client_secret = $this->config->get('plaid.client_secret');
+        $this->clientId = $this->config->get('plaid.client_id');
+        $this->clientSecret = $this->config->get('plaid.client_secret');
         $this->environment = $this->config->get('plaid.environment', 'sandbox');
-        $this->webhook_url = $this->config->get('plaid.webhook_url');
+        $this->webhookUrl = $this->config->get('plaid.webhook_url');
 
         $this->setBaseUrl($this->environment);
     }
 
-    public function setClientCredentials(?string $client_id, ?string $client_secret): self
+    public function setClientCredentials(?string $clientId, ?string $clientSecret): self
     {
-        $this->client_id = $client_id ?? $this->client_id;
-        $this->client_secret = $client_secret ?? $this->client_secret;
+        $this->clientId = $clientId ?? $this->clientId;
+        $this->clientSecret = $clientSecret ?? $this->clientSecret;
 
         return $this;
     }
@@ -77,7 +77,7 @@ class PlaidService
 
     public function setBaseUrl(?string $environment): void
     {
-        $this->base_url = match ($environment) {
+        $this->baseUrl = match ($environment) {
             'development' => 'https://development.plaid.com',
             'production' => 'https://production.plaid.com',
             default => 'https://sandbox.plaid.com', // Default to sandbox, including if environment is null
@@ -86,7 +86,7 @@ class PlaidService
 
     public function getBaseUrl(): string
     {
-        return $this->base_url;
+        return $this->baseUrl;
     }
 
     public function getEnvironment(): string
@@ -99,12 +99,12 @@ class PlaidService
         $request = $this->client->withHeaders([
             'Plaid-Version' => self::API_VERSION,
             'Content-Type' => 'application/json',
-        ])->baseUrl($this->base_url);
+        ])->baseUrl($this->baseUrl);
 
         if ($method === 'post') {
             $request = $request->withHeaders([
-                'PLAID-CLIENT-ID' => $this->client_id,
-                'PLAID-SECRET' => $this->client_secret,
+                'PLAID-CLIENT-ID' => $this->clientId,
+                'PLAID-SECRET' => $this->clientSecret,
             ]);
         }
 
@@ -181,12 +181,12 @@ class PlaidService
         );
     }
 
-    public function createLinkToken(string $client_name, string $language, array $country_codes, array $user, array $products): object
+    public function createLinkToken(string $clientName, string $language, array $countryCodes, array $user, array $products): object
     {
         $data = [
-            'client_name' => $client_name,
+            'client_name' => $clientName,
             'language' => $language,
-            'country_codes' => $country_codes,
+            'country_codes' => $countryCodes,
             'user' => (object) $user,
         ];
 
@@ -194,16 +194,18 @@ class PlaidService
             $data['products'] = $products;
         }
 
-        if (! empty($this->webhook_url)) {
-            $data['webhook'] = $this->webhook_url;
+        if (! empty($this->webhookUrl)) {
+            $data['webhook'] = $this->webhookUrl;
         }
 
         return $this->sendRequest('link/token/create', $data);
     }
 
-    public function exchangePublicToken(string $public_token): object
+    public function exchangePublicToken(string $publicToken): object
     {
-        $data = compact('public_token');
+        $data = [
+            'public_token' => $publicToken,
+        ];
 
         return $this->sendRequest('item/public_token/exchange', $data);
     }
@@ -218,7 +220,7 @@ class PlaidService
         return $this->sendRequest('accounts/get', $data);
     }
 
-    public function getInstitution(string $institution_id, string $country): object
+    public function getInstitution(string $institutionId, string $country): object
     {
         $options = [
             'include_optional_metadata' => true,
@@ -226,49 +228,57 @@ class PlaidService
 
         $plaidCountry = $this->getCountry($country);
 
-        return $this->getInstitutionById($institution_id, [$plaidCountry], $options);
+        return $this->getInstitutionById($institutionId, [$plaidCountry], $options);
     }
 
-    public function getInstitutionById(string $institution_id, array $country_codes, array $options = []): object
+    public function getInstitutionById(string $institutionId, array $countryCodes, array $options = []): object
     {
         $data = [
-            'institution_id' => $institution_id,
-            'country_codes' => $country_codes,
+            'institution_id' => $institutionId,
+            'country_codes' => $countryCodes,
             'options' => (object) $options,
         ];
 
         return $this->sendRequest('institutions/get_by_id', $data);
     }
 
-    public function getTransactions(string $access_token, string $start_date, string $end_date, array $options = []): object
+    public function getTransactions(string $accessToken, string $startDate, string $endDate, array $options = []): object
     {
         $data = [
-            'access_token' => $access_token,
-            'start_date' => $start_date,
-            'end_date' => $end_date,
+            'access_token' => $accessToken,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
             'options' => (object) $options,
         ];
 
         return $this->sendRequest('transactions/get', $data);
     }
 
-    public function fireSandboxWebhook(string $access_token, string $webhook_code, string $webhook_type): object
+    public function fireSandboxWebhook(string $accessToken, string $webhookCode, string $webhookType): object
     {
-        $data = compact('access_token', 'webhook_code', 'webhook_type');
+        $data = [
+            'access_token' => $accessToken,
+            'webhook_code' => $webhookCode,
+            'webhook_type' => $webhookType,
+        ];
 
         return $this->sendRequest('sandbox/item/fire_webhook', $data);
     }
 
-    public function refreshTransactions(string $access_token): object
+    public function refreshTransactions(string $accessToken): object
     {
-        $data = compact('access_token');
+        $data = [
+            'access_token' => $accessToken,
+        ];
 
         return $this->sendRequest('transactions/refresh', $data);
     }
 
-    public function removeItem(string $access_token): object
+    public function removeItem(string $accessToken): object
     {
-        $data = compact('access_token');
+        $data = [
+            'access_token' => $accessToken,
+        ];
 
         return $this->sendRequest('item/remove', $data);
     }

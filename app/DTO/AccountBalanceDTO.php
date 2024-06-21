@@ -12,8 +12,7 @@ class AccountBalanceDTO implements Wireable
         public string $creditBalance,
         public ?string $netMovement,
         public ?string $endingBalance,
-    ) {
-    }
+    ) {}
 
     public function toLivewire(): array
     {

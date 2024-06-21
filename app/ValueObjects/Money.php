@@ -7,17 +7,12 @@ use App\Utilities\Currency\CurrencyConverter;
 
 class Money
 {
-    private int $amount;
-
-    private string $currencyCode;
-
     private ?int $convertedAmount = null;
 
-    public function __construct(int $amount, string $currencyCode)
-    {
-        $this->amount = $amount;
-        $this->currencyCode = $currencyCode;
-    }
+    public function __construct(
+        private readonly int $amount,
+        private readonly string $currencyCode
+    ) {}
 
     public function getAmount(): int
     {

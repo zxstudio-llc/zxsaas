@@ -11,15 +11,10 @@ class InvoiceViewModel
 {
     use HasFont;
 
-    public DocumentDefault $invoice;
-
-    public ?array $data = [];
-
-    public function __construct(DocumentDefault $invoice, ?array $data = null)
-    {
-        $this->invoice = $invoice;
-        $this->data = $data;
-    }
+    public function __construct(
+        public DocumentDefault $invoice,
+        public ?array $data = null
+    ) {}
 
     public function logo(): ?string
     {

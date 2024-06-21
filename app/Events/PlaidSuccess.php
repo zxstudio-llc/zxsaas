@@ -11,19 +11,12 @@ class PlaidSuccess
     use Dispatchable;
     use SerializesModels;
 
-    public string $publicToken;
-
-    public string $accessToken;
-
-    public Company $company;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(string $publicToken, string $accessToken, Company $company)
-    {
-        $this->publicToken = $publicToken;
-        $this->accessToken = $accessToken;
-        $this->company = $company;
-    }
+    public function __construct(
+        public string $publicToken,
+        public string $accessToken,
+        public Company $company
+    ) {}
 }

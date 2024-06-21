@@ -15,7 +15,6 @@ use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -163,7 +162,8 @@ class Invoice extends Page
                 TextInput::make('subheader')
                     ->localizeLabel()
                     ->nullable(),
-                MarkdownEditor::make('terms')
+                Textarea::make('terms')
+                    ->localizeLabel()
                     ->nullable(),
                 Textarea::make('footer')
                     ->localizeLabel('Footer / Notes')

@@ -23,9 +23,9 @@
                             {{ $institution->name }}
                         </h3>
 
-                        @if($institution->getLastImportDate())
+                        @if($institution->latestImport)
                             <p class="connected-account-section-header-description text-sm leading-6 text-gray-500 dark:text-gray-400">
-                                {{ __('Last updated') }} {{ $institution->getLastImportDate() }}
+                                {{ __('Last updated') }} {{ $institution->latestImport->last_imported_at->diffForHumans() }}
                             </p>
                         @endif
                     </div>

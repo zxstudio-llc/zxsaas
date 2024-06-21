@@ -10,6 +10,7 @@ use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -98,6 +99,7 @@ class AccountChart extends Page
                 $this->getNameFormComponent(),
                 $this->getCurrencyFormComponent(),
                 $this->getDescriptionFormComponent(),
+                $this->getArchiveFormComponent(),
             ]);
     }
 
@@ -159,6 +161,16 @@ class AccountChart extends Page
         return Textarea::make('description')
             ->label('Description')
             ->autosize();
+    }
+
+    protected function getArchiveFormComponent(): Component
+    {
+        return Checkbox::make('archived')
+            ->label('Archive Account')
+            ->helperText('Archived accounts will not be available for selection in transactions.')
+            ->hidden(static function (string $operation): bool {
+                return $operation === 'create';
+            });
     }
 
     private function getChartSubtypeOptions($useActiveTab = true): array

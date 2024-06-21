@@ -12,25 +12,14 @@ class CompanyGenerated
     use Dispatchable;
     use SerializesModels;
 
-    public User $user;
-
-    public Company $company;
-
-    public string $country;
-
-    public string $language;
-
-    public string $currency;
-
     /**
      * Create a new event instance.
      */
-    public function __construct(User $user, Company $company, string $country, string $language = 'en', string $currency = 'USD')
-    {
-        $this->user = $user;
-        $this->company = $company;
-        $this->country = $country;
-        $this->language = $language;
-        $this->currency = $currency;
-    }
+    public function __construct(
+        public User $user,
+        public Company $company,
+        public string $country,
+        public string $language = 'en',
+        public string $currency = 'USD'
+    ) {}
 }

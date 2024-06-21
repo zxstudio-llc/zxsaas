@@ -11,15 +11,10 @@ use App\Repositories\Banking\ConnectedBankAccountRepository;
 
 class ConnectedBankAccountService
 {
-    protected AccountSubtypeRepository $accountSubtypeRepository;
-
-    protected ConnectedBankAccountRepository $connectedBankAccountRepository;
-
-    public function __construct(AccountSubtypeRepository $accountSubtypeRepository, ConnectedBankAccountRepository $connectedBankAccountRepository)
-    {
-        $this->accountSubtypeRepository = $accountSubtypeRepository;
-        $this->connectedBankAccountRepository = $connectedBankAccountRepository;
-    }
+    public function __construct(
+        protected AccountSubtypeRepository $accountSubtypeRepository,
+        protected ConnectedBankAccountRepository $connectedBankAccountRepository
+    ) {}
 
     public function getOrProcessBankAccountForConnectedBankAccount(Company $company, ConnectedBankAccount $connectedBankAccount, int | string $selectedBankAccountId): BankAccount
     {

@@ -3,6 +3,7 @@
 namespace App\Filament\Company\Pages;
 
 use App\Filament\Company\Pages\Reports\AccountBalances;
+use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Infolist;
@@ -38,7 +39,7 @@ class Reports extends Page
                             ->description('The sum of all debit and credit balances for all accounts on a single day. This helps to ensure that the books are in balance.')
                             ->icon('heroicon-o-scale')
                             ->iconColor(Color::Sky)
-                            ->url('#'),
+                            ->url(TrialBalance::getUrl()),
                         ReportEntry::make('account_transactions')
                             ->hiddenLabel()
                             ->heading('Account Transactions')

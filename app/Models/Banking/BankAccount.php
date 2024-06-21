@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 #[ObservedBy(BankAccountObserver::class)]
 class BankAccount extends Model
@@ -56,9 +55,9 @@ class BankAccount extends Model
         return $this->hasOne(ConnectedBankAccount::class, 'bank_account_id');
     }
 
-    public function account(): MorphOne
+    public function account(): HasOne
     {
-        return $this->morphOne(Account::class, 'accountable');
+        return $this->hasOne(Account::class, 'bank_account_id');
     }
 
     public function institution(): BelongsTo

@@ -29,14 +29,14 @@ class PlaidWebhookController extends Controller
     private function handleDefaultUpdate(array $payload): void
     {
         $newTransactions = $payload['new_transactions'];
-        $itemID = $payload['item_id'];
+        $itemId = $payload['item_id'];
 
-        $company = Company::whereHas('connectedBankAccounts', static function ($query) use ($itemID) {
-            $query->where('item_id', $itemID);
+        $company = Company::whereHas('connectedBankAccounts', static function ($query) use ($itemId) {
+            $query->where('item_id', $itemId);
         })->first();
 
         if ($company && $newTransactions > 0) {
-            ProcessTransactionUpdate::dispatch($company, $itemID)
+            ProcessTransactionUpdate::dispatch($company, $itemId)
                 ->onQueue('transactions');
         }
     }

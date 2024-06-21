@@ -12,8 +12,7 @@ class AccountCategoryDTO implements Wireable
     public function __construct(
         public array $accounts,
         public AccountBalanceDTO $summary,
-    ) {
-    }
+    ) {}
 
     public function toLivewire(): array
     {

@@ -13,13 +13,7 @@ class CompanyConfigured
     use InteractsWithSockets;
     use SerializesModels;
 
-    public Company $company;
-
-    /**
-     * Create a new event instance.
-     */
-    public function __construct(Company $company)
-    {
-        $this->company = $company;
-    }
+    public function __construct(
+        public Company $company
+    ) {}
 }

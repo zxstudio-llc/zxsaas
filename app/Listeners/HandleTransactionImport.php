@@ -9,15 +9,12 @@ use Illuminate\Support\Facades\DB;
 
 class HandleTransactionImport
 {
-    protected ConnectedBankAccountService $connectedBankAccountService;
-
     /**
      * Create the event listener.
      */
-    public function __construct(ConnectedBankAccountService $connectedBankAccountService)
-    {
-        $this->connectedBankAccountService = $connectedBankAccountService;
-    }
+    public function __construct(
+        protected ConnectedBankAccountService $connectedBankAccountService
+    ) {}
 
     /**
      * Handle the event.

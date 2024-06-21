@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 class Institution extends Model
@@ -46,34 +46,9 @@ class Institution extends Model
         return $this->hasMany(ConnectedBankAccount::class, 'institution_id');
     }
 
-    public function getLastTransactionDate(): ?string
+    public function latestImport(): HasOne
     {
-        $latestDate = $this->connectedBankAccounts->map(function ($connectedBankAccount) {
-            if ($connectedBankAccount->bankAccount) {
-                return $connectedBankAccount->bankAccount->transactions()->max('posted_at');
-            }
-
-            return null;
-        })->filter()->max();
-
-        if ($latestDate) {
-            return Carbon::parse($latestDate)->diffForHumans();
-        }
-
-        return null;
-    }
-
-    public function getLastImportDate(): ?string
-    {
-        $latestDate = $this->connectedBankAccounts->map(function ($connectedBankAccount) {
-            return $connectedBankAccount->last_imported_at;
-        })->filter()->max();
-
-        if ($latestDate) {
-            return Carbon::parse($latestDate)->diffForHumans();
-        }
-
-        return null;
+        return $this->hasOne(ConnectedBankAccount::class, 'institution_id')->latestOfMany('last_imported_at');
     }
 
     protected function logoUrl(): Attribute

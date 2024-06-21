@@ -4,7 +4,7 @@ namespace App\DTO;
 
 use Livewire\Wireable;
 
-class AccountBalanceReportDTO implements Wireable
+class ReportDTO implements Wireable
 {
     public function __construct(
         /**
@@ -12,14 +12,15 @@ class AccountBalanceReportDTO implements Wireable
          */
         public array $categories,
         public AccountBalanceDTO $overallTotal,
-    ) {
-    }
+        public array $fields,
+    ) {}
 
     public function toLivewire(): array
     {
         return [
             'categories' => $this->categories,
             'overallTotal' => $this->overallTotal->toLivewire(),
+            'fields' => $this->fields,
         ];
     }
 
@@ -28,6 +29,7 @@ class AccountBalanceReportDTO implements Wireable
         return new static(
             $value['categories'],
             AccountBalanceDTO::fromLivewire($value['overallTotal']),
+            $value['fields'],
         );
     }
 }
