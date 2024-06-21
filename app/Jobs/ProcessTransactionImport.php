@@ -28,8 +28,7 @@ class ProcessTransactionImport implements ShouldQueue
         protected BankAccount $bankAccount,
         protected ConnectedBankAccount $connectedBankAccount,
         protected string $startDate
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.

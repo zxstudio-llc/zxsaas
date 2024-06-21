@@ -4,6 +4,7 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
+use App\Support\Column;
 
 class TrialBalanceReportTransformer extends BaseReportTransformer
 {
@@ -14,22 +15,7 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
 
     public function getHeaders(): array
     {
-        return ['', 'Account', 'Debit', 'Credit'];
-    }
-
-    public function getRightAlignedColumns(): array
-    {
-        return [2, 3];
-    }
-
-    public function getLeftAlignedColumns(): array
-    {
-        return [1];
-    }
-
-    public function getCenterAlignedColumns(): array
-    {
-        return [0];
+        return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
     }
 
     /**
@@ -40,22 +26,48 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
         $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
+            // Initialize header with empty strings
+            $header = [];
+
+            foreach ($this->getColumns() as $index => $column) {
+                if ($column->getName() === 'account_name') {
+                    $header[$index] = $accountCategoryName;
+                } else {
+                    $header[$index] = '';
+                }
+            }
+
+            $data = array_map(function (AccountDTO $account) {
+                $row = [];
+
+                foreach ($this->getColumns() as $column) {
+                    $row[] = match ($column->getName()) {
+                        'account_code' => $account->accountCode,
+                        'account_name' => $account->accountName,
+                        'debit_balance' => $account->balance->debitBalance,
+                        'credit_balance' => $account->balance->creditBalance,
+                        default => '',
+                    };
+                }
+
+                return $row;
+            }, $accountCategory->accounts);
+
+            $summary = [];
+
+            foreach ($this->getColumns() as $column) {
+                $summary[] = match ($column->getName()) {
+                    'account_name' => 'Total ' . $accountCategoryName,
+                    'debit_balance' => $accountCategory->summary->debitBalance,
+                    'credit_balance' => $accountCategory->summary->creditBalance,
+                    default => '',
+                };
+            }
+
             $categories[] = new ReportCategoryDTO(
-                header: ['', $accountCategoryName, '', ''],
-                data: array_map(static function (AccountDTO $account) {
-                    return [
-                        $account->accountCode,
-                        $account->accountName,
-                        $account->balance->debitBalance,
-                        $account->balance->creditBalance,
-                    ];
-                }, $accountCategory->accounts),
-                summary: [
-                    '',
-                    'Total ' . $accountCategoryName,
-                    $accountCategory->summary->debitBalance,
-                    $accountCategory->summary->creditBalance,
-                ],
+                header: $header,
+                data: $data,
+                summary: $summary,
             );
         }
 
@@ -64,11 +76,17 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
 
     public function getOverallTotals(): array
     {
-        return [
-            '',
-            'Total for all accounts',
-            $this->report->overallTotal->debitBalance,
-            $this->report->overallTotal->creditBalance,
-        ];
+        $totals = [];
+
+        foreach ($this->getColumns() as $column) {
+            $totals[] = match ($column->getName()) {
+                'account_name' => 'Total for all accounts',
+                'debit_balance' => $this->report->overallTotal->debitBalance,
+                'credit_balance' => $this->report->overallTotal->creditBalance,
+                default => '',
+            };
+        }
+
+        return $totals;
     }
 }

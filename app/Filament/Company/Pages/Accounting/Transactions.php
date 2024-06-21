@@ -258,7 +258,7 @@ class Transactions extends Page implements HasTable
                             ->schema([
                                 Select::make('account_id')
                                     ->label('Category')
-                                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: true, onlyWithTransactions: true))
+                                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: true))
                                     ->multiple()
                                     ->searchable(),
                                 Select::make('reviewed')
@@ -713,9 +713,8 @@ class Transactions extends Page implements HasTable
         return 'uncategorized';
     }
 
-    protected function getChartAccountOptions(?TransactionType $type = null, ?bool $nominalAccountsOnly = null, ?bool $onlyWithTransactions = null, ?int $currentAccountId = null): array
+    protected function getChartAccountOptions(?TransactionType $type = null, ?bool $nominalAccountsOnly = null, ?int $currentAccountId = null): array
     {
-        $onlyWithTransactions ??= false;
         $nominalAccountsOnly ??= false;
 
         $excludedCategory = match ($type) {
@@ -727,7 +726,6 @@ class Transactions extends Page implements HasTable
         return Account::query()
             ->when($nominalAccountsOnly, fn (Builder $query) => $query->doesntHave('bankAccount'))
             ->when($excludedCategory, fn (Builder $query) => $query->whereNot('category', $excludedCategory))
-            ->when($onlyWithTransactions, fn (Builder $query) => $query->has('transactions'))
             ->where(function (Builder $query) use ($currentAccountId) {
                 $query->where('archived', false)
                     ->orWhere('id', $currentAccountId);

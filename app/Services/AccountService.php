@@ -15,8 +15,7 @@ class AccountService implements AccountHandler
 {
     public function __construct(
         protected JournalEntryRepository $journalEntryRepository
-    ) {
-    }
+    ) {}
 
     public function getDebitBalance(Account $account, string $startDate, string $endDate): Money
     {

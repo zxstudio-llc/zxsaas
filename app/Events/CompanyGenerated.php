@@ -21,6 +21,5 @@ class CompanyGenerated
         public string $country,
         public string $language = 'en',
         public string $currency = 'USD'
-    ) {
-    }
+    ) {}
 }

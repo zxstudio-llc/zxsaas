@@ -19,6 +19,5 @@ class CompanyDefaultUpdated
     public function __construct(
         public Model $record,
         public array $data
-    ) {
-    }
+    ) {}
 }

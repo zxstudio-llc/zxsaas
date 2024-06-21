@@ -20,6 +20,5 @@ class StartTransactionImport
         public ConnectedBankAccount $connectedBankAccount,
         public int | string $selectedBankAccountId,
         public string $startDate
-    ) {
-    }
+    ) {}
 }

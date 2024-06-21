@@ -10,8 +10,7 @@ class AccountDTO implements Wireable
         public string $accountName,
         public string $accountCode,
         public AccountBalanceDTO $balance,
-    ) {
-    }
+    ) {}
 
     public function toLivewire(): array
     {

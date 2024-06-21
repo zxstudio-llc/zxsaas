@@ -17,9 +17,5 @@ interface ExportableReport
 
     public function getOverallTotals(): array;
 
-    public function getRightAlignedColumns(): array;
-
-    public function getLeftAlignedColumns(): array;
-
-    public function getCenterAlignedColumns(): array;
+    public function getColumns(): array;
 }

@@ -14,8 +14,7 @@ class InvoiceViewModel
     public function __construct(
         public DocumentDefault $invoice,
         public ?array $data = null
-    ) {
-    }
+    ) {}
 
     public function logo(): ?string
     {

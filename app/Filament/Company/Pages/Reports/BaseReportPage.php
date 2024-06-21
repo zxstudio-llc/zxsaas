@@ -2,25 +2,37 @@
 
 namespace App\Filament\Company\Pages\Reports;
 
+use App\Contracts\ExportableReport;
+use App\DTO\ReportDTO;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
+use App\Support\Column;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Form;
 use Filament\Forms\Set;
 use Filament\Pages\Page;
+use Filament\Support\Enums\ActionSize;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
+use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Support\Carbon;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Session;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
 {
+    #[Session]
     public string $startDate = '';
 
+    #[Session]
     public string $endDate = '';
 
+    #[Session]
     public string $dateRange = '';
 
     public string $fiscalYearStartDate = '';
@@ -29,35 +41,153 @@ abstract class BaseReportPage extends Page
 
     public Company $company;
 
-    public array $options = [];
+    #[Session]
+    public array $toggledTableColumns = [];
 
-    public function mount(): void
-    {
-        $this->company = auth()->user()->currentCompany;
-        $this->fiscalYearStartDate = $this->company->locale->fiscalYearStartDate();
-        $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
-        $this->dateRange = $this->getDefaultDateRange();
-        $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
-        $this->options = ['showAccountCode'];
-
-        $this->loadReportData();
-    }
-
-    abstract public function loadReportData(): void;
+    abstract protected function buildReport(array $columns): ReportDTO;
 
     abstract public function exportCSV(): StreamedResponse;
 
     abstract public function exportPDF(): StreamedResponse;
+
+    abstract protected function getTransformer(ReportDTO $reportDTO): ExportableReport;
+
+    /**
+     * @return array<Column>
+     */
+    abstract public function getTable(): array;
+
+    public function mount(): void
+    {
+        $this->initializeProperties();
+
+        $this->loadDefaultDateRange();
+
+        $this->loadReportData();
+
+        $this->loadDefaultTableColumnToggleState();
+    }
+
+    protected function getForms(): array
+    {
+        return [
+            'toggleTableColumnForm',
+            'form',
+        ];
+    }
+
+    protected function initializeProperties(): void
+    {
+        $this->company = auth()->user()->currentCompany;
+        $this->fiscalYearStartDate = $this->company->locale->fiscalYearStartDate();
+        $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
+    }
+
+    protected function loadDefaultDateRange(): void
+    {
+        if (empty($this->dateRange)) {
+            $this->dateRange = $this->getDefaultDateRange();
+            $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
+        }
+    }
+
+    public function loadReportData(): void
+    {
+        unset($this->report);
+    }
+
+    protected function loadDefaultTableColumnToggleState(): void
+    {
+        $tableColumns = $this->getTable();
+
+        if (empty($this->toggledTableColumns)) {
+            foreach ($tableColumns as $column) {
+                if ($column->isToggleable()) {
+                    if ($column->isToggledHiddenByDefault()) {
+                        $this->toggledTableColumns[$column->getName()] = false;
+                    } else {
+                        $this->toggledTableColumns[$column->getName()] = true;
+                    }
+                } else {
+                    $this->toggledTableColumns[$column->getName()] = true;
+                }
+            }
+        }
+
+        foreach ($tableColumns as $column) {
+            $columnName = $column->getName();
+            if (! $column->isToggleable()) {
+                $this->toggledTableColumns[$columnName] = true;
+            }
+
+            if ($column->isToggleable() && $column->isToggledHiddenByDefault() && isset($this->toggledTableColumns[$columnName]) && $this->toggledTableColumns[$columnName]) {
+                $this->toggledTableColumns[$columnName] = false;
+            }
+        }
+    }
 
     public function getDefaultDateRange(): string
     {
         return 'FY-' . now()->year;
     }
 
+    protected function getToggledColumns(): array
+    {
+        return array_values(
+            array_filter(
+                $this->getTable(),
+                fn (Column $column) => $this->toggledTableColumns[$column->getName()] ?? false,
+            )
+        );
+    }
+
+    #[Computed(persist: true)]
+    public function report(): ExportableReport
+    {
+        $columns = $this->getToggledColumns();
+        $reportDTO = $this->buildReport($columns);
+
+        return $this->getTransformer($reportDTO);
+    }
+
     public function setDateRange(Carbon $start, Carbon $end): void
     {
-        $this->startDate = $start->format('Y-m-d');
-        $this->endDate = $end->isFuture() ? now()->format('Y-m-d') : $end->format('Y-m-d');
+        $this->startDate = $start->toDateString();
+        $this->endDate = $end->isFuture() ? now()->toDateString() : $end->toDateString();
+    }
+
+    public function toggleColumnsAction(): Action
+    {
+        return Action::make('toggleColumns')
+            ->label(__('filament-tables::table.actions.toggle_columns.label'))
+            ->iconButton()
+            ->size(ActionSize::Large)
+            ->icon(FilamentIcon::resolve('tables::actions.toggle-columns') ?? 'heroicon-m-view-columns')
+            ->color('gray');
+    }
+
+    public function toggleTableColumnForm(Form $form): Form
+    {
+        return $form
+            ->schema($this->getTableColumnToggleFormSchema())
+            ->statePath('toggledTableColumns');
+    }
+
+    /**
+     * @return array<Checkbox>
+     */
+    protected function getTableColumnToggleFormSchema(): array
+    {
+        $schema = [];
+
+        foreach ($this->getTable() as $column) {
+            if ($column->isToggleable()) {
+                $schema[] = Checkbox::make($column->getName())
+                    ->label($column->getLabel());
+            }
+        }
+
+        return $schema;
     }
 
     protected function getHeaderActions(): array
@@ -89,6 +219,12 @@ abstract class BaseReportPage extends Page
             ->selectablePlaceholder(false)
             ->startDateField('startDate')
             ->endDateField('endDate');
+    }
+
+    protected function resetDateRange(): void
+    {
+        $this->dateRange = $this->getDefaultDateRange();
+        $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
     }
 
     protected function getStartDateFormComponent(): Component

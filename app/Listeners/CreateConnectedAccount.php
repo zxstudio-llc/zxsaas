@@ -15,8 +15,7 @@ class CreateConnectedAccount
      */
     public function __construct(
         protected PlaidService $plaidService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the event.

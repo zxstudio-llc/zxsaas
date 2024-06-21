@@ -17,6 +17,5 @@ class CurrencyRateChanged
         public Currency $currency,
         public float $oldRate,
         public float $newRate
-    ) {
-    }
+    ) {}
 }

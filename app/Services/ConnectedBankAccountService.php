@@ -14,8 +14,7 @@ class ConnectedBankAccountService
     public function __construct(
         protected AccountSubtypeRepository $accountSubtypeRepository,
         protected ConnectedBankAccountRepository $connectedBankAccountRepository
-    ) {
-    }
+    ) {}
 
     public function getOrProcessBankAccountForConnectedBankAccount(Company $company, ConnectedBankAccount $connectedBankAccount, int | string $selectedBankAccountId): BankAccount
     {

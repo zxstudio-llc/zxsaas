@@ -10,10 +10,7 @@ use Squire\Repository;
 
 class SquireServiceProvider extends ServiceProvider
 {
-    public function register(): void
-    {
-
-    }
+    public function register(): void {}
 
     public function boot(): void
     {

@@ -15,8 +15,7 @@ readonly class UpdateCurrencyRates
      */
     public function __construct(
         private CurrencyHandler $currencyService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the event.

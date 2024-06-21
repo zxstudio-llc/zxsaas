@@ -14,8 +14,7 @@ class CurrencyService implements CurrencyHandler
         protected ?string $apiKey,
         protected ?string $baseUrl,
         protected Client $client
-    ) {
-    }
+    ) {}
 
     /**
      * Determine if the Currency Exchange Rate feature is enabled.

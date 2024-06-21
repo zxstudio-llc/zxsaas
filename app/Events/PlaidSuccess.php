@@ -18,6 +18,5 @@ class PlaidSuccess
         public string $publicToken,
         public string $accessToken,
         public Company $company
-    ) {
-    }
+    ) {}
 }

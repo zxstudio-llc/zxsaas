@@ -12,8 +12,7 @@ class Money
     public function __construct(
         private readonly int $amount,
         private readonly string $currencyCode
-    ) {
-    }
+    ) {}
 
     public function getAmount(): int
     {

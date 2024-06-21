@@ -18,6 +18,5 @@ class DefaultCurrencyChanged
      */
     public function __construct(
         public Currency $currency
-    ) {
-    }
+    ) {}
 }

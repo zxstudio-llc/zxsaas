@@ -13,6 +13,5 @@ class ReportCategoryDTO
         public array $header,
         public array $data,
         public array $summary,
-    ) {
-    }
+    ) {}
 }

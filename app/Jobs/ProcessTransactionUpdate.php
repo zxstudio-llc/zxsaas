@@ -23,8 +23,7 @@ class ProcessTransactionUpdate implements ShouldQueue
     public function __construct(
         protected Company $company,
         protected string $itemId
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.

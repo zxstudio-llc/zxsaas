@@ -4,38 +4,37 @@ namespace App\Transformers;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use Filament\Support\Enums\Alignment;
 use Livewire\Wireable;
 
 abstract class BaseReportTransformer implements ExportableReport, Wireable
 {
     protected ReportDTO $report;
 
-    protected array $options;
-
-    public function __construct(ReportDTO $report, array $options = [])
+    public function __construct(ReportDTO $report)
     {
         $this->report = $report;
-        $this->options = $options;
+    }
+
+    public function getColumns(): array
+    {
+        return $this->report->fields;
     }
 
     public function getAlignmentClass(int $index): string
     {
-        if (in_array($index, $this->getRightAlignedColumns())) {
+        $column = $this->getColumns()[$index];
+
+        if ($column->getAlignment() === Alignment::Right) {
             return 'text-right';
         }
 
-        if (in_array($index, $this->getCenterAlignedColumns())) {
+        if ($column->getAlignment() === Alignment::Center) {
             return 'text-center';
         }
 
         return 'text-left';
     }
-
-    abstract public function getRightAlignedColumns(): array;
-
-    abstract public function getCenterAlignedColumns(): array;
-
-    abstract public function getLeftAlignedColumns(): array;
 
     public function toLivewire(): array
     {

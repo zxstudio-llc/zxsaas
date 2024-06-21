@@ -14,8 +14,7 @@ class HandleTransactionImport
      */
     public function __construct(
         protected ConnectedBankAccountService $connectedBankAccountService
-    ) {
-    }
+    ) {}
 
     /**
      * Handle the event.

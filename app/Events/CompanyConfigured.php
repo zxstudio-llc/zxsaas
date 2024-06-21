@@ -15,6 +15,5 @@ class CompanyConfigured
 
     public function __construct(
         public Company $company
-    ) {
-    }
+    ) {}
 }

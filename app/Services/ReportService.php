@@ -15,8 +15,7 @@ class ReportService
 {
     public function __construct(
         protected AccountService $accountService,
-    ) {
-    }
+    ) {}
 
     public function formatBalances(array $balances): AccountBalanceDTO
     {
@@ -49,14 +48,51 @@ class ReportService
             ->sortBy(static fn (Collection $groupedAccounts, string $key) => array_search($key, $allCategories, true));
     }
 
-    private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $fields, ?callable $initializeCategoryBalances = null): ReportDTO
+    public function buildAccountBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $allCategories = $this->accountService->getAccountCategoryOrder();
+
+        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
+
+        $balanceFields = ['starting_balance', 'debit_balance', 'credit_balance', 'net_movement', 'ending_balance'];
+
+        return $this->buildReport(
+            $allCategories,
+            $categoryGroupedAccounts,
+            fn (Account $account) => $this->accountService->getBalances($account, $startDate, $endDate),
+            $balanceFields,
+            $columns,
+            fn (string $categoryName, array &$categorySummaryBalances) => $this->adjustAccountBalanceCategoryFields($categoryName, $categorySummaryBalances),
+        );
+    }
+
+    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $allCategories = $this->accountService->getAccountCategoryOrder();
+
+        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
+
+        $balanceFields = ['debit_balance', 'credit_balance'];
+
+        return $this->buildReport($allCategories, $categoryGroupedAccounts, function (Account $account) use ($startDate, $endDate) {
+            $endingBalance = $this->accountService->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
+
+            if ($endingBalance === 0) {
+                return [];
+            }
+
+            return $this->calculateTrialBalance($account->category, $endingBalance);
+        }, $balanceFields, $columns);
+    }
+
+    private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $balanceFields, array $allFields, ?callable $initializeCategoryBalances = null): ReportDTO
     {
         $accountCategories = [];
-        $reportTotalBalances = array_fill_keys($fields, 0);
+        $reportTotalBalances = array_fill_keys($balanceFields, 0);
 
         foreach ($allCategories as $categoryName) {
             $accountsInCategory = $categoryGroupedAccounts[$categoryName] ?? collect();
-            $categorySummaryBalances = array_fill_keys($fields, 0);
+            $categorySummaryBalances = array_fill_keys($balanceFields, 0);
 
             if ($initializeCategoryBalances) {
                 $initializeCategoryBalances($categoryName, $categorySummaryBalances);
@@ -78,7 +114,7 @@ class ReportService
                     }
                 }
 
-                $filteredAccountBalances = $this->filterBalances($accountBalances, $fields);
+                $filteredAccountBalances = $this->filterBalances($accountBalances, $balanceFields);
                 $formattedAccountBalances = $this->formatBalances($filteredAccountBalances);
 
                 $categoryAccounts[] = new AccountDTO(
@@ -88,13 +124,13 @@ class ReportService
                 );
             }
 
-            foreach ($fields as $field) {
+            foreach ($balanceFields as $field) {
                 if (array_key_exists($field, $categorySummaryBalances)) {
                     $reportTotalBalances[$field] += $categorySummaryBalances[$field];
                 }
             }
 
-            $filteredCategorySummaryBalances = $this->filterBalances($categorySummaryBalances, $fields);
+            $filteredCategorySummaryBalances = $this->filterBalances($categorySummaryBalances, $balanceFields);
             $formattedCategorySummaryBalances = $this->formatBalances($filteredCategorySummaryBalances);
 
             $accountCategories[$categoryName] = new AccountCategoryDTO(
@@ -105,24 +141,7 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances);
-    }
-
-    public function buildAccountBalanceReport(string $startDate, string $endDate): ReportDTO
-    {
-        $allCategories = $this->accountService->getAccountCategoryOrder();
-
-        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
-
-        $fields = ['starting_balance', 'debit_balance', 'credit_balance', 'net_movement', 'ending_balance'];
-
-        return $this->buildReport(
-            $allCategories,
-            $categoryGroupedAccounts,
-            fn (Account $account) => $this->accountService->getBalances($account, $startDate, $endDate),
-            $fields,
-            fn (string $categoryName, array &$categorySummaryBalances) => $this->adjustAccountBalanceCategoryFields($categoryName, $categorySummaryBalances),
-        );
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $allFields);
     }
 
     private function adjustAccountBalanceCategoryFields(string $categoryName, array &$categorySummaryBalances): void
@@ -130,25 +149,6 @@ class ReportService
         if (in_array($categoryName, [AccountCategory::Expense->getPluralLabel(), AccountCategory::Revenue->getPluralLabel()], true)) {
             unset($categorySummaryBalances['starting_balance'], $categorySummaryBalances['ending_balance']);
         }
-    }
-
-    public function buildTrialBalanceReport(string $startDate, string $endDate): ReportDTO
-    {
-        $allCategories = $this->accountService->getAccountCategoryOrder();
-
-        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
-
-        $fields = ['debit_balance', 'credit_balance'];
-
-        return $this->buildReport($allCategories, $categoryGroupedAccounts, function (Account $account) use ($startDate, $endDate) {
-            $endingBalance = $this->accountService->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
-
-            if ($endingBalance === 0) {
-                return [];
-            }
-
-            return $this->calculateTrialBalance($account->category, $endingBalance);
-        }, $fields);
     }
 
     private function calculateTrialBalance(AccountCategory $category, int $endingBalance): array
