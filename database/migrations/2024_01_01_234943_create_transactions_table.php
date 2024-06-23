@@ -30,6 +30,9 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
+
+            $table->index(['company_id', 'account_id', 'posted_at']);
+            $table->index(['company_id', 'bank_account_id', 'posted_at']);
         });
     }
 

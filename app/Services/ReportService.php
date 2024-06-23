@@ -8,6 +8,7 @@ use App\DTO\AccountDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
+use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -27,8 +28,8 @@ class ReportService
 
         return new AccountBalanceDTO(
             startingBalance: $balances['starting_balance'] ?? null,
-            debitBalance: $balances['debit_balance'],
-            creditBalance: $balances['credit_balance'],
+            debitBalance: $balances['debit_balance'] ?? null,
+            creditBalance: $balances['credit_balance'] ?? null,
             netMovement: $balances['net_movement'] ?? null,
             endingBalance: $balances['ending_balance'] ?? null,
         );
@@ -56,11 +57,15 @@ class ReportService
 
         $balanceFields = ['starting_balance', 'debit_balance', 'credit_balance', 'net_movement', 'ending_balance'];
 
+        $columnNameKeys = array_map(fn (Column $column) => $column->getName(), $columns);
+
+        $updatedBalanceFields = array_filter($balanceFields, fn (string $balanceField) => in_array($balanceField, $columnNameKeys, true));
+
         return $this->buildReport(
             $allCategories,
             $categoryGroupedAccounts,
-            fn (Account $account) => $this->accountService->getBalances($account, $startDate, $endDate),
-            $balanceFields,
+            fn (Account $account) => $this->accountService->getBalances($account, $startDate, $endDate, $updatedBalanceFields),
+            $updatedBalanceFields,
             $columns,
             fn (string $categoryName, array &$categorySummaryBalances) => $this->adjustAccountBalanceCategoryFields($categoryName, $categorySummaryBalances),
         );
