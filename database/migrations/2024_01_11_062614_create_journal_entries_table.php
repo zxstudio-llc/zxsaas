@@ -22,6 +22,9 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
+
+            $table->index(['company_id', 'account_id', 'type']);
+            $table->index(['company_id', 'account_id', 'transaction_id']);
         });
     }
 

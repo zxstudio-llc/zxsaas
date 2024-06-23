@@ -16,8 +16,16 @@
                     </div>
                 </form>
             </div>
-            <div class="relative divide-y divide-gray-200 overflow-x-auto dark:divide-white/10 dark:border-t-white/10">
-                <x-company.tables.reports.detailed-report :report="$this->report" />
+            <div class="divide-y divide-gray-200 overflow-x-auto overflow-y-hidden dark:divide-white/10 dark:border-t-white/10">
+                <div class="flex items-center justify-center">
+                    <div wire:loading.delay wire:target="loadReportData">
+                        <x-filament::loading-indicator class="p-6 text-primary-700 dark:text-primary-300" />
+                    </div>
+                </div>
+
+                <div wire:loading.remove wire:target="loadReportData">
+                    <x-company.tables.reports.detailed-report :report="$this->report" />
+                </div>
             </div>
             <div class="es-table__footer-ctn border-t border-gray-200"></div>
         </x-filament-tables::container>

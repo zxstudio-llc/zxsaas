@@ -17,7 +17,7 @@ interface AccountHandler
 
     public function getEndingBalance(Account $account, string $startDate, string $endDate): ?Money;
 
-    public function getBalances(Account $account, string $startDate, string $endDate): array;
+    public function getBalances(Account $account, string $startDate, string $endDate, array $fields): array;
 
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money;
 

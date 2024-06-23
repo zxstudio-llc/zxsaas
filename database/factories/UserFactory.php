@@ -6,6 +6,7 @@ use App\Events\CompanyGenerated;
 use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
+use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -87,6 +88,15 @@ class UserFactory extends Factory
                         'created_by' => $user->id,
                         'updated_by' => $user->id,
                     ]);
+
+                    TransactionFactory::new()
+                        ->count(2000)
+                        ->create([
+                            'company_id' => $company->id,
+                            'bank_account_id' => $defaultBankAccount?->id,
+                            'created_by' => $user->id,
+                            'updated_by' => $user->id,
+                        ]);
                 })
                 ->create([
                     'name' => $user->name . '\'s Company',

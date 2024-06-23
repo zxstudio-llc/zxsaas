@@ -92,9 +92,7 @@
             },
 
             setActiveMenu(menu) {
-                if (this.open) {
-                    this.transitionPanel(menu, 'forward');
-                }
+                this.transitionPanel(menu, 'forward');
             },
 
             focusMenuItem(menuItemRef) {
@@ -160,7 +158,9 @@
                             mainPanel.style.transform = 'translateX(0)';
                         }
                     } else {
-                        this.navigationStack = ['main'];
+                        if (this.currentActiveMenu() !== 'main') {
+                            this.setActiveMenu('main');
+                        }
                     }
                 });
             },
