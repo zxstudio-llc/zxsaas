@@ -91,7 +91,7 @@ class UserFactory extends Factory
 
                     TransactionFactory::new()
                         ->count(2000)
-                        ->create([
+                        ->createQuietly([
                             'company_id' => $company->id,
                             'bank_account_id' => $defaultBankAccount?->id,
                             'created_by' => $user->id,
