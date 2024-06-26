@@ -38,9 +38,18 @@ class TransactionFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Transaction $transaction) {
-            $transaction->journalEntries()->create([
+            $chartAccount = $transaction->account;
+            $bankAccount = $transaction->bankAccount->account;
+
+            $debitAccount = $transaction->type->isWithdrawal() ? $chartAccount : $bankAccount;
+            $creditAccount = $transaction->type->isWithdrawal() ? $bankAccount : $chartAccount;
+
+            if ($debitAccount === null || $creditAccount === null) {
+                return;
+            }
+
+            $debitAccount->journalEntries()->create([
                 'company_id' => $transaction->company_id,
-                'account_id' => $transaction->account_id,
                 'transaction_id' => $transaction->id,
                 'type' => 'debit',
                 'amount' => $transaction->amount,
@@ -49,9 +58,8 @@ class TransactionFactory extends Factory
                 'updated_by' => $transaction->updated_by,
             ]);
 
-            $transaction->journalEntries()->create([
+            $creditAccount->journalEntries()->create([
                 'company_id' => $transaction->company_id,
-                'account_id' => $transaction->account_id,
                 'transaction_id' => $transaction->id,
                 'type' => 'credit',
                 'amount' => $transaction->amount,
