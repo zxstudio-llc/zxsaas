@@ -41,6 +41,8 @@ abstract class BaseReportPage extends Page
 
     public Company $company;
 
+    public bool $reportLoaded = false;
+
     #[Session]
     public array $toggledTableColumns = [];
 
@@ -62,8 +64,6 @@ abstract class BaseReportPage extends Page
         $this->initializeProperties();
 
         $this->loadDefaultDateRange();
-
-        $this->loadReportData();
 
         $this->loadDefaultTableColumnToggleState();
     }
@@ -94,6 +94,7 @@ abstract class BaseReportPage extends Page
     public function loadReportData(): void
     {
         unset($this->report);
+        $this->reportLoaded = true;
     }
 
     protected function loadDefaultTableColumnToggleState(): void
@@ -142,8 +143,12 @@ abstract class BaseReportPage extends Page
     }
 
     #[Computed(persist: true)]
-    public function report(): ExportableReport
+    public function report(): ?ExportableReport
     {
+        if ($this->reportLoaded === false) {
+            return null;
+        }
+
         $columns = $this->getToggledColumns();
         $reportDTO = $this->buildReport($columns);
 
