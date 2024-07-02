@@ -6,13 +6,17 @@
     <title>{{ $report->getTitle() }}</title>
     <style>
         @page {
-            size: A4;
-            margin: 8.5mm 8.5mm 30mm 8.5mm;
+            size: auto;
+            margin: 10mm 7.5mm;
         }
 
         .header {
             color: #374151;
             margin-bottom: 1rem;
+        }
+
+        .header > * + * {
+            margin-top: 0.5rem;
         }
 
         .table-head {
@@ -34,12 +38,6 @@
         .table-class th,
         .table-class td {
             color: #374151;
-        }
-
-        .header .title,
-        .header .company-name,
-        .header .date-range {
-            margin-bottom: 0.125rem; /* Uniform space between header elements */
         }
 
         .title {
