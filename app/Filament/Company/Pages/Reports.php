@@ -3,6 +3,7 @@
 namespace App\Filament\Company\Pages;
 
 use App\Filament\Company\Pages\Reports\AccountBalances;
+use App\Filament\Company\Pages\Reports\AccountTransactions;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
@@ -46,7 +47,7 @@ class Reports extends Page
                             ->description('A record of all transactions for a company. The general ledger is the core of a company\'s financial records.')
                             ->icon('heroicon-o-adjustments-horizontal')
                             ->iconColor(Color::Amber)
-                            ->url('#'),
+                            ->url(AccountTransactions::getUrl()),
                     ]),
             ]);
     }

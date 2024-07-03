@@ -11,15 +11,15 @@ class ReportDTO implements Wireable
          * @var AccountCategoryDTO[]
          */
         public array $categories,
-        public AccountBalanceDTO $overallTotal,
-        public array $fields,
+        public ?AccountBalanceDTO $overallTotal = null,
+        public array $fields = [],
     ) {}
 
     public function toLivewire(): array
     {
         return [
             'categories' => $this->categories,
-            'overallTotal' => $this->overallTotal->toLivewire(),
+            'overallTotal' => $this->overallTotal?->toLivewire(),
             'fields' => $this->fields,
         ];
     }
@@ -28,8 +28,8 @@ class ReportDTO implements Wireable
     {
         return new static(
             $value['categories'],
-            AccountBalanceDTO::fromLivewire($value['overallTotal']),
-            $value['fields'],
+            isset($value['overallTotal']) ? AccountBalanceDTO::fromLivewire($value['overallTotal']) : null,
+            $value['fields'] ?? [],
         );
     }
 }

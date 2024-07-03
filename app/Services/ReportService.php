@@ -5,11 +5,14 @@ namespace App\Services;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountCategoryDTO;
 use App\DTO\AccountDTO;
+use App\DTO\AccountTransactionDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class ReportService
@@ -88,6 +91,94 @@ class ReportService
 
             return $this->calculateTrialBalance($account->category, $endingBalance);
         }, $balanceFields, $columns);
+    }
+
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $accounts = Account::whereHas('journalEntries.transaction', static function (Builder $query) use ($startDate, $endDate) {
+            $query->whereBetween('posted_at', [$startDate, $endDate]);
+        })
+            ->with(['journalEntries' => static function ($query) use ($startDate, $endDate) {
+                $query->whereHas('transaction', static function (Builder $query) use ($startDate, $endDate) {
+                    $query->whereBetween('posted_at', [$startDate, $endDate]);
+                })
+                    ->with(['transaction' => static function ($query) {
+                        $query->select('id', 'posted_at', 'description');
+                    }])
+                    ->select('id', 'account_id', 'transaction_id', 'type', 'amount');
+            }])
+            ->select(['id', 'name', 'category', 'subtype_id', 'currency_code'])
+            ->get()
+            ->lazy();
+
+        $reportCategories = [];
+
+        foreach ($accounts as $account) {
+            $accountTransactions = [];
+            $startingBalance = $this->accountService->getStartingBalance($account, $startDate, true);
+
+            $currentBalance = $startingBalance?->getAmount() ?? 0;
+            $totalDebit = 0;
+            $totalCredit = 0;
+
+            $accountTransactions[] = new AccountTransactionDTO(
+                date: 'Starting Balance',
+                description: '',
+                debit: '',
+                credit: '',
+                balance: $startingBalance?->format() ?? 0,
+            );
+
+            $journalEntriesGroupedByTransaction = $account->journalEntries->groupBy('transaction_id');
+
+            foreach ($journalEntriesGroupedByTransaction as $transactionId => $journalEntries) {
+                $transaction = $journalEntries->first()->transaction;
+
+                $debitAmount = $journalEntries->sumDebits()->getAmount();
+                $creditAmount = $journalEntries->sumCredits()->getAmount();
+
+                // Adjust balance
+                $currentBalance += $debitAmount;
+                $currentBalance -= $creditAmount;
+
+                $totalDebit += $debitAmount;
+                $totalCredit += $creditAmount;
+
+                $accountTransactions[] = new AccountTransactionDTO(
+                    date: $transaction->posted_at->format('Y-m-d'),
+                    description: $transaction->description,
+                    debit: $debitAmount ? money($debitAmount, $account->currency_code)->format() : '',
+                    credit: $creditAmount ? money($creditAmount, $account->currency_code)->format() : '',
+                    balance: money($currentBalance, $account->currency_code)->format(),
+                );
+            }
+
+            $balanceChange = $currentBalance - ($startingBalance?->getAmount() ?? 0);
+
+            $accountTransactions[] = new AccountTransactionDTO(
+                date: 'Totals and Ending Balance',
+                description: '',
+                debit: money($totalDebit, $account->currency_code)->format(),
+                credit: money($totalCredit, $account->currency_code)->format(),
+                balance: money($currentBalance, $account->currency_code)->format(),
+            );
+
+            $accountTransactions[] = new AccountTransactionDTO(
+                date: 'Balance Change',
+                description: '',
+                debit: '',
+                credit: '',
+                balance: money($balanceChange, $account->currency_code)->format(),
+            );
+
+            $reportCategories[] = [
+                'category' => $account->name,
+                'under' => 'Under: ' . $account->category->getLabel() . ' > ' . $account->subtype->name,
+                'transactions' => $accountTransactions,
+            ];
+        }
+
+        return new ReportDTO(categories: $reportCategories, fields: $columns);
     }
 
     private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $balanceFields, array $allFields, ?callable $initializeCategoryBalances = null): ReportDTO
