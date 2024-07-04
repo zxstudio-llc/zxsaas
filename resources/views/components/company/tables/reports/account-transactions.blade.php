@@ -16,12 +16,15 @@
             <tr class="bg-gray-50 dark:bg-white/5">
                 <x-filament-tables::cell colspan="{{ count($report->getHeaders()) }}" class="text-left">
                     <div class="px-3 py-2">
-                        <div class="text-sm font-semibold text-gray-950 dark:text-white">
-                            {{ $category->header[0]['value'] }}
-                        </div>
-                        <div class="text-sm text-gray-700 dark:text-gray-300">
-                            {{ $category->header[1]['value'] }}
-                        </div>
+                        @foreach ($category->header as $headerRow)
+                            <div class="text-sm {{ $loop->first ? 'font-semibold text-gray-950 dark:text-white' : 'text-gray-500 dark:text-white/50' }}">
+                                @foreach ($headerRow as $headerValue)
+                                    @if (!empty($headerValue))
+                                        {{ $headerValue }}
+                                    @endif
+                                @endforeach
+                            </div>
+                        @endforeach
                     </div>
                 </x-filament-tables::cell>
             </tr>
@@ -54,17 +57,4 @@
             @endunless
         </tbody>
     @endforeach
-    @if (filled($report->getOverallTotals()))
-        <tfoot>
-            <tr class="bg-gray-50 dark:bg-white/5">
-                @foreach($report->getOverallTotals() as $index => $total)
-                    <x-filament-tables::cell wire:key="footer-total-{{ $index }}" class="{{ $report->getAlignmentClass($index) }}">
-                        <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
-                            {{ $total }}
-                        </div>
-                    </x-filament-tables::cell>
-                @endforeach
-            </tr>
-        </tfoot>
-    @endif
 </table>

@@ -9,7 +9,6 @@ use App\DTO\AccountTransactionDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
-use App\Models\Accounting\JournalEntry;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Builder;
@@ -173,7 +172,7 @@ class ReportService
 
             $reportCategories[] = [
                 'category' => $account->name,
-                'under' => 'Under: ' . $account->category->getLabel() . ' > ' . $account->subtype->name,
+                'under' => $account->category->getLabel() . ' > ' . $account->subtype->name,
                 'transactions' => $accountTransactions,
             ];
         }

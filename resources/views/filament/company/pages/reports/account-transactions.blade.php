@@ -5,11 +5,13 @@
                 <form wire:submit.prevent="loadReportData">
                     <div class="flex flex-col lg:flex-row items-start lg:items-center justify-center gap-4 lg:gap-12">
                         {{ $this->form }}
-                        <x-filament-tables::column-toggle.dropdown
-                            class="my-auto"
-                            :form="$this->toggleTableColumnForm"
-                            :trigger-action="$this->toggleColumnsAction"
-                        />
+                        @if($this->hasToggleableColumns())
+                            <x-filament-tables::column-toggle.dropdown
+                                class="my-auto"
+                                :form="$this->toggleTableColumnForm"
+                                :trigger-action="$this->toggleColumnsAction"
+                            />
+                        @endif
                         <x-filament::button type="submit" class="flex-shrink-0">
                             Update Report
                         </x-filament::button>

@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportService
 {
-    public function exportToCsv(Company $company, ExportableReport $report, string $startDate, string $endDate): StreamedResponse
+    public function exportToCsv(Company $company, ExportableReport $report, string $startDate, string $endDate, bool $separateCategoryHeaders = false): StreamedResponse
     {
         $formattedStartDate = Carbon::parse($startDate)->format('Y-m-d');
         $formattedEndDate = Carbon::parse($endDate)->format('Y-m-d');
@@ -24,7 +24,7 @@ class ExportService
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function () use ($report, $company, $formattedStartDate, $formattedEndDate) {
+        $callback = function () use ($report, $company, $formattedStartDate, $formattedEndDate, $separateCategoryHeaders) {
             $file = fopen('php://output', 'wb');
 
             fputcsv($file, [$report->getTitle()]);
@@ -35,17 +35,28 @@ class ExportService
             fputcsv($file, $report->getHeaders());
 
             foreach ($report->getCategories() as $category) {
-                fputcsv($file, $category->header);
+                if (isset($category->header[0]) && is_array($category->header[0])) {
+                    foreach ($category->header as $headerRow) {
+                        fputcsv($file, $headerRow);
+                    }
+                } else {
+                    fputcsv($file, $category->header);
+                }
 
                 foreach ($category->data as $accountRow) {
                     fputcsv($file, $accountRow);
                 }
 
-                fputcsv($file, $category->summary);
+                if (filled($category->summary)) {
+                    fputcsv($file, $category->summary);
+                }
+
                 fputcsv($file, []); // Empty row for spacing
             }
 
-            fputcsv($file, $report->getOverallTotals());
+            if (filled($report->getOverallTotals())) {
+                fputcsv($file, $report->getOverallTotals());
+            }
 
             fclose($file);
         };
@@ -62,7 +73,7 @@ class ExportService
 
         $filename = $company->name . ' ' . $report->getTitle() . ' ' . $formattedStartDate . ' to ' . $formattedEndDate . ' ' . $timestamp . '.pdf';
 
-        $pdf = Pdf::loadView('components.company.reports.report-pdf', [
+        $pdf = Pdf::loadView($report->getPdfView(), [
             'company' => $company,
             'report' => $report,
             'startDate' => Carbon::parse($startDate)->format('M d, Y'),
