@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Contracts\ExportableReport;
 use App\Models\Company;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -24,7 +24,7 @@ class ExportService
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function () use ($report, $company, $formattedStartDate, $formattedEndDate, $separateCategoryHeaders) {
+        $callback = function () use ($report, $company, $formattedStartDate, $formattedEndDate) {
             $file = fopen('php://output', 'wb');
 
             fputcsv($file, [$report->getTitle()]);
@@ -73,15 +73,15 @@ class ExportService
 
         $filename = $company->name . ' ' . $report->getTitle() . ' ' . $formattedStartDate . ' to ' . $formattedEndDate . ' ' . $timestamp . '.pdf';
 
-        $pdf = Pdf::loadView($report->getPdfView(), [
+        $pdf = SnappyPdf::loadView($report->getPdfView(), [
             'company' => $company,
             'report' => $report,
             'startDate' => Carbon::parse($startDate)->format('M d, Y'),
             'endDate' => Carbon::parse($endDate)->format('M d, Y'),
-        ])->setPaper('letter');
+        ]);
 
         return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
+            echo $pdf->inline();
         }, $filename);
     }
 }

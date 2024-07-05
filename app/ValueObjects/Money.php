@@ -44,6 +44,11 @@ class Money
         return money($this->getEffectiveAmount(), $this->getCurrencyCode())->format();
     }
 
+    public function formatInDefaultCurrency(): string
+    {
+        return money($this->getEffectiveAmount(), CurrencyAccessor::getDefaultCurrency())->format();
+    }
+
     public function formatSimple(): string
     {
         return money($this->getEffectiveAmount(), $this->getCurrencyCode())->formatSimple();

@@ -16,7 +16,7 @@
         "andrewdwallo/filament-selectify": "^2.0",
         "andrewdwallo/transmatic": "^1.1",
         "awcodes/filament-table-repeater": "^3.0",
-        "barryvdh/laravel-dompdf": "^2.1",
+        "barryvdh/laravel-snappy": "^1.0",
         "bezhansalleh/filament-panel-switch": "^1.0",
         "filament/filament": "^3.2.29",
         "guava/filament-clusters": "^1.1",

@@ -12,7 +12,7 @@
                                 :trigger-action="$this->toggleColumnsAction"
                             />
                         @endif
-                        <x-filament::button type="submit" class="flex-shrink-0">
+                        <x-filament::button type="submit" class="flex-shrink-0 mt-6">
                             Update Report
                         </x-filament::button>
                     </div>

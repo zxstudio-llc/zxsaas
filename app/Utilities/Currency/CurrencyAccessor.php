@@ -5,6 +5,7 @@ namespace App\Utilities\Currency;
 use Akaunting\Money\Currency as ISOCurrencies;
 use App\Facades\Forex;
 use App\Models\Setting\Currency;
+use Illuminate\Support\Facades\Cache;
 
 class CurrencyAccessor
 {
@@ -52,8 +53,13 @@ class CurrencyAccessor
 
     public static function getDefaultCurrency(): ?string
     {
-        return Currency::query()
-            ->where('enabled', true)
-            ->value('code');
+        $companyId = auth()->user()->currentCompany->id;
+        $cacheKey = "default_currency_{$companyId}";
+
+        return Cache::rememberForever($cacheKey, function () {
+            return Currency::query()
+                ->where('enabled', true)
+                ->value('code');
+        });
     }
 }

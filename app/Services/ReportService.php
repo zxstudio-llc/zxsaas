@@ -13,6 +13,7 @@ use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class ReportService
 {
@@ -92,25 +93,37 @@ class ReportService
         }, $balanceFields, $columns);
     }
 
-    public function buildAccountTransactionsReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
     {
-        $accounts = Account::whereHas('journalEntries.transaction', static function (Builder $query) use ($startDate, $endDate) {
+        $columns ??= [];
+        $query = Account::whereHas('journalEntries.transaction', function (Builder $query) use ($startDate, $endDate) {
             $query->whereBetween('posted_at', [$startDate, $endDate]);
         })
-            ->with(['journalEntries' => static function ($query) use ($startDate, $endDate) {
-                $query->whereHas('transaction', static function (Builder $query) use ($startDate, $endDate) {
+            ->with(['journalEntries' => function (Relation $query) use ($startDate, $endDate) {
+                $query->whereHas('transaction', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('posted_at', [$startDate, $endDate]);
                 })
-                    ->with(['transaction' => static function ($query) {
-                        $query->select('id', 'posted_at', 'description');
+                    ->with(['transaction' => function (Relation $query) {
+                        $query->select(['id', 'description', 'posted_at']);
                     }])
-                    ->select('id', 'account_id', 'transaction_id', 'type', 'amount');
+                    ->select(['account_id', 'transaction_id'])
+                    ->selectRaw('SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS total_debit')
+                    ->selectRaw('SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS total_credit')
+                    ->selectRaw('(SELECT MIN(posted_at) FROM transactions WHERE transactions.id = journal_entries.transaction_id) AS earliest_posted_at')
+                    ->groupBy('account_id', 'transaction_id')
+                    ->orderBy('earliest_posted_at');
             }])
-            ->select(['id', 'name', 'category', 'subtype_id', 'currency_code'])
-            ->get()
-            ->lazy();
+            ->select(['id', 'name', 'category', 'subtype_id', 'currency_code']);
+
+        if ($accountId !== 'all') {
+            $query->where('id', $accountId);
+        }
+
+        $accounts = $query->get();
 
         $reportCategories = [];
+
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
         foreach ($accounts as $account) {
             $accountTransactions = [];
@@ -125,30 +138,24 @@ class ReportService
                 description: '',
                 debit: '',
                 credit: '',
-                balance: $startingBalance?->format() ?? 0,
+                balance: $startingBalance?->formatInDefaultCurrency() ?? 0,
             );
 
-            $journalEntriesGroupedByTransaction = $account->journalEntries->groupBy('transaction_id');
-
-            foreach ($journalEntriesGroupedByTransaction as $transactionId => $journalEntries) {
-                $transaction = $journalEntries->first()->transaction;
-
-                $debitAmount = $journalEntries->sumDebits()->getAmount();
-                $creditAmount = $journalEntries->sumCredits()->getAmount();
+            foreach ($account->journalEntries as $journalEntry) {
+                $transaction = $journalEntry->transaction;
+                $totalDebit += $journalEntry->total_debit;
+                $totalCredit += $journalEntry->total_credit;
 
                 // Adjust balance
-                $currentBalance += $debitAmount;
-                $currentBalance -= $creditAmount;
-
-                $totalDebit += $debitAmount;
-                $totalCredit += $creditAmount;
+                $currentBalance += $journalEntry->total_debit;
+                $currentBalance -= $journalEntry->total_credit;
 
                 $accountTransactions[] = new AccountTransactionDTO(
                     date: $transaction->posted_at->format('Y-m-d'),
-                    description: $transaction->description,
-                    debit: $debitAmount ? money($debitAmount, $account->currency_code)->format() : '',
-                    credit: $creditAmount ? money($creditAmount, $account->currency_code)->format() : '',
-                    balance: money($currentBalance, $account->currency_code)->format(),
+                    description: $transaction->description ?? '',
+                    debit: $journalEntry->total_debit ? money($journalEntry->total_debit, $defaultCurrency)->format() : '',
+                    credit: $journalEntry->total_credit ? money($journalEntry->total_credit, $defaultCurrency)->format() : '',
+                    balance: money($currentBalance, $defaultCurrency)->format(),
                 );
             }
 
@@ -157,9 +164,9 @@ class ReportService
             $accountTransactions[] = new AccountTransactionDTO(
                 date: 'Totals and Ending Balance',
                 description: '',
-                debit: money($totalDebit, $account->currency_code)->format(),
-                credit: money($totalCredit, $account->currency_code)->format(),
-                balance: money($currentBalance, $account->currency_code)->format(),
+                debit: money($totalDebit, $defaultCurrency)->format(),
+                credit: money($totalCredit, $defaultCurrency)->format(),
+                balance: money($currentBalance, $defaultCurrency)->format(),
             );
 
             $accountTransactions[] = new AccountTransactionDTO(
@@ -167,7 +174,7 @@ class ReportService
                 description: '',
                 debit: '',
                 credit: '',
-                balance: money($balanceChange, $account->currency_code)->format(),
+                balance: money($balanceChange, $defaultCurrency)->format(),
             );
 
             $reportCategories[] = [

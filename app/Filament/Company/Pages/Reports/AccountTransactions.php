@@ -4,14 +4,16 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Models\Accounting\Account;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
-use App\Transformers\AccountBalanceReportTransformer;
 use App\Transformers\AccountTransactionReportTransformer;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
 use Guava\FilamentClusters\Forms\Cluster;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -25,6 +27,8 @@ class AccountTransactions extends BaseReportPage
     protected ReportService $reportService;
 
     protected ExportService $exportService;
+
+    public ?string $account_id = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
@@ -59,24 +63,40 @@ class AccountTransactions extends BaseReportPage
     public function form(Form $form): Form
     {
         return $form
-            ->inlineLabel()
-            ->columns([
-                'lg' => 1,
-                '2xl' => 2,
-            ])
+            ->columns(3)
             ->live()
             ->schema([
+                Select::make('account_id')
+                    ->label('Account')
+                    ->options($this->getAccountOptions())
+                    ->searchable()
+                    ->required(),
                 $this->getDateRangeFormComponent(),
                 Cluster::make([
                     $this->getStartDateFormComponent(),
                     $this->getEndDateFormComponent(),
-                ])->hiddenLabel(),
+                ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
             ]);
+    }
+
+    protected function getAccountOptions(): array
+    {
+        $accounts = Account::query()
+            ->get()
+            ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
+            ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
+            ->toArray();
+
+        $allAccountsOption = [
+            'All Accounts' => ['all' => 'All Accounts'],
+        ];
+
+        return $allAccountsOption + $accounts;
     }
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->startDate, $this->endDate, $columns);
+        return $this->reportService->buildAccountTransactionsReport($this->startDate, $this->endDate, $columns, $this->account_id);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport

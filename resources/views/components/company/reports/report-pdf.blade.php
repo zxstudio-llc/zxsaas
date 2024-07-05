@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $report->getTitle() }}</title>
     <style>
-        @page {
-            size: auto;
-            margin: 10mm 7.5mm;
-        }
-
         .header {
             color: #374151;
             margin-bottom: 1rem;
