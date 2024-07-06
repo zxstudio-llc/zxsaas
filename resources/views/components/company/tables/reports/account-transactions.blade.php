@@ -33,14 +33,22 @@
                 <tr wire:key="category-{{ $categoryIndex }}-data-{{ $dataIndex }}"
                     @class([
                         'bg-gray-50 dark:bg-white/5' => $loop->first || $loop->last || $loop->remaining === 1,
-                    ])>
+                    ])
+                >
                     @foreach($transaction as $cellIndex => $cell)
-                        <x-filament-tables::cell wire:key="category-{{ $categoryIndex }}-data-{{ $dataIndex }}-cell-{{ $cellIndex }}" class="{{ $report->getAlignmentClass($cellIndex) }}">
+                        <x-filament-tables::cell
+                            wire:key="category-{{ $categoryIndex }}-data-{{ $dataIndex }}-cell-{{ $cellIndex }}"
+                             @class([
+                                $report->getAlignmentClass($cellIndex),
+                                'whitespace-normal' => $cellIndex === 1,
+                            ])
+                        >
                             <div
                                 @class([
                                     'px-3 py-4 text-sm leading-6 text-gray-950 dark:text-white',
                                     'font-semibold' => $loop->parent->first || $loop->parent->last || $loop->parent->remaining === 1,
-                                ])>
+                                ])
+                            >
                                 {{ $cell }}
                             </div>
                         </x-filament-tables::cell>

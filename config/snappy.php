@@ -39,7 +39,6 @@ return [
         'timeout' => false,
         'options' => [
             'no-pdf-compression' => true,
-            'disable-smart-shrinking' => true,
             'disable-javascript' => true,
             'margin-top' => '10mm',
             'margin-right' => '7.5mm',

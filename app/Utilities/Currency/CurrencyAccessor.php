@@ -53,8 +53,12 @@ class CurrencyAccessor
 
     public static function getDefaultCurrency(): ?string
     {
-        $companyId = auth()->user()->currentCompany->id;
+        $companyId = auth()->user()?->currentCompany?->id;
         $cacheKey = "default_currency_{$companyId}";
+
+        if ($companyId === null) {
+            return 'USD';
+        }
 
         return Cache::rememberForever($cacheKey, function () {
             return Currency::query()

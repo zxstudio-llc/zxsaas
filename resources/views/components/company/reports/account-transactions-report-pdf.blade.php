@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $report->getTitle() }}</title>
     <style>
-        @page {
-            size: auto;
-            margin: 10mm 7.5mm;
-        }
-
         .header {
             color: #374151;
             margin-bottom: 1rem;
@@ -64,6 +59,14 @@
             font-size: 0.75rem;
             line-height: 1rem;
             border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
+        }
+
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
         }
 
         .category-header-row > td {
@@ -125,7 +128,7 @@
                     'category-header-row' => $loop->first || $loop->last || $loop->remaining === 1,
                 ])>
                 @foreach($transaction as $cellIndex => $cell)
-                    <td class="{{ $report->getAlignmentClass($cellIndex) }}">
+                    <td class="{{ $report->getAlignmentClass($cellIndex) }} {{ $cellIndex === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
                         {{ $cell }}
                     </td>
                 @endforeach

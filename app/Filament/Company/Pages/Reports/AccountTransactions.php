@@ -14,6 +14,7 @@ use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Session;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -28,6 +29,7 @@ class AccountTransactions extends BaseReportPage
 
     protected ExportService $exportService;
 
+    #[Session]
     public ?string $account_id = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
@@ -69,8 +71,8 @@ class AccountTransactions extends BaseReportPage
                 Select::make('account_id')
                     ->label('Account')
                     ->options($this->getAccountOptions())
-                    ->searchable()
-                    ->required(),
+                    ->selectablePlaceholder(false)
+                    ->searchable(),
                 $this->getDateRangeFormComponent(),
                 Cluster::make([
                     $this->getStartDateFormComponent(),

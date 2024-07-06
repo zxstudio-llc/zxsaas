@@ -2,12 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Events\CompanyGenerated;
 use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
+use App\Services\ChartOfAccountsService;
+use App\Services\CompanyDefaultService;
 use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Wallo\FilamentCompanies\FilamentCompanies;
@@ -69,34 +71,39 @@ class UserFactory extends Factory
             Company::factory()
                 ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
                 ->afterCreating(function (Company $company) use ($user, $countryCode) {
-                    CompanyGenerated::dispatch($user, $company, $countryCode);
+                    DB::transaction(function () use ($company, $user, $countryCode) {
+                        $companyDefaultService = app()->make(CompanyDefaultService::class);
+                        $companyDefaultService->createCompanyDefaults($company, $user, 'USD', $countryCode, 'en');
 
-                    $defaultBankAccount = $company->bankAccounts()->where('enabled', true)->first();
-                    $defaultCurrency = $company->currencies()->where('enabled', true)->first();
-                    $defaultSalesTax = $company->taxes()->where('type', 'sales')->where('enabled', true)->first();
-                    $defaultPurchaseTax = $company->taxes()->where('type', 'purchase')->where('enabled', true)->first();
-                    $defaultSalesDiscount = $company->discounts()->where('type', 'sales')->where('enabled', true)->first();
-                    $defaultPurchaseDiscount = $company->discounts()->where('type', 'purchase')->where('enabled', true)->first();
+                        $chartOfAccountsService = app()->make(ChartOfAccountsService::class);
+                        $chartOfAccountsService->createChartOfAccounts($company);
 
-                    $company->default()->create([
-                        'bank_account_id' => $defaultBankAccount?->id,
-                        'currency_code' => $defaultCurrency?->code,
-                        'sales_tax_id' => $defaultSalesTax?->id,
-                        'purchase_tax_id' => $defaultPurchaseTax?->id,
-                        'sales_discount_id' => $defaultSalesDiscount?->id,
-                        'purchase_discount_id' => $defaultPurchaseDiscount?->id,
-                        'created_by' => $user->id,
-                        'updated_by' => $user->id,
-                    ]);
+                        $defaultBankAccount = $company->bankAccounts()->where('enabled', true)->first();
+                        $defaultCurrency = $company->currencies()->where('enabled', true)->first();
+                        $defaultSalesTax = $company->taxes()->where('type', 'sales')->where('enabled', true)->first();
+                        $defaultPurchaseTax = $company->taxes()->where('type', 'purchase')->where('enabled', true)->first();
+                        $defaultSalesDiscount = $company->discounts()->where('type', 'sales')->where('enabled', true)->first();
+                        $defaultPurchaseDiscount = $company->discounts()->where('type', 'purchase')->where('enabled', true)->first();
 
-                    TransactionFactory::new()
-                        ->count(2000)
-                        ->createQuietly([
-                            'company_id' => $company->id,
+                        $company->default()->create([
                             'bank_account_id' => $defaultBankAccount?->id,
+                            'currency_code' => $defaultCurrency?->code,
+                            'sales_tax_id' => $defaultSalesTax?->id,
+                            'purchase_tax_id' => $defaultPurchaseTax?->id,
+                            'sales_discount_id' => $defaultSalesDiscount?->id,
+                            'purchase_discount_id' => $defaultPurchaseDiscount?->id,
                             'created_by' => $user->id,
                             'updated_by' => $user->id,
                         ]);
+
+                        TransactionFactory::new()
+                            ->forCompanyAndBankAccount($company, $defaultBankAccount)
+                            ->count(2000)
+                            ->createQuietly([
+                                'created_by' => $user->id,
+                                'updated_by' => $user->id,
+                            ]);
+                    });
                 })
                 ->create([
                     'name' => $user->name . '\'s Company',

@@ -146,7 +146,6 @@ class ReportService
                 $totalDebit += $journalEntry->total_debit;
                 $totalCredit += $journalEntry->total_credit;
 
-                // Adjust balance
                 $currentBalance += $journalEntry->total_debit;
                 $currentBalance -= $journalEntry->total_credit;
 
