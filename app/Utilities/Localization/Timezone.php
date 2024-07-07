@@ -16,7 +16,7 @@ class Timezone
             return [];
         }
 
-        $countryTimezones = DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, strtoupper($countryCode));
+        $countryTimezones = self::getTimezonesForCountry($countryCode);
 
         if (empty($countryTimezones)) {
             return [];
@@ -54,5 +54,10 @@ class Timezone
         $time_format = $localizationModel->time_format->value ?? TimeFormat::DEFAULT;
 
         return now($timezone)->translatedFormat($time_format);
+    }
+
+    public static function getTimezonesForCountry(string $countryCode): array
+    {
+        return DateTimeZone::listIdentifiers(DateTimeZone::PER_COUNTRY, strtoupper($countryCode));
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Locale\City;
 use App\Models\Locale\Country;
 use App\Models\Locale\State;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
+use App\Utilities\Localization\Timezone;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
@@ -90,12 +91,50 @@ class CompanyProfile extends Page
             $data = $this->form->getState();
 
             $this->handleRecordUpdate($this->record, $data);
-
         } catch (Halt $exception) {
             return;
         }
 
+        $countryChanged = $this->record->wasChanged('country');
+        $stateChanged = $this->record->wasChanged('state_id');
+
         $this->getSavedNotification()->send();
+
+        if ($countryChanged || $stateChanged) {
+            if ($countryChanged) {
+                $this->updateTimezone($this->record->country);
+            }
+
+            $this->getTimezoneChangeNotification()->send();
+        }
+    }
+
+    protected function updateTimezone(string $countryCode): void
+    {
+        $model = \App\Models\Setting\Localization::firstOrFail();
+
+        $timezones = Timezone::getTimezonesForCountry($countryCode);
+
+        if (! empty($timezones)) {
+            $model->update([
+                'timezone' => $timezones[0],
+            ]);
+        }
+    }
+
+    protected function getTimezoneChangeNotification(): Notification
+    {
+        return Notification::make()
+            ->warning()
+            ->title('Timezone Update Required')
+            ->body('You have changed your country or state. Please update your timezone to ensure accurate date and time information.')
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('updateTimezone')
+                    ->label('Update Timezone')
+                    ->url(Localization::getUrl()),
+            ])
+            ->persistent()
+            ->send();
     }
 
     protected function getSavedNotification(): Notification
@@ -176,6 +215,7 @@ class CompanyProfile extends Page
                     ->searchable()
                     ->live()
                     ->options(static fn (Get $get) => State::getStateOptions($get('country')))
+                    ->afterStateUpdated(static fn (Set $set) => $set('city_id', null))
                     ->nullable(),
                 TextInput::make('address')
                     ->localizeLabel('Street Address')
