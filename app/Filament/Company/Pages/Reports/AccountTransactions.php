@@ -9,6 +9,7 @@ use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
 use App\Transformers\AccountTransactionReportTransformer;
+use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
@@ -65,7 +66,7 @@ class AccountTransactions extends BaseReportPage
     public function form(Form $form): Form
     {
         return $form
-            ->columns(3)
+            ->columns(4)
             ->live()
             ->schema([
                 Select::make('account_id')
@@ -78,6 +79,12 @@ class AccountTransactions extends BaseReportPage
                     $this->getStartDateFormComponent(),
                     $this->getEndDateFormComponent(),
                 ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
+                Actions::make([
+                    Actions\Action::make('loadReportData')
+                        ->label('Update Report')
+                        ->submit('loadReportData')
+                        ->keyBindings(['mod+s']),
+                ])->alignEnd()->verticallyAlignEnd(),
             ]);
     }
 

@@ -71,10 +71,7 @@ class AccountBalances extends BaseReportPage
     {
         return $form
             ->inlineLabel()
-            ->columns([
-                'lg' => 1,
-                '2xl' => 2,
-            ])
+            ->columns()
             ->live()
             ->schema([
                 $this->getDateRangeFormComponent(),

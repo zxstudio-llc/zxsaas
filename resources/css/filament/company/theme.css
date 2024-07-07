@@ -18,7 +18,15 @@
 }
 
 .choices[data-type="select-one"] .choices__inner {
-    height: 2.25rem;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    min-height: 2.25rem;
+    box-sizing: border-box;
+}
+
+.choices__item {
+    cursor: pointer;
 }
 
 .table-repeater-container {
@@ -135,7 +143,7 @@
 
 .fi-body::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
@@ -159,7 +167,7 @@
 
 :is(.dark .fi-body)::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
     background-image: radial-gradient(
