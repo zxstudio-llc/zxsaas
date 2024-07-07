@@ -61,6 +61,14 @@
             border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
         }
 
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
         .category-header-row > td {
             background-color: #f3f4f6; /* Gray background for category names */
             font-weight: 600;
@@ -100,42 +108,39 @@
     @foreach($report->getCategories() as $category)
         <tbody>
         <tr class="category-header-row">
-            @foreach($category->header as $index => $header)
-                <td class="{{ $report->getAlignmentClass($index) }}">
-                    {{ $header }}
-                </td>
-            @endforeach
+            <td colspan="{{ count($report->getHeaders()) }}">
+                <div>
+                    @foreach($category->header as $headerRow)
+                        <div>
+                            @foreach($headerRow as $headerValue)
+                                @if (!empty($headerValue))
+                                    {{ $headerValue }}
+                                @endif
+                            @endforeach
+                        </div>
+                    @endforeach
+                </div>
+            </td>
         </tr>
-        @foreach($category->data as $account)
-            <tr>
-                @foreach($account as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
+        @foreach($category->data as $dataIndex => $transaction)
+            <tr
+                @class([
+                    'category-header-row' => $loop->first || $loop->last || $loop->remaining === 1,
+                ])>
+                @foreach($transaction as $cellIndex => $cell)
+                    <td class="{{ $report->getAlignmentClass($cellIndex) }} {{ $cellIndex === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
                         {{ $cell }}
                     </td>
                 @endforeach
             </tr>
         @endforeach
-        <tr class="category-summary-row">
-            @foreach($category->summary as $index => $cell)
-                <td class="{{ $report->getAlignmentClass($index) }}">
-                    {{ $cell }}
-                </td>
-            @endforeach
-        </tr>
-        <tr class="spacer-row">
-            <td colspan="{{ count($report->getHeaders()) }}"></td>
-        </tr>
+        @unless($loop->last)
+            <tr class="spacer-row">
+                <td colspan="{{ count($report->getHeaders()) }}"></td>
+            </tr>
+        @endunless
         </tbody>
     @endforeach
-    <tfoot>
-    <tr class="table-footer-row">
-        @foreach ($report->getOverallTotals() as $index => $total)
-            <td class="{{ $report->getAlignmentClass($index) }}">
-                {{ $total }}
-            </td>
-        @endforeach
-    </tr>
-    </tfoot>
 </table>
 </body>
 </html>

@@ -38,9 +38,9 @@ class AccountService implements AccountHandler
         return new Money($balances['net_movement'], $account->currency_code);
     }
 
-    public function getStartingBalance(Account $account, string $startDate): ?Money
+    public function getStartingBalance(Account $account, string $startDate, bool $override = false): ?Money
     {
-        if (in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
+        if ($override === false && in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
             return null;
         }
 

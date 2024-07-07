@@ -18,4 +18,6 @@ interface ExportableReport
     public function getOverallTotals(): array;
 
     public function getColumns(): array;
+
+    public function getPdfView(): string;
 }

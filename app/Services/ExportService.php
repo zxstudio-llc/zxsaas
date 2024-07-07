@@ -4,13 +4,13 @@ namespace App\Services;
 
 use App\Contracts\ExportableReport;
 use App\Models\Company;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\Snappy\Facades\SnappyPdf;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportService
 {
-    public function exportToCsv(Company $company, ExportableReport $report, string $startDate, string $endDate): StreamedResponse
+    public function exportToCsv(Company $company, ExportableReport $report, string $startDate, string $endDate, bool $separateCategoryHeaders = false): StreamedResponse
     {
         $formattedStartDate = Carbon::parse($startDate)->format('Y-m-d');
         $formattedEndDate = Carbon::parse($endDate)->format('Y-m-d');
@@ -35,17 +35,28 @@ class ExportService
             fputcsv($file, $report->getHeaders());
 
             foreach ($report->getCategories() as $category) {
-                fputcsv($file, $category->header);
+                if (isset($category->header[0]) && is_array($category->header[0])) {
+                    foreach ($category->header as $headerRow) {
+                        fputcsv($file, $headerRow);
+                    }
+                } else {
+                    fputcsv($file, $category->header);
+                }
 
                 foreach ($category->data as $accountRow) {
                     fputcsv($file, $accountRow);
                 }
 
-                fputcsv($file, $category->summary);
+                if (filled($category->summary)) {
+                    fputcsv($file, $category->summary);
+                }
+
                 fputcsv($file, []); // Empty row for spacing
             }
 
-            fputcsv($file, $report->getOverallTotals());
+            if (filled($report->getOverallTotals())) {
+                fputcsv($file, $report->getOverallTotals());
+            }
 
             fclose($file);
         };
@@ -62,15 +73,15 @@ class ExportService
 
         $filename = $company->name . ' ' . $report->getTitle() . ' ' . $formattedStartDate . ' to ' . $formattedEndDate . ' ' . $timestamp . '.pdf';
 
-        $pdf = Pdf::loadView('components.company.reports.report-pdf', [
+        $pdf = SnappyPdf::loadView($report->getPdfView(), [
             'company' => $company,
             'report' => $report,
             'startDate' => Carbon::parse($startDate)->format('M d, Y'),
             'endDate' => Carbon::parse($endDate)->format('M d, Y'),
-        ])->setPaper('letter');
+        ]);
 
         return response()->streamDownload(function () use ($pdf) {
-            echo $pdf->stream();
+            echo $pdf->inline();
         }, $filename);
     }
 }

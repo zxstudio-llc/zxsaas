@@ -178,6 +178,11 @@ abstract class BaseReportPage extends Page
             ->statePath('toggledTableColumns');
     }
 
+    protected function hasToggleableColumns(): bool
+    {
+        return ! empty($this->getTableColumnToggleFormSchema());
+    }
+
     /**
      * @return array<Checkbox>
      */

@@ -21,6 +21,11 @@ abstract class BaseReportTransformer implements ExportableReport, Wireable
         return $this->report->fields;
     }
 
+    public function getPdfView(): string
+    {
+        return 'components.company.reports.report-pdf';
+    }
+
     public function getAlignmentClass(int $index): string
     {
         $column = $this->getColumns()[$index];
