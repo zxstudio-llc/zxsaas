@@ -4,6 +4,7 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Models\Accounting\Account;
 use App\Services\ExportService;
 use App\Services\ReportService;
@@ -13,9 +14,10 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\Session;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -30,7 +32,6 @@ class AccountTransactions extends BaseReportPage
 
     protected ExportService $exportService;
 
-    #[Session]
     public ?string $account_id = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
@@ -121,5 +122,38 @@ class AccountTransactions extends BaseReportPage
     public function exportPDF(): StreamedResponse
     {
         return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+    }
+
+    public function getEmptyStateHeading(): string | Htmlable
+    {
+        return 'No Transactions Found';
+    }
+
+    public function getEmptyStateDescription(): string | Htmlable | null
+    {
+        return 'Adjust the account or date range, or start by creating a transaction.';
+    }
+
+    public function getEmptyStateIcon(): string
+    {
+        return 'heroicon-o-x-mark';
+    }
+
+    public function getEmptyStateActions(): array
+    {
+        return [
+            Action::make('createTransaction')
+                ->label('Create Transaction')
+                ->url(Transactions::getUrl()),
+        ];
+    }
+
+    public function tableHasEmptyState(): bool
+    {
+        if ($this->report) {
+            return empty($this->report->getCategories());
+        } else {
+            return true;
+        }
     }
 }

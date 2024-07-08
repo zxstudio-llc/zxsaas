@@ -37,12 +37,13 @@ class CompanyDefaultFactory extends Factory
         ];
     }
 
-    public function withDefault(User $user, Company $company, string $country, string $language = 'en'): static
+    public function withDefault(User $user, Company $company, ?string $currencyCode, string $countryCode, string $language = 'en'): static
     {
-        /** @var CurrencyCode $currencyFaker */
-        $currencyFaker = $this->faker;
-
-        $currencyCode = $currencyFaker->currencyCode($country);
+        if ($currencyCode === null) {
+            /** @var CurrencyCode $currencyFaker */
+            $currencyFaker = $this->faker;
+            $currencyCode = $currencyFaker->currencyCode($countryCode);
+        }
 
         $currency = $this->createCurrency($company, $user, $currencyCode);
         $salesTax = $this->createSalesTax($company, $user);
@@ -51,7 +52,7 @@ class CompanyDefaultFactory extends Factory
         $purchaseDiscount = $this->createPurchaseDiscount($company, $user);
         $this->createAppearance($company, $user);
         $this->createDocumentDefaults($company, $user);
-        $this->createLocalization($company, $user, $country, $language);
+        $this->createLocalization($company, $user, $countryCode, $language);
 
         $companyDefaults = [
             'company_id' => $company->id,
@@ -67,7 +68,7 @@ class CompanyDefaultFactory extends Factory
         return $this->state($companyDefaults);
     }
 
-    private function createCurrency(Company $company, User $user, string $currencyCode)
+    private function createCurrency(Company $company, User $user, string $currencyCode): Currency
     {
         return Currency::factory()->forCurrency($currencyCode)->create([
             'company_id' => $company->id,

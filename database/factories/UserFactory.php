@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
-use App\Services\ChartOfAccountsService;
 use App\Services\CompanyDefaultService;
 use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -75,26 +74,7 @@ class UserFactory extends Factory
                         $companyDefaultService = app()->make(CompanyDefaultService::class);
                         $companyDefaultService->createCompanyDefaults($company, $user, 'USD', $countryCode, 'en');
 
-                        $chartOfAccountsService = app()->make(ChartOfAccountsService::class);
-                        $chartOfAccountsService->createChartOfAccounts($company);
-
-                        $defaultBankAccount = $company->bankAccounts()->where('enabled', true)->first();
-                        $defaultCurrency = $company->currencies()->where('enabled', true)->first();
-                        $defaultSalesTax = $company->taxes()->where('type', 'sales')->where('enabled', true)->first();
-                        $defaultPurchaseTax = $company->taxes()->where('type', 'purchase')->where('enabled', true)->first();
-                        $defaultSalesDiscount = $company->discounts()->where('type', 'sales')->where('enabled', true)->first();
-                        $defaultPurchaseDiscount = $company->discounts()->where('type', 'purchase')->where('enabled', true)->first();
-
-                        $company->default()->create([
-                            'bank_account_id' => $defaultBankAccount?->id,
-                            'currency_code' => $defaultCurrency?->code,
-                            'sales_tax_id' => $defaultSalesTax?->id,
-                            'purchase_tax_id' => $defaultPurchaseTax?->id,
-                            'sales_discount_id' => $defaultSalesDiscount?->id,
-                            'purchase_discount_id' => $defaultPurchaseDiscount?->id,
-                            'created_by' => $user->id,
-                            'updated_by' => $user->id,
-                        ]);
+                        $defaultBankAccount = $company->default->bankAccount;
 
                         TransactionFactory::new()
                             ->forCompanyAndBankAccount($company, $defaultBankAccount)
