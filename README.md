@@ -19,11 +19,11 @@ Please check the official laravel installation guide for server requirements bef
 
 Clone the repository
 
-    git clone https://github.com/andrewdwallo/erpsaas.git
+    git clone git@github.com:zxstudio-llc/zxsaas.git
 
 Switch to the repo folder
 
-    cd erpsaas
+    cd zxsaas
 
 Install all the dependencies using composer and npm
 
@@ -50,8 +50,8 @@ Build your assets & start the local development server
 
 **Command list**
 
-    git clone https://github.com/andrewdwallo/erpsaas.git
-    cd erpsaas
+    git clone git@github.com:zxstudio-llc/zxsaas.git
+    cd zxsaas
     composer install
     npm install
     cp .env.example .env
