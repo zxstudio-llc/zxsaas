@@ -26,13 +26,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
 {
-    #[Session]
     public string $startDate = '';
 
-    #[Session]
     public string $endDate = '';
 
-    #[Session]
     public string $dateRange = '';
 
     public string $fiscalYearStartDate = '';

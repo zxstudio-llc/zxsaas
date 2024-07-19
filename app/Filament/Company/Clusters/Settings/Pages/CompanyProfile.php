@@ -125,7 +125,7 @@ class CompanyProfile extends Page
     protected function getTimezoneChangeNotification(): Notification
     {
         return Notification::make()
-            ->warning()
+            ->info()
             ->title('Timezone Update Required')
             ->body('You have changed your country or state. Please update your timezone to ensure accurate date and time information.')
             ->actions([

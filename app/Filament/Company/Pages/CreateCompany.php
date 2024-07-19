@@ -3,16 +3,17 @@
 namespace App\Filament\Company\Pages;
 
 use App\Enums\Setting\EntityType;
-use App\Events\CompanyGenerated;
 use App\Models\Company;
 use App\Models\Locale\Country;
 use App\Models\Setting\Localization;
+use App\Services\CompanyDefaultService;
 use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Wallo\FilamentCompanies\Events\AddingCompany;
 use Wallo\FilamentCompanies\FilamentCompanies;
@@ -69,26 +70,28 @@ class CreateCompany extends FilamentCreateCompany
 
         $personalCompany = $user?->personalCompany() === null;
 
-        /** @var Company $company */
-        $company = $user?->ownedCompanies()->create([
-            'name' => $data['name'],
-            'personal_company' => $personalCompany,
-        ]);
+        return DB::transaction(function () use ($user, $data, $personalCompany) {
+            /** @var Company $company */
+            $company = $user?->ownedCompanies()->create([
+                'name' => $data['name'],
+                'personal_company' => $personalCompany,
+            ]);
 
-        $company->profile()->create([
-            'email' => $data['profile']['email'],
-            'entity_type' => $data['profile']['entity_type'],
-            'country' => $data['profile']['country'],
-        ]);
+            $company->profile()->create([
+                'email' => $data['profile']['email'],
+                'entity_type' => $data['profile']['entity_type'],
+                'country' => $data['profile']['country'],
+            ]);
 
-        $user?->switchCompany($company);
+            $user?->switchCompany($company);
 
-        $name = $data['name'];
+            $companyDefaultService = app()->make(CompanyDefaultService::class);
+            $user = $company->owner ?? $user;
+            $companyDefaultService->createCompanyDefaults($company, $user, $data['currencies']['code'], $data['profile']['country'], $data['locale']['language']);
 
-        CompanyGenerated::dispatch($user ?? Auth::user(), $company, $data['profile']['country'], $data['locale']['language'], $data['currencies']['code']);
+            $this->companyCreated($data['name']);
 
-        $this->companyCreated($name);
-
-        return $company;
+            return $company;
+        });
     }
 }

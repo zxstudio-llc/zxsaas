@@ -2,6 +2,8 @@
 
 namespace Database\Factories\Accounting;
 
+use App\Enums\Accounting\JournalEntryType;
+use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
@@ -29,13 +31,10 @@ class TransactionFactory extends Factory
             'company_id' => 1,
             'bank_account_id' => 1,
             'account_id' => $this->faker->numberBetween(2, 30),
-            'type' => $this->faker->randomElement(['deposit', 'withdrawal', 'journal']),
-            'payment_channel' => $this->faker->randomElement(['online', 'in store', 'other']),
+            'type' => $this->faker->randomElement([TransactionType::Deposit, TransactionType::Withdrawal]),
             'description' => $this->faker->sentence,
             'notes' => $this->faker->paragraph,
-            'reference' => $this->faker->word,
             'amount' => $this->faker->numberBetween(100, 5000),
-            'pending' => $this->faker->boolean,
             'reviewed' => $this->faker->boolean,
             'posted_at' => $this->faker->dateTimeBetween('-2 years'),
             'created_by' => 1,
@@ -59,7 +58,7 @@ class TransactionFactory extends Factory
             $debitAccount->journalEntries()->create([
                 'company_id' => $transaction->company_id,
                 'transaction_id' => $transaction->id,
-                'type' => 'debit',
+                'type' => JournalEntryType::Debit,
                 'amount' => $transaction->amount,
                 'description' => $transaction->description,
                 'created_by' => $transaction->created_by,
@@ -69,7 +68,7 @@ class TransactionFactory extends Factory
             $creditAccount->journalEntries()->create([
                 'company_id' => $transaction->company_id,
                 'transaction_id' => $transaction->id,
-                'type' => 'credit',
+                'type' => JournalEntryType::Credit,
                 'amount' => $transaction->amount,
                 'description' => $transaction->description,
                 'created_by' => $transaction->created_by,
@@ -81,12 +80,11 @@ class TransactionFactory extends Factory
     public function forCompanyAndBankAccount(Company $company, BankAccount $bankAccount): static
     {
         return $this->state(function (array $attributes) use ($bankAccount, $company) {
-            $type = $this->faker->randomElement(['deposit', 'withdrawal', 'journal']);
+            $type = $this->faker->randomElement([TransactionType::Deposit, TransactionType::Withdrawal]);
 
             $associatedAccountTypes = match ($type) {
-                'deposit' => ['asset', 'liability', 'equity', 'revenue'],
-                'withdrawal' => ['asset', 'liability', 'equity', 'expense'],
-                default => ['asset', 'liability', 'equity', 'revenue', 'expense'],
+                TransactionType::Deposit => ['asset', 'liability', 'equity', 'revenue'],
+                TransactionType::Withdrawal => ['asset', 'liability', 'equity', 'expense'],
             };
 
             $accountIdForBankAccount = $bankAccount->account->id;

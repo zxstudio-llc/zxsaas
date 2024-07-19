@@ -81,4 +81,9 @@ class ChartOfAccountsService
             'updated_by' => $company->owner->id,
         ]);
     }
+
+    public function getDefaultBankAccount(Company $company): ?BankAccount
+    {
+        return $company->bankAccounts()->where('enabled', true)->first();
+    }
 }

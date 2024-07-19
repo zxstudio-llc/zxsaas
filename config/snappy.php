@@ -48,6 +48,7 @@ return [
             'footer-right' => 'Page [page] / [toPage]',
             'footer-font-size' => '8',
             'footer-spacing' => '5',
+            'zoom' => '1.3',
         ],
         'env' => [],
     ],
