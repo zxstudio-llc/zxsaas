@@ -65,6 +65,30 @@ class AccountService implements AccountHandler
         return new Money($endingBalance, $account->currency_code);
     }
 
+    public function getRetainedEarnings(string $startDate): Money
+    {
+        $revenueAccounts = Account::where('category', AccountCategory::Revenue)
+            ->get();
+
+        $expenseAccounts = Account::where('category', AccountCategory::Expense)
+            ->get();
+
+        $revenue = 0;
+        $expense = 0;
+
+        foreach ($revenueAccounts as $account) {
+            $revenue += $this->journalEntryRepository->sumCreditAmounts($account, $startDate);
+        }
+
+        foreach ($expenseAccounts as $account) {
+            $expense += $this->journalEntryRepository->sumDebitAmounts($account, $startDate);
+        }
+
+        $retainedEarnings = $revenue - $expense;
+
+        return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
+    }
+
     private function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
     {
         return match ($category) {
