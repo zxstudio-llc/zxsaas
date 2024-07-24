@@ -9,6 +9,7 @@ class AccountDTO implements Wireable
     public function __construct(
         public string $accountName,
         public string $accountCode,
+        public ?int $accountId,
         public AccountBalanceDTO $balance,
     ) {}
 
@@ -17,6 +18,7 @@ class AccountDTO implements Wireable
         return [
             'accountName' => $this->accountName,
             'accountCode' => $this->accountCode,
+            'accountId' => $this->accountId,
             'balance' => $this->balance->toLivewire(),
         ];
     }
@@ -26,6 +28,7 @@ class AccountDTO implements Wireable
         return new static(
             $value['accountName'],
             $value['accountCode'],
+            $value['accountId'],
             AccountBalanceDTO::fromLivewire($value['balance']),
         );
     }

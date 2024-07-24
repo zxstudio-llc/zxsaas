@@ -18,6 +18,7 @@ use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -32,6 +33,7 @@ class AccountTransactions extends BaseReportPage
 
     protected ExportService $exportService;
 
+    #[Url]
     public ?string $account_id = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void

@@ -12,8 +12,8 @@ use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 
 class ReportService
 {
@@ -46,7 +46,7 @@ class ReportService
     private function getCategoryGroupedAccounts(array $allCategories): Collection
     {
         return Account::whereHas('journalEntries')
-            ->select('id', 'name', 'currency_code', 'category', 'code')
+            ->select(['id', 'name', 'currency_code', 'category', 'code'])
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
             ->sortBy(static fn (Collection $groupedAccounts, string $key) => array_search($key, $allCategories, true));
@@ -115,6 +115,7 @@ class ReportService
             $totalCredit = 0;
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Starting Balance',
                 description: '',
                 debit: '',
@@ -131,6 +132,7 @@ class ReportService
                 $currentBalance -= $journalEntry->total_credit;
 
                 $accountTransactions[] = new AccountTransactionDTO(
+                    id: $transaction->id,
                     date: $transaction->posted_at->format('Y-m-d'),
                     description: $transaction->description ?? '',
                     debit: $journalEntry->total_debit ? money($journalEntry->total_debit, $defaultCurrency)->format() : '',
@@ -142,6 +144,7 @@ class ReportService
             $balanceChange = $currentBalance - ($startingBalance?->getAmount() ?? 0);
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Totals and Ending Balance',
                 description: '',
                 debit: money($totalDebit, $defaultCurrency)->format(),
@@ -150,6 +153,7 @@ class ReportService
             );
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Balance Change',
                 description: '',
                 debit: '',
@@ -202,6 +206,7 @@ class ReportService
                 $categoryAccounts[] = new AccountDTO(
                     $account->name,
                     $account->code,
+                    $account->id,
                     $formattedAccountBalances,
                 );
             }
@@ -215,6 +220,7 @@ class ReportService
                     $categoryAccounts[] = new AccountDTO(
                         'Retained Earnings',
                         'RE',
+                        null,
                         $this->formatBalances(['debit_balance' => 0, 'credit_balance' => $retainedEarningsAmount])
                     );
                 } else {
@@ -222,6 +228,7 @@ class ReportService
                     $categoryAccounts[] = new AccountDTO(
                         'Retained Earnings',
                         'RE',
+                        null,
                         $this->formatBalances(['debit_balance' => abs($retainedEarningsAmount), 'credit_balance' => 0])
                     );
                 }

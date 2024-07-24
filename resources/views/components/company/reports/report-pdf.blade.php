@@ -35,6 +35,14 @@
             color: #374151;
         }
 
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
         .title {
             font-size: 1.5rem;
         }
@@ -109,8 +117,12 @@
         @foreach($category->data as $account)
             <tr>
                 @foreach($account as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
-                        {{ $cell }}
+                    <td class="{{ $report->getAlignmentClass($index) }} {{ $index === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
+                        @if(isset($cell['id']) && isset($cell['name']))
+                            {{ $cell['name'] }}
+                        @else
+                            {{ $cell }}
+                        @endif
                     </td>
                 @endforeach
             </tr>

@@ -90,6 +90,17 @@ class Transactions extends Page implements HasTable
         return static::getModel()::query();
     }
 
+    public function openModalForTransaction($recordId): void
+    {
+        $record = Transaction::findOrFail($recordId);
+
+        if ($record->type->isJournal()) {
+            $this->mountTableAction('updateJournalTransaction', $record->id);
+        } else {
+            $this->mountTableAction('updateTransaction', $record->id);
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
