@@ -39,6 +39,6 @@ class CreateCurrency extends CreateRecord
             throw new Halt('No authenticated user found');
         }
 
-        return $this->handleRecordCreationWithUniqueField($data, new Currency(), $user);
+        return $this->handleRecordCreationWithUniqueField($data, new Currency, $user);
     }
 }

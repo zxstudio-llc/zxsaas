@@ -12,8 +12,8 @@ use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
 
 class ReportService
 {
@@ -46,7 +46,7 @@ class ReportService
     private function getCategoryGroupedAccounts(array $allCategories): Collection
     {
         return Account::whereHas('journalEntries')
-            ->select('id', 'name', 'currency_code', 'category', 'code')
+            ->select(['id', 'name', 'currency_code', 'category', 'code'])
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
             ->sortBy(static fn (Collection $groupedAccounts, string $key) => array_search($key, $allCategories, true));
@@ -74,25 +74,6 @@ class ReportService
         );
     }
 
-    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
-    {
-        $allCategories = $this->accountService->getAccountCategoryOrder();
-
-        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
-
-        $balanceFields = ['debit_balance', 'credit_balance'];
-
-        return $this->buildReport($allCategories, $categoryGroupedAccounts, function (Account $account) use ($startDate, $endDate) {
-            $endingBalance = $this->accountService->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
-
-            if ($endingBalance === 0) {
-                return [];
-            }
-
-            return $this->calculateTrialBalance($account->category, $endingBalance);
-        }, $balanceFields, $columns);
-    }
-
     public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
     {
         $columns ??= [];
@@ -103,9 +84,7 @@ class ReportService
                 $query->whereHas('transaction', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('posted_at', [$startDate, $endDate]);
                 })
-                    ->with(['transaction' => function (Relation $query) {
-                        $query->select(['id', 'description', 'posted_at']);
-                    }])
+                    ->with('transaction:id,type,description,posted_at')
                     ->select(['account_id', 'transaction_id'])
                     ->selectRaw('SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS total_debit')
                     ->selectRaw('SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS total_credit')
@@ -134,11 +113,14 @@ class ReportService
             $totalCredit = 0;
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Starting Balance',
                 description: '',
                 debit: '',
                 credit: '',
                 balance: $startingBalance?->formatInDefaultCurrency() ?? 0,
+                type: null,
+                tableAction: null,
             );
 
             foreach ($account->journalEntries as $journalEntry) {
@@ -150,30 +132,39 @@ class ReportService
                 $currentBalance -= $journalEntry->total_credit;
 
                 $accountTransactions[] = new AccountTransactionDTO(
+                    id: $transaction->id,
                     date: $transaction->posted_at->format('Y-m-d'),
                     description: $transaction->description ?? '',
                     debit: $journalEntry->total_debit ? money($journalEntry->total_debit, $defaultCurrency)->format() : '',
                     credit: $journalEntry->total_credit ? money($journalEntry->total_credit, $defaultCurrency)->format() : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),
+                    type: $transaction->type,
+                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
                 );
             }
 
             $balanceChange = $currentBalance - ($startingBalance?->getAmount() ?? 0);
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Totals and Ending Balance',
                 description: '',
                 debit: money($totalDebit, $defaultCurrency)->format(),
                 credit: money($totalCredit, $defaultCurrency)->format(),
                 balance: money($currentBalance, $defaultCurrency)->format(),
+                type: null,
+                tableAction: null,
             );
 
             $accountTransactions[] = new AccountTransactionDTO(
+                id: null,
                 date: 'Balance Change',
                 description: '',
                 debit: '',
                 credit: '',
                 balance: money($balanceChange, $defaultCurrency)->format(),
+                type: null,
+                tableAction: null,
             );
 
             $reportCategories[] = [
@@ -186,7 +177,7 @@ class ReportService
         return new ReportDTO(categories: $reportCategories, fields: $columns);
     }
 
-    private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $balanceFields, array $allFields, ?callable $initializeCategoryBalances = null): ReportDTO
+    private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $balanceFields, array $allFields, ?callable $initializeCategoryBalances = null, bool $includeRetainedEarnings = false, ?string $startDate = null): ReportDTO
     {
         $accountCategories = [];
         $reportTotalBalances = array_fill_keys($balanceFields, 0);
@@ -221,8 +212,32 @@ class ReportService
                 $categoryAccounts[] = new AccountDTO(
                     $account->name,
                     $account->code,
+                    $account->id,
                     $formattedAccountBalances,
                 );
+            }
+
+            if ($includeRetainedEarnings && $categoryName === AccountCategory::Equity->getPluralLabel()) {
+                $retainedEarnings = $this->accountService->getRetainedEarnings($startDate);
+                $retainedEarningsAmount = $retainedEarnings->getAmount();
+
+                if ($retainedEarningsAmount >= 0) {
+                    $categorySummaryBalances['credit_balance'] += $retainedEarningsAmount;
+                    $categoryAccounts[] = new AccountDTO(
+                        'Retained Earnings',
+                        'RE',
+                        null,
+                        $this->formatBalances(['debit_balance' => 0, 'credit_balance' => $retainedEarningsAmount])
+                    );
+                } else {
+                    $categorySummaryBalances['debit_balance'] += abs($retainedEarningsAmount);
+                    $categoryAccounts[] = new AccountDTO(
+                        'Retained Earnings',
+                        'RE',
+                        null,
+                        $this->formatBalances(['debit_balance' => abs($retainedEarningsAmount), 'credit_balance' => 0])
+                    );
+                }
             }
 
             foreach ($balanceFields as $field) {
@@ -250,6 +265,25 @@ class ReportService
         if (in_array($categoryName, [AccountCategory::Expense->getPluralLabel(), AccountCategory::Revenue->getPluralLabel()], true)) {
             unset($categorySummaryBalances['starting_balance'], $categorySummaryBalances['ending_balance']);
         }
+    }
+
+    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $allCategories = $this->accountService->getAccountCategoryOrder();
+
+        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
+
+        $balanceFields = ['debit_balance', 'credit_balance'];
+
+        return $this->buildReport($allCategories, $categoryGroupedAccounts, function (Account $account) use ($startDate, $endDate) {
+            $endingBalance = $this->accountService->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
+
+            if ($endingBalance === 0) {
+                return [];
+            }
+
+            return $this->calculateTrialBalance($account->category, $endingBalance);
+        }, $balanceFields, $columns, null, true, $startDate);
     }
 
     private function calculateTrialBalance(AccountCategory $category, int $endingBalance): array

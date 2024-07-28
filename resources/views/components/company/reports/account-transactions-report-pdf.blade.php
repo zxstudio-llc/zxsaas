@@ -35,6 +35,14 @@
             color: #374151;
         }
 
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
         .title {
             font-size: 1.5rem;
         }
@@ -59,14 +67,6 @@
             font-size: 0.75rem;
             line-height: 1rem;
             border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
-        }
-
-        .whitespace-normal {
-            white-space: normal;
-        }
-
-        .whitespace-nowrap {
-            white-space: nowrap;
         }
 
         .category-header-row > td {

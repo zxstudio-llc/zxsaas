@@ -41,6 +41,6 @@ class CreateDiscount extends CreateRecord
 
         $evaluatedTypes = [DiscountType::Sales, DiscountType::Purchase];
 
-        return $this->handleRecordCreationWithUniqueField($data, new Discount(), $user, 'type', $evaluatedTypes);
+        return $this->handleRecordCreationWithUniqueField($data, new Discount, $user, 'type', $evaluatedTypes);
     }
 }

@@ -43,7 +43,10 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
                 foreach ($this->getColumns() as $column) {
                     $row[] = match ($column->getName()) {
                         'account_code' => $account->accountCode,
-                        'account_name' => $account->accountName,
+                        'account_name' => [
+                            'name' => $account->accountName,
+                            'id' => $account->accountId ?? null,
+                        ],
                         'debit_balance' => $account->balance->debitBalance,
                         'credit_balance' => $account->balance->creditBalance,
                         default => '',

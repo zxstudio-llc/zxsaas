@@ -52,7 +52,11 @@ class AccountTransactionReportTransformer extends BaseReportTransformer
                 foreach ($this->getColumns() as $column) {
                     $row[] = match ($column->getName()) {
                         'date' => $transaction->date,
-                        'description' => $transaction->description,
+                        'description' => [
+                            'id' => $transaction->id,
+                            'description' => $transaction->description,
+                            'tableAction' => $transaction->tableAction,
+                        ],
                         'debit' => $transaction->debit,
                         'credit' => $transaction->credit,
                         'balance' => $transaction->balance,

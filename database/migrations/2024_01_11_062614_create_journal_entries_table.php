@@ -23,8 +23,8 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->index(['company_id', 'account_id', 'type']);
-            $table->index(['company_id', 'account_id', 'transaction_id']);
+            $table->index(['account_id', 'type']);
+            $table->index(['account_id', 'transaction_id']);
         });
     }
 

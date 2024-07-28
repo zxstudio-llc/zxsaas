@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Contracts\AccountHandler;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
-use App\Models\Banking\BankAccount;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\Money;
+use Illuminate\Support\Facades\DB;
 
 class AccountService implements AccountHandler
 {
@@ -63,6 +64,31 @@ class AccountService implements AccountHandler
         $endingBalance = $startingBalances['starting_balance'] + $netMovement;
 
         return new Money($endingBalance, $account->currency_code);
+    }
+
+    public function getRetainedEarnings(string $startDate): Money
+    {
+        $revenue = JournalEntry::whereHas('account', static function ($query) {
+            $query->where('category', AccountCategory::Revenue);
+        })
+            ->where('type', 'credit')
+            ->whereHas('transaction', static function ($query) use ($startDate) {
+                $query->where('posted_at', '<=', $startDate);
+            })
+            ->sum('amount');
+
+        $expense = JournalEntry::whereHas('account', static function ($query) {
+            $query->where('category', AccountCategory::Expense);
+        })
+            ->where('type', 'debit')
+            ->whereHas('transaction', static function ($query) use ($startDate) {
+                $query->where('posted_at', '<=', $startDate);
+            })
+            ->sum('amount');
+
+        $retainedEarnings = $revenue - $expense;
+
+        return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
     private function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
@@ -125,19 +151,40 @@ class AccountService implements AccountHandler
 
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money
     {
-        $bankAccounts = BankAccount::with('account')
-            ->get();
+        $accountIds = Account::whereHas('bankAccount')
+            ->pluck('id')
+            ->toArray();
 
-        $totalBalance = 0;
-
-        foreach ($bankAccounts as $bankAccount) {
-            $account = $bankAccount->account;
-
-            if ($account) {
-                $endingBalance = $this->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
-                $totalBalance += $endingBalance;
-            }
+        if (empty($accountIds)) {
+            return new Money(0, CurrencyAccessor::getDefaultCurrency());
         }
+
+        $result = DB::table('journal_entries')
+            ->join('transactions', 'journal_entries.transaction_id', '=', 'transactions.id')
+            ->whereIn('journal_entries.account_id', $accountIds)
+            ->where('transactions.posted_at', '<=', $endDate)
+            ->selectRaw('
+            SUM(CASE
+                WHEN transactions.posted_at <= ? AND journal_entries.type = "debit" THEN journal_entries.amount
+                WHEN transactions.posted_at <= ? AND journal_entries.type = "credit" THEN -journal_entries.amount
+                ELSE 0
+            END) AS totalStartingBalance,
+            SUM(CASE
+                WHEN transactions.posted_at BETWEEN ? AND ? AND journal_entries.type = "debit" THEN journal_entries.amount
+                WHEN transactions.posted_at BETWEEN ? AND ? AND journal_entries.type = "credit" THEN -journal_entries.amount
+                ELSE 0
+            END) AS totalNetMovement
+        ', [
+                $startDate,
+                $startDate,
+                $startDate,
+                $endDate,
+                $startDate,
+                $endDate,
+            ])
+            ->first();
+
+        $totalBalance = $result->totalStartingBalance + $result->totalNetMovement;
 
         return new Money($totalBalance, CurrencyAccessor::getDefaultCurrency());
     }

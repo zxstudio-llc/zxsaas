@@ -43,11 +43,9 @@ class TrialBalance extends BaseReportPage
                 ->alignment(Alignment::Left),
             Column::make('debit_balance')
                 ->label('Debit')
-                ->toggleable()
                 ->alignment(Alignment::Right),
             Column::make('credit_balance')
                 ->label('Credit')
-                ->toggleable()
                 ->alignment(Alignment::Right),
         ];
     }
