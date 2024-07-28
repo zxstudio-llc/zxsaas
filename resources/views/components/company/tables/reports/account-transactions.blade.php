@@ -53,11 +53,13 @@
                             ])
                         >
                             @if(is_array($cell) && isset($cell['description']))
-                                @if(isset($cell['id']))
+                                @if(isset($cell['id']) && $cell['tableAction'])
                                     <x-filament::link
-                                        :href="\App\Filament\Company\Pages\Accounting\Transactions::getUrl()"
+                                        :href="\App\Filament\Company\Pages\Accounting\Transactions::getUrl(parameters: [
+                                            'tableAction' => $cell['tableAction'],
+                                            'tableActionRecord' => $cell['id'],
+                                        ])"
                                         target="_blank"
-                                        x-on:click="localStorage.setItem('openTransactionId', '{{ $cell['id'] }}')"
                                         color="primary"
                                         icon="heroicon-o-arrow-top-right-on-square"
                                         :icon-position="\Filament\Support\Enums\IconPosition::After"

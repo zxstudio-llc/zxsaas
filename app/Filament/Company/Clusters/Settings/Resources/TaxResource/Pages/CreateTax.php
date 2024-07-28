@@ -41,6 +41,6 @@ class CreateTax extends CreateRecord
 
         $evaluatedTypes = [TaxType::Sales, TaxType::Purchase];
 
-        return $this->handleRecordCreationWithUniqueField($data, new Tax(), $user, 'type', $evaluatedTypes);
+        return $this->handleRecordCreationWithUniqueField($data, new Tax, $user, 'type', $evaluatedTypes);
     }
 }

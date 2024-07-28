@@ -2,6 +2,8 @@
 
 namespace App\DTO;
 
+use App\Enums\Accounting\TransactionType;
+
 class AccountTransactionDTO
 {
     public function __construct(
@@ -11,5 +13,7 @@ class AccountTransactionDTO
         public string $debit,
         public string $credit,
         public string $balance,
+        public ?TransactionType $type,
+        public ?string $tableAction,
     ) {}
 }

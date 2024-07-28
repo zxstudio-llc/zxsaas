@@ -84,9 +84,7 @@ class ReportService
                 $query->whereHas('transaction', function (Builder $query) use ($startDate, $endDate) {
                     $query->whereBetween('posted_at', [$startDate, $endDate]);
                 })
-                    ->with(['transaction' => function (Relation $query) {
-                        $query->select(['id', 'description', 'posted_at']);
-                    }])
+                    ->with('transaction:id,type,description,posted_at')
                     ->select(['account_id', 'transaction_id'])
                     ->selectRaw('SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS total_debit')
                     ->selectRaw('SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS total_credit')
@@ -121,6 +119,8 @@ class ReportService
                 debit: '',
                 credit: '',
                 balance: $startingBalance?->formatInDefaultCurrency() ?? 0,
+                type: null,
+                tableAction: null,
             );
 
             foreach ($account->journalEntries as $journalEntry) {
@@ -138,6 +138,8 @@ class ReportService
                     debit: $journalEntry->total_debit ? money($journalEntry->total_debit, $defaultCurrency)->format() : '',
                     credit: $journalEntry->total_credit ? money($journalEntry->total_credit, $defaultCurrency)->format() : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),
+                    type: $transaction->type,
+                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
                 );
             }
 
@@ -150,6 +152,8 @@ class ReportService
                 debit: money($totalDebit, $defaultCurrency)->format(),
                 credit: money($totalCredit, $defaultCurrency)->format(),
                 balance: money($currentBalance, $defaultCurrency)->format(),
+                type: null,
+                tableAction: null,
             );
 
             $accountTransactions[] = new AccountTransactionDTO(
@@ -159,6 +163,8 @@ class ReportService
                 debit: '',
                 credit: '',
                 balance: money($balanceChange, $defaultCurrency)->format(),
+                type: null,
+                tableAction: null,
             );
 
             $reportCategories[] = [

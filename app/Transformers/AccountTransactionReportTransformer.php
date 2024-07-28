@@ -53,8 +53,9 @@ class AccountTransactionReportTransformer extends BaseReportTransformer
                     $row[] = match ($column->getName()) {
                         'date' => $transaction->date,
                         'description' => [
-                            'id' => $transaction->id ?? null,
+                            'id' => $transaction->id,
                             'description' => $transaction->description,
+                            'tableAction' => $transaction->tableAction,
                         ],
                         'debit' => $transaction->debit,
                         'credit' => $transaction->credit,

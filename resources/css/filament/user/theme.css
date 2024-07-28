@@ -8,24 +8,19 @@
     z-index: 1;
 }
 
-.fi-input-password-revealable::-ms-reveal {
-    display: none;
-}
-
 .fi-body::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-image:
-        linear-gradient(99.6deg,
-            rgba(232, 233, 235, 1) 10.6%,
-            rgba(240, 241, 243, 1) 32.9%,
-            rgba(248, 249, 251, 0.7) 50%,
-            rgba(240, 241, 243, 1) 67.1%,
-            rgba(232, 233, 235, 1) 83.4%);
+    background-image: linear-gradient(99.6deg,
+    rgba(232, 233, 235, 1) 10.6%,
+    rgba(240, 241, 243, 1) 32.9%,
+    rgba(248, 249, 251, 0.7) 50%,
+    rgba(240, 241, 243, 1) 67.1%,
+    rgba(232, 233, 235, 1) 83.4%);
     pointer-events: none;
     z-index: -1;
 }
@@ -38,7 +33,7 @@
 
 :is(.dark .fi-body)::before {
     content: '';
-    position: absolute;
+    position: fixed;
     top: 0;
     right: 0;
     background-image: radial-gradient(
@@ -49,7 +44,7 @@
         rgba(var(--primary-900), 0.5) 45%,
         rgba(var(--primary-950), 0.3) 60%,
         rgba(var(--primary-950), 0.1) 75%,
-        rgba(3,7,18,0) 100%
+        rgba(3, 7, 18, 0) 100%
     );
     width: 100%;
     height: 100%;
