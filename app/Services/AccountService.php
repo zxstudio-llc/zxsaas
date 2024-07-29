@@ -10,6 +10,8 @@ use App\Models\Accounting\Transaction;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\Money;
+use Closure;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 class AccountService implements AccountHandler
@@ -48,6 +50,105 @@ class AccountService implements AccountHandler
         $balances = $this->calculateStartingBalances($account, $startDate);
 
         return new Money($balances['starting_balance'], $account->currency_code);
+    }
+
+    public function getStartingBalanceSubquery($startDate, $accountIds = null): Builder
+    {
+        return DB::table('journal_entries')
+            ->select('journal_entries.account_id')
+            ->selectRaw('
+                SUM(
+                    CASE
+                        WHEN accounts.category IN ("asset", "expense") THEN
+                            CASE WHEN journal_entries.type = "debit" THEN journal_entries.amount ELSE -journal_entries.amount END
+                        ELSE
+                            CASE WHEN journal_entries.type = "credit" THEN journal_entries.amount ELSE -journal_entries.amount END
+                    END
+                ) AS starting_balance
+            ')
+            ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
+            ->join('accounts', 'accounts.id', '=', 'journal_entries.account_id')
+            ->where('transactions.posted_at', '<', $startDate)
+            ->groupBy('journal_entries.account_id');
+    }
+
+    public function getTotalDebitSubquery($startDate, $endDate, $accountIds = null): Builder
+    {
+        return DB::table('journal_entries')
+            ->select('journal_entries.account_id')
+            ->selectRaw('
+                SUM(CASE WHEN journal_entries.type = "debit" THEN journal_entries.amount ELSE 0 END) as total_debit
+            ')
+            ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
+            ->whereBetween('transactions.posted_at', [$startDate, $endDate])
+            ->groupBy('journal_entries.account_id');
+    }
+
+    public function getTotalCreditSubquery($startDate, $endDate, $accountIds = null): Builder
+    {
+        return DB::table('journal_entries')
+            ->select('journal_entries.account_id')
+            ->selectRaw('
+                SUM(CASE WHEN journal_entries.type = "credit" THEN journal_entries.amount ELSE 0 END) as total_credit
+            ')
+            ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
+            ->whereBetween('transactions.posted_at', [$startDate, $endDate])
+            ->groupBy('journal_entries.account_id');
+    }
+
+    public function getTransactionDetailsSubquery($startDate, $endDate): Closure
+    {
+        return function ($query) use ($startDate, $endDate) {
+            $query->select(
+                'journal_entries.id',
+                'journal_entries.account_id',
+                'journal_entries.transaction_id',
+                'journal_entries.type',
+                'journal_entries.amount',
+                DB::raw('journal_entries.amount * IF(journal_entries.type = "debit", 1, -1) AS signed_amount')
+            )
+                ->whereBetween('transactions.posted_at', [$startDate, $endDate])
+                ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
+                ->orderBy('transactions.posted_at')
+                ->with('transaction:id,type,description,posted_at');
+        };
+    }
+
+    public function getAccountBalances($startDate, $endDate, $accountIds = null): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = Account::query()
+            ->select([
+                'accounts.id',
+                'accounts.name',
+                'accounts.category',
+                'accounts.subtype_id',
+                'accounts.currency_code',
+                'accounts.code',
+            ])
+            ->leftJoinSub($this->getStartingBalanceSubquery($startDate), 'starting_balance', function ($join) {
+                $join->on('accounts.id', '=', 'starting_balance.account_id');
+            })
+            ->leftJoinSub($this->getTotalDebitSubquery($startDate, $endDate), 'total_debit', function ($join) {
+                $join->on('accounts.id', '=', 'total_debit.account_id');
+            })
+            ->leftJoinSub($this->getTotalCreditSubquery($startDate, $endDate), 'total_credit', function ($join) {
+                $join->on('accounts.id', '=', 'total_credit.account_id');
+            })
+            ->addSelect([
+                'starting_balance.starting_balance',
+                'total_debit.total_debit',
+                'total_credit.total_credit',
+            ])
+            ->with(['subtype:id,name'])
+            ->whereHas('journalEntries.transaction', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('posted_at', [$startDate, $endDate]);
+            });
+
+        if ($accountIds !== null) {
+            $query->whereIn('accounts.id', (array) $accountIds);
+        }
+
+        return $query;
     }
 
     public function getEndingBalance(Account $account, string $startDate, string $endDate): ?Money
