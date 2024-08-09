@@ -78,7 +78,7 @@ class ReportService
             foreach ($accountsInCategory as $account) {
                 $accountBalances = $this->calculateAccountBalances($account, $categoryName);
 
-                if ($this->isZeroBalance($accountBalances)) {
+                if ($this->hasZeroBalanceSum($accountBalances)) {
                     continue;
                 }
 
@@ -124,19 +124,19 @@ class ReportService
     private function calculateAccountBalances(Account $account, AccountCategory $category): array
     {
         $balances = [
-            'debit_balance' => $account->total_debit,
-            'credit_balance' => $account->total_credit,
+            'debit_balance' => $account->total_debit ?? 0,
+            'credit_balance' => $account->total_credit ?? 0,
         ];
 
         if (in_array($category, [AccountCategory::Liability, AccountCategory::Equity, AccountCategory::Revenue])) {
-            $balances['net_movement'] = $account->total_credit - $account->total_debit;
+            $balances['net_movement'] = $balances['credit_balance'] - $balances['debit_balance'];
         } else {
-            $balances['net_movement'] = $account->total_debit - $account->total_credit;
+            $balances['net_movement'] = $balances['debit_balance'] - $balances['credit_balance'];
         }
 
         if (! in_array($category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
-            $balances['starting_balance'] = $account->starting_balance;
-            $balances['ending_balance'] = $account->starting_balance + $account->total_credit - $account->total_debit;
+            $balances['starting_balance'] = $account->starting_balance ?? 0;
+            $balances['ending_balance'] = $balances['starting_balance'] + $balances['credit_balance'] - $balances['debit_balance'];
         }
 
         return $balances;
@@ -149,7 +149,7 @@ class ReportService
         }
     }
 
-    private function isZeroBalance(array $balances): bool
+    private function hasZeroBalanceSum(array $balances): bool
     {
         return array_sum(array_map('abs', $balances)) === 0;
     }
@@ -159,15 +159,11 @@ class ReportService
         $columns ??= [];
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
-        $accountIds = $accountId !== 'all' ? [$accountId] : null;
+        $accountIds = $accountId !== 'all' ? [$accountId] : [];
 
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds);
 
         $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)]);
-
-        if ($accountId !== 'all') {
-            $query->where('id', $accountId);
-        }
 
         $accounts = $query->get();
 

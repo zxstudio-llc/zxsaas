@@ -12,6 +12,7 @@ use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\Money;
 use Closure;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
 
 class AccountService implements AccountHandler
@@ -57,14 +58,14 @@ class AccountService implements AccountHandler
         return DB::table('journal_entries')
             ->select('journal_entries.account_id')
             ->selectRaw('
-                SUM(
+                COALESCE(SUM(
                     CASE
                         WHEN accounts.category IN ("asset", "expense") THEN
                             CASE WHEN journal_entries.type = "debit" THEN journal_entries.amount ELSE -journal_entries.amount END
                         ELSE
                             CASE WHEN journal_entries.type = "credit" THEN journal_entries.amount ELSE -journal_entries.amount END
                     END
-                ) AS starting_balance
+                ), 0) AS starting_balance
             ')
             ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
             ->join('accounts', 'accounts.id', '=', 'journal_entries.account_id')
@@ -77,7 +78,7 @@ class AccountService implements AccountHandler
         return DB::table('journal_entries')
             ->select('journal_entries.account_id')
             ->selectRaw('
-                SUM(CASE WHEN journal_entries.type = "debit" THEN journal_entries.amount ELSE 0 END) as total_debit
+                COALESCE(SUM(CASE WHEN journal_entries.type = "debit" THEN journal_entries.amount ELSE 0 END), 0) as total_debit
             ')
             ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
             ->whereBetween('transactions.posted_at', [$startDate, $endDate])
@@ -89,7 +90,7 @@ class AccountService implements AccountHandler
         return DB::table('journal_entries')
             ->select('journal_entries.account_id')
             ->selectRaw('
-                SUM(CASE WHEN journal_entries.type = "credit" THEN journal_entries.amount ELSE 0 END) as total_credit
+                COALESCE(SUM(CASE WHEN journal_entries.type = "credit" THEN journal_entries.amount ELSE 0 END), 0) as total_credit
             ')
             ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
             ->whereBetween('transactions.posted_at', [$startDate, $endDate])
@@ -114,7 +115,7 @@ class AccountService implements AccountHandler
         };
     }
 
-    public function getAccountBalances($startDate, $endDate, $accountIds = null): \Illuminate\Database\Eloquent\Builder
+    public function getAccountBalances(string $startDate, string $endDate, array $accountIds = []): \Illuminate\Database\Eloquent\Builder
     {
         $query = Account::query()
             ->select([
@@ -125,27 +126,27 @@ class AccountService implements AccountHandler
                 'accounts.currency_code',
                 'accounts.code',
             ])
-            ->leftJoinSub($this->getStartingBalanceSubquery($startDate), 'starting_balance', function ($join) {
+            ->leftJoinSub($this->getStartingBalanceSubquery($startDate), 'starting_balance', function (JoinClause $join) {
                 $join->on('accounts.id', '=', 'starting_balance.account_id');
             })
-            ->leftJoinSub($this->getTotalDebitSubquery($startDate, $endDate), 'total_debit', function ($join) {
+            ->leftJoinSub($this->getTotalDebitSubquery($startDate, $endDate), 'total_debit', function (JoinClause $join) {
                 $join->on('accounts.id', '=', 'total_debit.account_id');
             })
-            ->leftJoinSub($this->getTotalCreditSubquery($startDate, $endDate), 'total_credit', function ($join) {
+            ->leftJoinSub($this->getTotalCreditSubquery($startDate, $endDate), 'total_credit', function (JoinClause $join) {
                 $join->on('accounts.id', '=', 'total_credit.account_id');
             })
             ->addSelect([
-                'starting_balance.starting_balance',
-                'total_debit.total_debit',
-                'total_credit.total_credit',
+                DB::raw('COALESCE(starting_balance.starting_balance, 0) as starting_balance'),
+                DB::raw('COALESCE(total_debit.total_debit, 0) as total_debit'),
+                DB::raw('COALESCE(total_credit.total_credit, 0) as total_credit'),
             ])
             ->with(['subtype:id,name'])
             ->whereHas('journalEntries.transaction', function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('posted_at', [$startDate, $endDate]);
             });
 
-        if ($accountIds !== null) {
-            $query->whereIn('accounts.id', (array) $accountIds);
+        if (! empty($accountIds)) {
+            $query->whereIn('accounts.id', $accountIds);
         }
 
         return $query;

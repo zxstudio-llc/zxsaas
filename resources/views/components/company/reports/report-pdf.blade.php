@@ -118,7 +118,7 @@
             <tr>
                 @foreach($account as $index => $cell)
                     <td class="{{ $report->getAlignmentClass($index) }} {{ $index === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
-                        @if(isset($cell['id']) && isset($cell['name']))
+                        @if(is_array($cell) && isset($cell['name']))
                             {{ $cell['name'] }}
                         @else
                             {{ $cell }}

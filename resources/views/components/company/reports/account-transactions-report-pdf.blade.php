@@ -129,7 +129,11 @@
                 ])>
                 @foreach($transaction as $cellIndex => $cell)
                     <td class="{{ $report->getAlignmentClass($cellIndex) }} {{ $cellIndex === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
-                        {{ $cell }}
+                        @if(is_array($cell) && isset($cell['description']))
+                            {{ $cell['description'] }}
+                        @else
+                            {{ $cell }}
+                        @endif
                     </td>
                 @endforeach
             </tr>
