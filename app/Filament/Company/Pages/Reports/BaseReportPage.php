@@ -238,7 +238,7 @@ abstract class BaseReportPage extends Page
     {
         return DatePicker::make('startDate')
             ->label('Start Date')
-            ->displayFormat('Y-m-d')
+            ->defaultDateFormat()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });
@@ -248,7 +248,7 @@ abstract class BaseReportPage extends Page
     {
         return DatePicker::make('endDate')
             ->label('End Date')
-            ->displayFormat('Y-m-d')
+            ->defaultDateFormat()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });

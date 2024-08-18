@@ -21,7 +21,5 @@ interface AccountHandler
 
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money;
 
-    public function getAccountCategoryOrder(): array;
-
     public function getEarliestTransactionDate(): string;
 }

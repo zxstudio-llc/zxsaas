@@ -96,7 +96,7 @@ class AccountTransactions extends BaseReportPage
         $accounts = Account::query()
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
-            ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
+            ->map(fn (Collection $accounts) => $accounts->pluck('name', 'id'))
             ->toArray();
 
         $allAccountsOption = [

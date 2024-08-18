@@ -224,7 +224,7 @@ class Transactions extends Page implements HasTable
                 Tables\Columns\TextColumn::make('posted_at')
                     ->label('Date')
                     ->sortable()
-                    ->localizeDate(),
+                    ->defaultDateFormat(),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')
                     ->limit(30)
