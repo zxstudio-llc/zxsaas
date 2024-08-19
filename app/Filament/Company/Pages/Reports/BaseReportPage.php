@@ -154,8 +154,8 @@ abstract class BaseReportPage extends Page
 
     public function setDateRange(Carbon $start, Carbon $end): void
     {
-        $this->startDate = $start->toDateString();
-        $this->endDate = $end->isFuture() ? now()->toDateString() : $end->toDateString();
+        $this->startDate = $start->startOfDay()->toDateTimeString();
+        $this->endDate = $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString();
     }
 
     public function toggleColumnsAction(): Action
@@ -238,7 +238,6 @@ abstract class BaseReportPage extends Page
     {
         return DatePicker::make('startDate')
             ->label('Start Date')
-            ->defaultDateFormat()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });
@@ -248,7 +247,6 @@ abstract class BaseReportPage extends Page
     {
         return DatePicker::make('endDate')
             ->label('End Date')
-            ->defaultDateFormat()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });

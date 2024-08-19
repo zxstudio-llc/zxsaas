@@ -13,7 +13,6 @@ use App\ValueObjects\Money;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AccountService implements AccountHandler
@@ -56,9 +55,7 @@ class AccountService implements AccountHandler
 
     public function getTransactionDetailsSubquery(string $startDate, string $endDate): Closure
     {
-        $endOfDay = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
-
-        return static function ($query) use ($startDate, $endOfDay) {
+        return static function ($query) use ($startDate, $endDate) {
             $query->select(
                 'journal_entries.id',
                 'journal_entries.account_id',
@@ -67,7 +64,7 @@ class AccountService implements AccountHandler
                 'journal_entries.amount',
                 DB::raw('journal_entries.amount * IF(journal_entries.type = "debit", 1, -1) AS signed_amount')
             )
-                ->whereBetween('transactions.posted_at', [$startDate, $endOfDay])
+                ->whereBetween('transactions.posted_at', [$startDate, $endDate])
                 ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
                 ->orderBy('transactions.posted_at')
                 ->with('transaction:id,type,description,posted_at');
@@ -76,8 +73,6 @@ class AccountService implements AccountHandler
 
     public function getAccountBalances(string $startDate, string $endDate, array $accountIds = []): Builder
     {
-        $endOfDay = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
-
         $query = Account::query()
             ->select([
                 'accounts.id',
@@ -110,9 +105,9 @@ class AccountService implements AccountHandler
                 "),
             ])
             ->join('journal_entries', 'journal_entries.account_id', '=', 'accounts.id')
-            ->join('transactions', function (JoinClause $join) use ($endOfDay) {
+            ->join('transactions', function (JoinClause $join) use ($endDate) {
                 $join->on('transactions.id', '=', 'journal_entries.transaction_id')
-                    ->where('transactions.posted_at', '<=', $endOfDay);
+                    ->where('transactions.posted_at', '<=', $endDate);
             })
             ->groupBy('accounts.id')
             ->with(['subtype:id,name']);
@@ -121,15 +116,13 @@ class AccountService implements AccountHandler
             $query->whereIn('accounts.id', $accountIds);
         }
 
-        $query->addBinding([$startDate, $startDate, $startDate, $startDate, $startDate, $endOfDay, $startDate, $endOfDay], 'select');
+        $query->addBinding([$startDate, $startDate, $startDate, $startDate, $startDate, $endDate, $startDate, $endDate], 'select');
 
         return $query;
     }
 
     public function getTotalBalanceForAllBankAccounts(string $startDate, string $endDate): Money
     {
-        $endOfDay = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
-
         $accountIds = Account::whereHas('bankAccount')
             ->pluck('id')
             ->toArray();
@@ -139,9 +132,9 @@ class AccountService implements AccountHandler
         }
 
         $result = DB::table('journal_entries')
-            ->join('transactions', function (JoinClause $join) use ($endOfDay) {
+            ->join('transactions', function (JoinClause $join) use ($endDate) {
                 $join->on('transactions.id', '=', 'journal_entries.transaction_id')
-                    ->where('transactions.posted_at', '<=', $endOfDay);
+                    ->where('transactions.posted_at', '<=', $endDate);
             })
             ->whereIn('journal_entries.account_id', $accountIds)
             ->selectRaw('
@@ -159,9 +152,9 @@ class AccountService implements AccountHandler
                 $startDate,
                 $startDate,
                 $startDate,
-                $endOfDay,
+                $endDate,
                 $startDate,
-                $endOfDay,
+                $endDate,
             ])
             ->first();
 

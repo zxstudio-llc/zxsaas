@@ -630,14 +630,12 @@ class Transactions extends Page implements HasTable
                             ->endDateField("{$fieldPrefix}_end_date"),
                         DatePicker::make("{$fieldPrefix}_start_date")
                             ->label("{$label} From")
-                            ->displayFormat('Y-m-d')
                             ->columnStart(1)
                             ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
                                 $set("{$fieldPrefix}_date_range", 'Custom');
                             }),
                         DatePicker::make("{$fieldPrefix}_end_date")
                             ->label("{$label} To")
-                            ->displayFormat('Y-m-d')
                             ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
                                 $set("{$fieldPrefix}_date_range", 'Custom');
                             }),

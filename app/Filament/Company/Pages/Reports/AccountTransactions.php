@@ -50,6 +50,7 @@ class AccountTransactions extends BaseReportPage
         return [
             Column::make('date')
                 ->label('Date')
+                ->markAsDate()
                 ->alignment(Alignment::Left),
             Column::make('description')
                 ->label('Description')

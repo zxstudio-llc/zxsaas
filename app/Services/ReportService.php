@@ -121,9 +121,7 @@ class ReportService
 
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds);
 
-        $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)]);
-
-        $accounts = $query->get();
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)])->get();
 
         $reportCategories = [];
 
@@ -291,5 +289,73 @@ class ReportService
         }
 
         return ['debit_balance' => abs($endingBalance), 'credit_balance' => 0];
+    }
+
+    public function buildIncomeStatementReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+
+        $accountCategories = [];
+        $totalRevenue = 0;
+        $cogs = 0;
+        $totalExpenses = 0;
+
+        $categoryGroups = [
+            'Revenue' => [
+                'accounts' => $accounts->where('category', AccountCategory::Revenue),
+                'total' => &$totalRevenue,
+            ],
+            'Cost of Goods Sold' => [
+                'accounts' => $accounts->where('subtype.name', 'Cost of Goods Sold'),
+                'total' => &$cogs,
+            ],
+            'Expenses' => [
+                'accounts' => $accounts->where('category', AccountCategory::Expense)->where('subtype.name', '!=', 'Cost of Goods Sold'),
+                'total' => &$totalExpenses,
+            ],
+        ];
+
+        foreach ($categoryGroups as $label => $group) {
+            $categoryAccounts = [];
+            $netMovement = 0;
+
+            foreach ($group['accounts']->sortBy('code', SORT_NATURAL) as $account) {
+                $category = null;
+
+                if ($label === 'Revenue') {
+                    $category = AccountCategory::Revenue;
+                } elseif ($label === 'Expenses') {
+                    $category = AccountCategory::Expense;
+                } elseif ($label === 'Cost of Goods Sold') {
+                    // COGS is treated as part of Expenses, so we use AccountCategory::Expense
+                    $category = AccountCategory::Expense;
+                }
+
+                if ($category !== null) {
+                    $accountBalances = $this->calculateAccountBalances($account, $category);
+                    $movement = $accountBalances['net_movement'];
+                    $netMovement += $movement;
+                    $group['total'] += $movement;
+
+                    $categoryAccounts[] = new AccountDTO(
+                        $account->name,
+                        $account->code,
+                        $account->id,
+                        $this->formatBalances(['net_movement' => $movement]),
+                    );
+                }
+            }
+
+            $accountCategories[$label] = new AccountCategoryDTO(
+                $categoryAccounts,
+                $this->formatBalances(['net_movement' => $netMovement]),
+            );
+        }
+
+        $grossProfit = $totalRevenue - $cogs;
+        $netProfit = $grossProfit - $totalExpenses;
+        $formattedReportTotalBalances = $this->formatBalances(['net_movement' => $netProfit]);
+
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 }

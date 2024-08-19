@@ -18,6 +18,8 @@ class Column extends Component
     use HasLabel;
     use HasName;
 
+    protected bool $isDate = false;
+
     final public function __construct(string $name)
     {
         $this->name($name);
@@ -39,5 +41,17 @@ class Column extends Component
             Alignment::Right, Alignment::End => 'text-right',
             default => '',
         };
+    }
+
+    public function markAsDate(): static
+    {
+        $this->isDate = true;
+
+        return $this;
+    }
+
+    public function isDate(): bool
+    {
+        return $this->isDate;
     }
 }

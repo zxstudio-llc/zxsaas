@@ -4,6 +4,7 @@ namespace App\Filament\Company\Pages;
 
 use App\Filament\Company\Pages\Reports\AccountBalances;
 use App\Filament\Company\Pages\Reports\AccountTransactions;
+use App\Filament\Company\Pages\Reports\IncomeStatement;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
@@ -22,9 +23,36 @@ class Reports extends Page
         return $infolist
             ->state([])
             ->schema([
+                Section::make('Financial Statements')
+                    ->aside()
+                    ->description('Key financial statements that provide a snapshot of your company’s financial health.')
+                    ->extraAttributes(['class' => 'es-report-card'])
+                    ->schema([
+                        ReportEntry::make('income_statement')
+                            ->hiddenLabel()
+                            ->heading('Income Statement')
+                            ->description('Tracks revenue and expenses to show profit or loss over a specific period of time.')
+                            ->icon('heroicon-o-chart-bar')
+                            ->iconColor(Color::Indigo)
+                            ->url(IncomeStatement::getUrl()),
+                        ReportEntry::make('balance_sheet')
+                            ->hiddenLabel()
+                            ->heading('Balance Sheet')
+                            ->description('Snapshot of assets, liabilities, and equity at a specific point in time.')
+                            ->icon('heroicon-o-clipboard-document-list')
+                            ->iconColor(Color::Emerald)
+                            ->url('#'),
+                        ReportEntry::make('cash_flow_statement')
+                            ->hiddenLabel()
+                            ->heading('Cash Flow Statement')
+                            ->description('Shows cash inflows and outflows over a specific period of time.')
+                            ->icon('heroicon-o-document-currency-dollar')
+                            ->iconColor(Color::Cyan)
+                            ->url('#'),
+                    ]),
                 Section::make('Detailed Reports')
                     ->aside()
-                    ->description('Dig into the details of your business’s transactions, balances, and accounts.')
+                    ->description('Dig into the details of your company’s transactions, balances, and accounts.')
                     ->extraAttributes(['class' => 'es-report-card'])
                     ->schema([
                         ReportEntry::make('account_balances')

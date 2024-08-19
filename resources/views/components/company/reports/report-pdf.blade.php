@@ -84,7 +84,7 @@
 
         .category-summary-row > td,
         .table-footer-row > td {
-            font-weight: 600;
+            font-weight: bold;
             background-color: #ffffff; /* White background for footer */
         }
     </style>
@@ -139,7 +139,7 @@
         </tr>
         </tbody>
     @endforeach
-    <tfoot>
+    <tbody>
     <tr class="table-footer-row">
         @foreach ($report->getOverallTotals() as $index => $total)
             <td class="{{ $report->getAlignmentClass($index) }}">
@@ -147,7 +147,7 @@
             </td>
         @endforeach
     </tr>
-    </tfoot>
+    </tbody>
 </table>
 </body>
 </html>
