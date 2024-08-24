@@ -11,6 +11,8 @@ use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\ValueObjects\Money;
+use Illuminate\Support\Carbon;
 
 class ReportService
 {
@@ -110,6 +112,33 @@ class ReportService
         }
 
         return $balances;
+    }
+
+    public function calculateRetainedEarnings(string $startDate): Money
+    {
+        $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateTimeString();
+        $endDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateTimeString();
+
+        $revenueAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Revenue)->get();
+
+        $expenseAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Expense)->get();
+
+        $revenueTotal = 0;
+        $expenseTotal = 0;
+
+        foreach ($revenueAccounts as $account) {
+            $revenueBalances = $this->calculateAccountBalances($account, AccountCategory::Revenue);
+            $revenueTotal += $revenueBalances['net_movement'];
+        }
+
+        foreach ($expenseAccounts as $account) {
+            $expenseBalances = $this->calculateAccountBalances($account, AccountCategory::Expense);
+            $expenseTotal += $expenseBalances['net_movement'];
+        }
+
+        $retainedEarnings = $revenueTotal - $expenseTotal;
+
+        return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
     public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
@@ -241,7 +270,7 @@ class ReportService
             }
 
             if ($category === AccountCategory::Equity) {
-                $retainedEarningsAmount = $this->accountService->getRetainedEarnings($startDate)->getAmount();
+                $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate)->getAmount();
                 $isCredit = $retainedEarningsAmount >= 0;
 
                 $categorySummaryBalances[$isCredit ? 'credit_balance' : 'debit_balance'] += abs($retainedEarningsAmount);
