@@ -10,6 +10,7 @@ use App\Facades\Accounting;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Filament\Forms\Components\JournalEntryRepeater;
+use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
@@ -373,8 +374,17 @@ class Transactions extends Page implements HasTable
                     Tables\Actions\ReplicateAction::make()
                         ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
                         ->modal(false)
-                        ->beforeReplicaSaved(static function (Transaction $transaction) {
-                            $transaction->description = '(Copy of) ' . $transaction->description;
+                        ->beforeReplicaSaved(static function (Transaction $replica) {
+                            $replica->description = '(Copy of) ' . $replica->description;
+                        })
+                        ->after(static function (Transaction $original, Transaction $replica) {
+                            $original->journalEntries->each(function (JournalEntry $entry) use ($replica) {
+                                $entry->replicate([
+                                    'transaction_id',
+                                ])->fill([
+                                    'transaction_id' => $replica->id,
+                                ])->save();
+                            });
                         }),
                 ])
                     ->dropdownPlacement('bottom-start')
@@ -383,6 +393,18 @@ class Transactions extends Page implements HasTable
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ReplicateBulkAction::make()
+                        ->label('Replicate')
+                        ->modalWidth(MaxWidth::Large)
+                        ->modalDescription('Replicating transactions will also replicate their journal entries. Are you sure you want to proceed?')
+                        ->successNotificationTitle('Transactions Replicated Successfully')
+                        ->failureNotificationTitle('Failed to Replicate Transactions')
+                        ->deselectRecordsAfterCompletion()
+                        ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
+                        ->beforeReplicaSaved(static function (Transaction $replica) {
+                            $replica->description = '(Copy of) ' . $replica->description;
+                        })
+                        ->withReplicatedRelationships(['journalEntries']),
                 ]),
             ]);
     }
