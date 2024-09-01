@@ -34,7 +34,7 @@
                                         icon="heroicon-o-arrow-top-right-on-square"
                                         :icon-position="\Filament\Support\Enums\IconPosition::After"
                                         :icon-size="\Filament\Support\Enums\IconSize::Small"
-                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl(['account_id' => $cell['id']]) }}"
+                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl(['selectedAccount' => $cell['id']]) }}"
                                     >
                                         {{ $cell['name'] }}
                                     </x-filament::link>

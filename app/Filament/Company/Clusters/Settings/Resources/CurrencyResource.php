@@ -19,7 +19,6 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
-use Wallo\FilamentSelectify\Components\ToggleButton;
 
 class CurrencyResource extends Resource
 {
@@ -51,7 +50,6 @@ class CurrencyResource extends Resource
                             ->live()
                             ->required()
                             ->localizeLabel()
-                            ->hidden(static fn (Forms\Get $get, $state): bool => $get('enabled') && $state !== null)
                             ->afterStateUpdated(static function (Forms\Set $set, $state) {
                                 $fields = ['name', 'precision', 'symbol', 'symbol_first', 'decimal_mark', 'thousands_separator'];
 
@@ -71,12 +69,6 @@ class CurrencyResource extends Resource
 
                                 array_walk($fields, static fn ($field) => $set($field, $currencyDetails[$field] ?? null));
                             }),
-                        Forms\Components\TextInput::make('code')
-                            ->localizeLabel()
-                            ->hidden(static fn (Forms\Get $get): bool => ! ($get('enabled') && $get('code') !== null))
-                            ->disabled(static fn (Forms\Get $get): bool => $get('enabled'))
-                            ->dehydrated()
-                            ->required(),
                         Forms\Components\TextInput::make('name')
                             ->localizeLabel()
                             ->maxLength(50)
@@ -86,8 +78,6 @@ class CurrencyResource extends Resource
                             ->rule('gt:0')
                             ->live()
                             ->localizeLabel()
-                            ->disabled(static fn (?CurrencyModel $record): bool => $record?->isEnabled() ?? false)
-                            ->dehydrated()
                             ->required(),
                         Forms\Components\Select::make('precision')
                             ->localizeLabel()
@@ -123,36 +113,6 @@ class CurrencyResource extends Resource
                                 };
                             })
                             ->nullable(),
-                        ToggleButton::make('enabled')
-                            ->localizeLabel('Default')
-                            ->onLabel(CurrencyModel::enabledLabel())
-                            ->offLabel(CurrencyModel::disabledLabel())
-                            ->disabled(static fn (?CurrencyModel $record): bool => $record?->isEnabled() ?? false)
-                            ->dehydrated()
-                            ->live()
-                            ->afterStateUpdated(static function (Forms\Set $set, Forms\Get $get, $state) {
-                                $enabledState = (bool) $state;
-                                $code = $get('code');
-
-                                if (! $code) {
-                                    return;
-                                }
-
-                                if ($enabledState) {
-                                    $set('rate', 1);
-
-                                    return;
-                                }
-
-                                $forexEnabled = Forex::isEnabled();
-                                if ($forexEnabled) {
-                                    $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
-                                    $exchangeRate = Forex::getCachedExchangeRate($defaultCurrencyCode, $code);
-                                    if ($exchangeRate !== null) {
-                                        $set('rate', $exchangeRate);
-                                    }
-                                }
-                            }),
                     ])->columns(),
             ]);
     }
@@ -230,10 +190,7 @@ class CurrencyResource extends Resource
             ])
             ->checkIfRecordIsSelectableUsing(static function (CurrencyModel $record) {
                 return $record->isDisabled();
-            })
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
-            ]);
+            });
     }
 
     public static function getPages(): array

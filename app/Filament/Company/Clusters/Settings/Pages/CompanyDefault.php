@@ -6,12 +6,12 @@ use App\Events\CompanyDefaultUpdated;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Banking\BankAccount;
 use App\Models\Setting\CompanyDefault as CompanyDefaultModel;
-use App\Models\Setting\Currency;
 use App\Models\Setting\Discount;
 use App\Models\Setting\Tax;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
@@ -133,14 +133,10 @@ class CompanyDefault extends Page
                     ->selectablePlaceholder(false)
                     ->searchable()
                     ->preload(),
-                Select::make('currency_code')
-                    ->softRequired()
-                    ->localizeLabel('Currency')
-                    ->relationship('currency', 'name')
-                    ->getOptionLabelFromRecordUsing(static fn (Currency $record) => "{$record->code} {$record->symbol} - {$record->name}")
-                    ->saveRelationshipsUsing(null)
-                    ->searchable()
-                    ->preload(),
+                Placeholder::make('currency_code')
+                    ->label(translate('Currency'))
+                    ->hintIcon('heroicon-o-question-mark-circle', 'You cannot change this after your company has been created. You can still use other currencies for transactions.')
+                    ->content(static fn (CompanyDefaultModel $record) => "{$record->currency->code} {$record->currency->symbol} - {$record->currency->name}"),
             ])->columns();
     }
 

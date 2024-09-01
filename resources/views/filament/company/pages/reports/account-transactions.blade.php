@@ -4,7 +4,7 @@
             {{ $this->form }}
         </form>
     </x-filament::section>
-    
+
     <x-filament-tables::container>
         <div class="es-table__header-ctn"></div>
         <div

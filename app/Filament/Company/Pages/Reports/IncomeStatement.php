@@ -47,12 +47,11 @@ class IncomeStatement extends BaseReportPage
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->inlineLabel()
             ->columns()
-            ->live()
             ->schema([
                 $this->getDateRangeFormComponent(),
                 Cluster::make([
@@ -64,7 +63,7 @@ class IncomeStatement extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildIncomeStatementReport($this->startDate, $this->endDate, $columns);
+        return $this->reportService->buildIncomeStatementReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -74,11 +73,11 @@ class IncomeStatement extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 }

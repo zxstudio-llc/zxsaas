@@ -30,6 +30,7 @@ class DateRangeSelect extends Select
         $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
 
         $this->options($this->getDateRangeOptions())
+            ->live()
             ->afterStateUpdated(function ($state, Set $set) {
                 $this->updateDateRange($state, $set);
             });
@@ -165,7 +166,7 @@ class DateRangeSelect extends Select
 
     public function setDateRange(Carbon $start, Carbon $end, Set $set): void
     {
-        $set($this->startDateField, $start->startOfDay()->toDateTimeString());
+        $set($this->startDateField, $start->startOfDay()->toDateString());
         $set($this->endDateField, $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString());
     }
 }

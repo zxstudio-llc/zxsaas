@@ -217,6 +217,12 @@ class Transactions extends Page implements HasTable
         return $table
             ->query(static::getEloquentQuery())
             ->modifyQueryUsing(function (Builder $query) {
+                $query->with([
+                    'account',
+                    'bankAccount.account',
+                    'journalEntries.account',
+                ]);
+
                 if ($this->bankAccountIdFiltered !== 'all') {
                     $query->where('bank_account_id', $this->bankAccountIdFiltered);
                 }

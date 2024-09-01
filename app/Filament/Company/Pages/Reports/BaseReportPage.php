@@ -19,18 +19,25 @@ use Filament\Support\Enums\ActionSize;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Facades\FilamentIcon;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Session;
+use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
 {
-    public string $startDate = '';
+    /**
+     * @var array<string, mixed> | null
+     */
+    #[Url(keep: true)]
+    public ?array $filters = null;
 
-    public string $endDate = '';
-
-    public string $dateRange = '';
+    /**
+     * @var array<string, mixed> | null
+     */
+    public ?array $deferredFilters = null;
 
     public string $fiscalYearStartDate = '';
 
@@ -62,15 +69,108 @@ abstract class BaseReportPage extends Page
 
         $this->loadDefaultDateRange();
 
+        $this->initializeFilters();
+
         $this->loadDefaultTableColumnToggleState();
+    }
+
+    public function initializeFilters(): void
+    {
+        if (! count($this->filters ?? [])) {
+            $this->filters = null;
+        }
+
+        $this->getFiltersForm()->fill($this->filters);
+
+        $this->applyFilters();
     }
 
     protected function getForms(): array
     {
         return [
             'toggleTableColumnForm',
-            'form',
+            'filtersForm' => $this->getFiltersForm(),
         ];
+    }
+
+    public function filtersForm(Form $form): Form
+    {
+        return $form;
+    }
+
+    public function getFiltersForm(): Form
+    {
+        return $this->filtersForm($this->makeForm()
+            ->statePath('deferredFilters'));
+    }
+
+    public function updatedFilters(): void
+    {
+        $this->deferredFilters = $this->filters;
+
+        $this->handleFilterUpdates();
+    }
+
+    protected function isValidDate($date): bool
+    {
+        return strtotime($date) !== false;
+    }
+
+    protected function handleFilterUpdates(): void
+    {
+        //
+    }
+
+    public function applyFilters(): void
+    {
+        $normalizedFilters = $this->deferredFilters;
+
+        $this->normalizeFilters($normalizedFilters);
+
+        $this->filters = $normalizedFilters;
+
+        $this->handleFilterUpdates();
+
+        $this->loadReportData();
+    }
+
+    protected function normalizeFilters(array &$filters): void
+    {
+        foreach ($filters as $name => &$value) {
+            if ($name === 'dateRange') {
+                unset($filters[$name]);
+            } elseif ($this->isValidDate($value)) {
+                $filters[$name] = Carbon::parse($value)->toDateString();
+            }
+        }
+    }
+
+    public function getFiltersApplyAction(): Action
+    {
+        return Action::make('applyFilters')
+            ->label(__('filament-tables::table.filters.actions.apply.label'))
+            ->action('applyFilters')
+            ->button();
+    }
+
+    public function getFilterState(string $name): mixed
+    {
+        return Arr::get($this->filters, $name);
+    }
+
+    public function setFilterState(string $name, mixed $value): void
+    {
+        Arr::set($this->filters, $name, $value);
+    }
+
+    public function getDeferredFilterState(string $name): mixed
+    {
+        return Arr::get($this->deferredFilters, $name);
+    }
+
+    public function setDeferredFilterState(string $name, mixed $value): void
+    {
+        Arr::set($this->deferredFilters, $name, $value);
     }
 
     protected function initializeProperties(): void
@@ -82,8 +182,8 @@ abstract class BaseReportPage extends Page
 
     protected function loadDefaultDateRange(): void
     {
-        if (empty($this->dateRange)) {
-            $this->dateRange = $this->getDefaultDateRange();
+        if (! $this->getDeferredFilterState('dateRange')) {
+            $this->setFilterState('dateRange', $this->getDefaultDateRange());
             $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
         }
     }
@@ -154,8 +254,18 @@ abstract class BaseReportPage extends Page
 
     public function setDateRange(Carbon $start, Carbon $end): void
     {
-        $this->startDate = $start->startOfDay()->toDateTimeString();
-        $this->endDate = $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString();
+        $this->setFilterState('startDate', $start->startOfDay()->toDateTimeString());
+        $this->setFilterState('endDate', $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString());
+    }
+
+    public function getFormattedStartDate(): string
+    {
+        return Carbon::parse($this->getFilterState('startDate'))->startOfDay()->toDateTimeString();
+    }
+
+    public function getFormattedEndDate(): string
+    {
+        return Carbon::parse($this->getFilterState('endDate'))->endOfDay()->toDateTimeString();
     }
 
     public function toggleColumnsAction(): Action
@@ -228,17 +338,12 @@ abstract class BaseReportPage extends Page
             ->endDateField('endDate');
     }
 
-    protected function resetDateRange(): void
-    {
-        $this->dateRange = $this->getDefaultDateRange();
-        $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
-    }
-
     protected function getStartDateFormComponent(): Component
     {
         return DatePicker::make('startDate')
             ->label('Start Date')
-            ->afterStateUpdated(static function (Set $set) {
+            ->live()
+            ->afterStateUpdated(static function ($state, Set $set) {
                 $set('dateRange', 'Custom');
             });
     }
@@ -247,6 +352,7 @@ abstract class BaseReportPage extends Page
     {
         return DatePicker::make('endDate')
             ->label('End Date')
+            ->live()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });

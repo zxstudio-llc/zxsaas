@@ -73,6 +73,8 @@ class AccountService implements AccountHandler
 
     public function getAccountBalances(string $startDate, string $endDate, array $accountIds = []): Builder
     {
+        $accountIds = array_map('intval', $accountIds);
+
         $query = Account::query()
             ->select([
                 'accounts.id',

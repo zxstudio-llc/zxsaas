@@ -34,7 +34,7 @@ class AccountTransactions extends BaseReportPage
     protected ExportService $exportService;
 
     #[Url]
-    public ?string $account_id = 'all';
+    public ?string $selectedAccount = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
@@ -71,9 +71,8 @@ class AccountTransactions extends BaseReportPage
     {
         return $form
             ->columns(4)
-            ->live()
             ->schema([
-                Select::make('account_id')
+                Select::make('selectedAccount')
                     ->label('Account')
                     ->options($this->getAccountOptions())
                     ->selectablePlaceholder(false)
@@ -109,7 +108,7 @@ class AccountTransactions extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->startDate, $this->endDate, $columns, $this->account_id);
+        return $this->reportService->buildAccountTransactionsReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns, $this->selectedAccount);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -119,12 +118,12 @@ class AccountTransactions extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function getEmptyStateHeading(): string | Htmlable
