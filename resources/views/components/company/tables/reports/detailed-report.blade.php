@@ -27,14 +27,18 @@
                     <x-filament-tables::cell class="{{ $report->getAlignmentClass($cellIndex) }}">
                         <div class="px-3 py-4 text-sm leading-6 text-gray-950 dark:text-white">
                             @if(is_array($cell) && isset($cell['name']))
-                                @if(isset($cell['id']))
+                                @if(isset($cell['id']) && isset($cell['start_date']) && isset($cell['end_date']))
                                     <x-filament::link
                                         color="primary"
                                         target="_blank"
                                         icon="heroicon-o-arrow-top-right-on-square"
                                         :icon-position="\Filament\Support\Enums\IconPosition::After"
                                         :icon-size="\Filament\Support\Enums\IconSize::Small"
-                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl(['selectedAccount' => $cell['id']]) }}"
+                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl([
+                                            'filters[startDate]' => $cell['start_date'],
+                                            'filters[endDate]' => $cell['end_date'],
+                                            'filters[selectedAccount]' => $cell['id']
+                                        ]) }}"
                                     >
                                         {{ $cell['name'] }}
                                     </x-filament::link>

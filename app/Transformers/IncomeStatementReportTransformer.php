@@ -60,6 +60,8 @@ class IncomeStatementReportTransformer extends BaseReportTransformer
                         'account_name' => [
                             'name' => $account->accountName,
                             'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
                         ],
                         'net_movement' => $account->balance->netMovement ?? '',
                         default => '',

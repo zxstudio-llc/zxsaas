@@ -73,6 +73,8 @@ class ReportService
                     $account->code,
                     $account->id,
                     $formattedAccountBalances,
+                    Carbon::parse($startDate)->toDateString(),
+                    Carbon::parse($endDate)->toDateString(),
                 );
             }
 
@@ -266,6 +268,8 @@ class ReportService
                     $account->code,
                     $account->id,
                     $formattedAccountBalances,
+                    Carbon::parse($startDate)->toDateString(),
+                    Carbon::parse($endDate)->toDateString(),
                 );
             }
 
@@ -282,7 +286,9 @@ class ReportService
                     $this->formatBalances([
                         'debit_balance' => $isCredit ? 0 : abs($retainedEarningsAmount),
                         'credit_balance' => $isCredit ? $retainedEarningsAmount : 0,
-                    ])
+                    ]),
+                    null,
+                    null,
                 );
             }
 
@@ -371,6 +377,8 @@ class ReportService
                         $account->code,
                         $account->id,
                         $this->formatBalances(['net_movement' => $movement]),
+                        Carbon::parse($startDate)->toDateString(),
+                        Carbon::parse($endDate)->toDateString(),
                     );
                 }
             }

@@ -32,7 +32,7 @@ abstract class BaseReportPage extends Page
     /**
      * @var array<string, mixed> | null
      */
-    #[Url(keep: true)]
+    #[Url]
     public ?array $filters = null;
 
     /**
@@ -97,6 +97,8 @@ abstract class BaseReportPage extends Page
         if ($this->filters !== null) {
             $this->filters = $this->normalizeFilters($this->filters);
         }
+
+        ray($this->filters);
     }
 
     protected function convertDatesToDateTimeString(array $filters): array

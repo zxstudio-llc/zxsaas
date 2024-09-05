@@ -40,7 +40,7 @@ class AccountTransactions extends BaseReportPage
 
     protected function initializeDefaultFilters(): void
     {
-        if (! $this->getFilterState('selectedAccount')) {
+        if (empty($this->getFilterState('selectedAccount'))) {
             $this->setFilterState('selectedAccount', 'all');
         }
     }
