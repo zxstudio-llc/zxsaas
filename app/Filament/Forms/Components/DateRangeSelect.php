@@ -2,37 +2,35 @@
 
 namespace App\Filament\Forms\Components;
 
-use App\Facades\Accounting;
-use App\Models\Company;
-use Carbon\CarbonPeriod;
+use App\Services\DateRangeService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Set;
 use Illuminate\Support\Carbon;
 
 class DateRangeSelect extends Select
 {
-    public string $fiscalYearStartDate = '';
+    public string $fiscalYearStartDate;
 
-    public string $fiscalYearEndDate = '';
+    public string $fiscalYearEndDate;
 
-    public string $startDateField = '';
+    public ?string $startDateField = null;
 
-    public string $endDateField = '';
-
-    public Company $company;
+    public ?string $endDateField = null;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->company = auth()->user()->currentCompany;
-        $this->fiscalYearStartDate = $this->company->locale->fiscalYearStartDate();
-        $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
+        $company = auth()->user()->currentCompany;
+        $this->fiscalYearStartDate = $company->locale->fiscalYearStartDate();
+        $this->fiscalYearEndDate = $company->locale->fiscalYearEndDate();
 
-        $this->options($this->getDateRangeOptions())
+        $this->options(app(DateRangeService::class)->getDateRangeOptions())
             ->live()
             ->afterStateUpdated(function ($state, Set $set) {
-                $this->updateDateRange($state, $set);
+                if ($this->startDateField && $this->endDateField) {
+                    $this->updateDateRange($state, $set);
+                }
             });
     }
 
@@ -48,54 +46,6 @@ class DateRangeSelect extends Select
         $this->endDateField = $fieldName;
 
         return $this;
-    }
-
-    public function getDateRangeOptions(): array
-    {
-        $earliestDate = Carbon::parse(Accounting::getEarliestTransactionDate());
-        $currentDate = now();
-        $fiscalYearStartCurrent = Carbon::parse($this->fiscalYearStartDate);
-
-        $options = [
-            'Fiscal Year' => [],
-            'Fiscal Quarter' => [],
-            'Calendar Year' => [],
-            'Calendar Quarter' => [],
-            'Month' => [],
-            'Custom' => [],
-        ];
-
-        $period = CarbonPeriod::create($earliestDate, '1 month', $currentDate);
-
-        foreach ($period as $date) {
-            $options['Fiscal Year']['FY-' . $date->year] = $date->year;
-
-            $fiscalYearStart = $fiscalYearStartCurrent->copy()->subYears($currentDate->year - $date->year);
-
-            for ($i = 0; $i < 4; $i++) {
-                $quarterNumber = $i + 1;
-                $quarterStart = $fiscalYearStart->copy()->addMonths(($quarterNumber - 1) * 3);
-                $quarterEnd = $quarterStart->copy()->addMonths(3)->subDay();
-
-                if ($quarterStart->lessThanOrEqualTo($currentDate) && $quarterEnd->greaterThanOrEqualTo($earliestDate)) {
-                    $options['Fiscal Quarter']['FQ-' . $quarterNumber . '-' . $date->year] = 'Q' . $quarterNumber . ' ' . $date->year;
-                }
-            }
-
-            $options['Calendar Year']['Y-' . $date->year] = $date->year;
-            $quarterKey = 'Q-' . $date->quarter . '-' . $date->year;
-            $options['Calendar Quarter'][$quarterKey] = 'Q' . $date->quarter . ' ' . $date->year;
-            $options['Month']['M-' . $date->format('Y-m')] = $date->format('F Y');
-            $options['Custom']['Custom'] = 'Custom';
-        }
-
-        $options['Fiscal Year'] = array_reverse($options['Fiscal Year'], true);
-        $options['Fiscal Quarter'] = array_reverse($options['Fiscal Quarter'], true);
-        $options['Calendar Year'] = array_reverse($options['Calendar Year'], true);
-        $options['Calendar Quarter'] = array_reverse($options['Calendar Quarter'], true);
-        $options['Month'] = array_reverse($options['Month'], true);
-
-        return $options;
     }
 
     public function updateDateRange($state, Set $set): void

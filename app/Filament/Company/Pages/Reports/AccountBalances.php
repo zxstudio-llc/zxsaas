@@ -67,12 +67,11 @@ class AccountBalances extends BaseReportPage
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->inlineLabel()
             ->columns()
-            ->live()
             ->schema([
                 $this->getDateRangeFormComponent(),
                 Cluster::make([

@@ -50,15 +50,11 @@ class TrialBalance extends BaseReportPage
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->inlineLabel()
-            ->columns([
-                'lg' => 1,
-                '2xl' => 2,
-            ])
-            ->live()
+            ->columns()
             ->schema([
                 $this->getDateRangeFormComponent(),
                 Cluster::make([

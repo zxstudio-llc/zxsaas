@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\AccountHandler;
 use App\Services\AccountService;
+use App\Services\DateRangeService;
 use BezhanSalleh\PanelSwitch\PanelSwitch;
 use Filament\Notifications\Livewire\Notifications;
 use Filament\Support\Assets\Js;
@@ -25,7 +26,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(DateRangeService::class);
     }
 
     /**

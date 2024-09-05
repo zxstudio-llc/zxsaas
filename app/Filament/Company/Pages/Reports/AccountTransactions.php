@@ -18,7 +18,6 @@ use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -33,13 +32,17 @@ class AccountTransactions extends BaseReportPage
 
     protected ExportService $exportService;
 
-    #[Url]
-    public ?string $selectedAccount = 'all';
-
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
         $this->reportService = $reportService;
         $this->exportService = $exportService;
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        if (! $this->getFilterState('selectedAccount')) {
+            $this->setFilterState('selectedAccount', 'all');
+        }
     }
 
     /**
@@ -67,7 +70,7 @@ class AccountTransactions extends BaseReportPage
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->columns(4)
@@ -83,10 +86,11 @@ class AccountTransactions extends BaseReportPage
                     $this->getEndDateFormComponent(),
                 ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
                 Actions::make([
-                    Actions\Action::make('loadReportData')
+                    Actions\Action::make('applyFilters')
                         ->label('Update Report')
-                        ->submit('loadReportData')
-                        ->keyBindings(['mod+s']),
+                        ->action('applyFilters')
+                        ->keyBindings(['mod+s'])
+                        ->button(),
                 ])->alignEnd()->verticallyAlignEnd(),
             ]);
     }
@@ -108,7 +112,7 @@ class AccountTransactions extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns, $this->selectedAccount);
+        return $this->reportService->buildAccountTransactionsReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns, $this->getFilterState('selectedAccount'));
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport

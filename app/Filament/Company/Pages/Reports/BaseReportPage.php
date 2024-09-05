@@ -6,6 +6,7 @@ use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
+use App\Services\DateRangeService;
 use App\Support\Column;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -39,9 +40,9 @@ abstract class BaseReportPage extends Page
      */
     public ?array $deferredFilters = null;
 
-    public string $fiscalYearStartDate = '';
+    public string $fiscalYearStartDate;
 
-    public string $fiscalYearEndDate = '';
+    public string $fiscalYearEndDate;
 
     public Company $company;
 
@@ -69,9 +70,16 @@ abstract class BaseReportPage extends Page
 
         $this->loadDefaultDateRange();
 
+        $this->initializeDefaultFilters();
+
         $this->initializeFilters();
 
         $this->loadDefaultTableColumnToggleState();
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        //
     }
 
     public function initializeFilters(): void
@@ -80,9 +88,28 @@ abstract class BaseReportPage extends Page
             $this->filters = null;
         }
 
-        $this->getFiltersForm()->fill($this->filters);
+        $filtersForForm = $this->filters !== null
+            ? $this->convertDatesToDateTimeString($this->filters)
+            : [];
 
-        $this->applyFilters();
+        $this->getFiltersForm()->fill($filtersForForm);
+
+        if ($this->filters !== null) {
+            $this->filters = $this->normalizeFilters($this->filters);
+        }
+    }
+
+    protected function convertDatesToDateTimeString(array $filters): array
+    {
+        if (isset($filters['startDate'])) {
+            $filters['startDate'] = Carbon::parse($filters['startDate'])->startOfDay()->toDateTimeString();
+        }
+
+        if (isset($filters['endDate'])) {
+            $filters['endDate'] = Carbon::parse($filters['endDate'])->endOfDay()->toDateTimeString();
+        }
+
+        return $filters;
     }
 
     protected function getForms(): array
@@ -123,33 +150,32 @@ abstract class BaseReportPage extends Page
 
     public function applyFilters(): void
     {
-        $normalizedFilters = $this->deferredFilters;
-
-        $this->normalizeFilters($normalizedFilters);
-
-        $this->filters = $normalizedFilters;
+        $this->filters = $this->normalizeFilters($this->deferredFilters);
 
         $this->handleFilterUpdates();
 
         $this->loadReportData();
     }
 
-    protected function normalizeFilters(array &$filters): void
+    protected function normalizeFilters(array $filters): array
     {
         foreach ($filters as $name => &$value) {
             if ($name === 'dateRange') {
                 unset($filters[$name]);
             } elseif ($this->isValidDate($value)) {
-                $filters[$name] = Carbon::parse($value)->toDateString();
+                $value = Carbon::parse($value)->toDateString();
             }
         }
+
+        return $filters;
     }
 
     public function getFiltersApplyAction(): Action
     {
         return Action::make('applyFilters')
-            ->label(__('filament-tables::table.filters.actions.apply.label'))
+            ->label('Update Report')
             ->action('applyFilters')
+            ->keyBindings(['mod+s'])
             ->button();
     }
 
@@ -182,7 +208,13 @@ abstract class BaseReportPage extends Page
 
     protected function loadDefaultDateRange(): void
     {
-        if (! $this->getDeferredFilterState('dateRange')) {
+        $startDate = $this->getFilterState('startDate');
+        $endDate = $this->getFilterState('endDate');
+
+        if ($this->isValidDate($startDate) && $this->isValidDate($endDate)) {
+            $matchingDateRange = app(DateRangeService::class)->getMatchingDateRangeOption(Carbon::parse($startDate), Carbon::parse($endDate));
+            $this->setFilterState('dateRange', $matchingDateRange);
+        } else {
             $this->setFilterState('dateRange', $this->getDefaultDateRange());
             $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
         }
@@ -191,6 +223,7 @@ abstract class BaseReportPage extends Page
     public function loadReportData(): void
     {
         unset($this->report);
+
         $this->reportLoaded = true;
     }
 
@@ -198,27 +231,21 @@ abstract class BaseReportPage extends Page
     {
         $tableColumns = $this->getTable();
 
-        if (empty($this->toggledTableColumns)) {
-            foreach ($tableColumns as $column) {
-                if ($column->isToggleable()) {
-                    if ($column->isToggledHiddenByDefault()) {
-                        $this->toggledTableColumns[$column->getName()] = false;
-                    } else {
-                        $this->toggledTableColumns[$column->getName()] = true;
-                    }
-                } else {
-                    $this->toggledTableColumns[$column->getName()] = true;
-                }
-            }
-        }
-
         foreach ($tableColumns as $column) {
             $columnName = $column->getName();
-            if (! $column->isToggleable()) {
-                $this->toggledTableColumns[$columnName] = true;
+
+            if (empty($this->toggledTableColumns)) {
+                if ($column->isToggleable()) {
+                    $this->toggledTableColumns[$columnName] = ! $column->isToggledHiddenByDefault();
+                } else {
+                    $this->toggledTableColumns[$columnName] = true;
+                }
             }
 
-            if ($column->isToggleable() && $column->isToggledHiddenByDefault() && isset($this->toggledTableColumns[$columnName]) && $this->toggledTableColumns[$columnName]) {
+            // Handle cases where the toggle state needs to be reset
+            if (! $column->isToggleable()) {
+                $this->toggledTableColumns[$columnName] = true;
+            } elseif ($column->isToggleable() && $column->isToggledHiddenByDefault() && isset($this->toggledTableColumns[$columnName]) && $this->toggledTableColumns[$columnName]) {
                 $this->toggledTableColumns[$columnName] = false;
             }
         }
