@@ -4,6 +4,7 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Company\Pages\Concerns\HasDeferredFiltersForm;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
 use App\Services\DateRangeService;
@@ -24,15 +25,15 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Session;
-use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
 {
+    use HasDeferredFiltersForm;
+
     /**
      * @var array<string, mixed> | null
      */
-    #[Url]
     public ?array $filters = null;
 
     /**
@@ -88,17 +89,7 @@ abstract class BaseReportPage extends Page
             $this->filters = null;
         }
 
-        $filtersForForm = $this->filters !== null
-            ? $this->convertDatesToDateTimeString($this->filters)
-            : [];
-
-        $this->getFiltersForm()->fill($filtersForForm);
-
-        if ($this->filters !== null) {
-            $this->filters = $this->normalizeFilters($this->filters);
-        }
-
-        ray($this->filters);
+        $this->getFiltersForm()->fill($this->filters);
     }
 
     protected function convertDatesToDateTimeString(array $filters): array
@@ -152,24 +143,11 @@ abstract class BaseReportPage extends Page
 
     public function applyFilters(): void
     {
-        $this->filters = $this->normalizeFilters($this->deferredFilters);
+        $this->filters = $this->deferredFilters;
 
         $this->handleFilterUpdates();
 
         $this->loadReportData();
-    }
-
-    protected function normalizeFilters(array $filters): array
-    {
-        foreach ($filters as $name => &$value) {
-            if ($name === 'dateRange') {
-                unset($filters[$name]);
-            } elseif ($this->isValidDate($value)) {
-                $value = Carbon::parse($value)->toDateString();
-            }
-        }
-
-        return $filters;
     }
 
     public function getFiltersApplyAction(): Action

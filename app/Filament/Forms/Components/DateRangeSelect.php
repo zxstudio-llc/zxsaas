@@ -116,7 +116,7 @@ class DateRangeSelect extends Select
 
     public function setDateRange(Carbon $start, Carbon $end, Set $set): void
     {
-        $set($this->startDateField, $start->startOfDay()->toDateString());
+        $set($this->startDateField, $start->startOfDay()->toDateTimeString());
         $set($this->endDateField, $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString());
     }
 }

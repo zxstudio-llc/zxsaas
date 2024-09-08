@@ -35,9 +35,9 @@
                                         :icon-position="\Filament\Support\Enums\IconPosition::After"
                                         :icon-size="\Filament\Support\Enums\IconSize::Small"
                                         href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl([
-                                            'filters[startDate]' => $cell['start_date'],
-                                            'filters[endDate]' => $cell['end_date'],
-                                            'filters[selectedAccount]' => $cell['id']
+                                            'startDate' => $cell['start_date'],
+                                            'endDate' => $cell['end_date'],
+                                            'selectedAccount' => $cell['id']
                                         ]) }}"
                                     >
                                         {{ $cell['name'] }}

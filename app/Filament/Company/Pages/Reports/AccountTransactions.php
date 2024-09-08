@@ -45,6 +45,11 @@ class AccountTransactions extends BaseReportPage
         }
     }
 
+    protected function extraQueryStrings(): array
+    {
+        return ['selectedAccount'];
+    }
+
     /**
      * @return array<Column>
      */
