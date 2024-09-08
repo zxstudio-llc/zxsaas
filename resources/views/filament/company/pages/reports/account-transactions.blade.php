@@ -1,6 +1,8 @@
 <x-filament-panels::page>
     <x-filament::section>
-        {{ $this->getFiltersForm() }}
+        @if(method_exists($this, 'filtersForm'))
+            {{ $this->filtersForm }}
+        @endif
     </x-filament::section>
 
     <x-filament-tables::container>

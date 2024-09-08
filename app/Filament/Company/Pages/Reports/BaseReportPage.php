@@ -12,7 +12,6 @@ use App\Services\DateRangeService;
 use App\Support\Column;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
@@ -22,7 +21,6 @@ use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Session;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 abstract class BaseReportPage extends Page
@@ -37,9 +35,6 @@ abstract class BaseReportPage extends Page
     public Company $company;
 
     public bool $reportLoaded = false;
-
-    #[Session]
-    public array $toggledTableColumns = [];
 
     abstract protected function buildReport(array $columns): ReportDTO;
 
@@ -59,8 +54,6 @@ abstract class BaseReportPage extends Page
         $this->initializeProperties();
 
         $this->loadDefaultDateRange();
-
-        $this->loadDefaultTableColumnToggleState();
     }
 
     protected function initializeProperties(): void
@@ -91,43 +84,9 @@ abstract class BaseReportPage extends Page
         $this->reportLoaded = true;
     }
 
-    protected function loadDefaultTableColumnToggleState(): void
-    {
-        $tableColumns = $this->getTable();
-
-        foreach ($tableColumns as $column) {
-            $columnName = $column->getName();
-
-            if (empty($this->toggledTableColumns)) {
-                if ($column->isToggleable()) {
-                    $this->toggledTableColumns[$columnName] = ! $column->isToggledHiddenByDefault();
-                } else {
-                    $this->toggledTableColumns[$columnName] = true;
-                }
-            }
-
-            // Handle cases where the toggle state needs to be reset
-            if (! $column->isToggleable()) {
-                $this->toggledTableColumns[$columnName] = true;
-            } elseif ($column->isToggleable() && $column->isToggledHiddenByDefault() && isset($this->toggledTableColumns[$columnName]) && $this->toggledTableColumns[$columnName]) {
-                $this->toggledTableColumns[$columnName] = false;
-            }
-        }
-    }
-
     public function getDefaultDateRange(): string
     {
         return 'FY-' . now()->year;
-    }
-
-    protected function getToggledColumns(): array
-    {
-        return array_values(
-            array_filter(
-                $this->getTable(),
-                fn (Column $column) => $this->toggledTableColumns[$column->getName()] ?? false,
-            )
-        );
     }
 
     #[Computed(persist: true)]
@@ -163,28 +122,6 @@ abstract class BaseReportPage extends Page
     {
         return $form
             ->schema($this->getTableColumnToggleFormSchema());
-    }
-
-    protected function hasToggleableColumns(): bool
-    {
-        return ! empty($this->getTableColumnToggleFormSchema());
-    }
-
-    /**
-     * @return array<Checkbox>
-     */
-    protected function getTableColumnToggleFormSchema(): array
-    {
-        $schema = [];
-
-        foreach ($this->getTable() as $column) {
-            if ($column->isToggleable()) {
-                $schema[] = Checkbox::make($column->getName())
-                    ->label($column->getLabel());
-            }
-        }
-
-        return $schema;
     }
 
     protected function getHeaderActions(): array
