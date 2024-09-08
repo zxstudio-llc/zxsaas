@@ -2,9 +2,9 @@
     <x-filament::section>
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-8">
             <!-- Form Container -->
-            <div class="flex-grow">
-                {{ $this->getFiltersForm() }}
-            </div>
+            @if(method_exists($this, 'filtersForm'))
+                {{ $this->filtersForm }}
+            @endif
 
             <!-- Grouping Button and Column Toggle -->
             <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 flex-shrink-0">
@@ -14,7 +14,10 @@
                         :trigger-action="$this->toggleColumnsAction"
                     />
                 @endif
-                {{ $this->getFiltersApplyAction() }}
+            </div>
+
+            <div class="inline-flex items-center flex-shrink-0 min-w-[8.5rem] justify-end">
+                {{ $this->applyFiltersAction }}
             </div>
         </div>
     </x-filament::section>

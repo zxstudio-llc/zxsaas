@@ -2,10 +2,131 @@
 
 namespace App\Filament\Company\Pages\Concerns;
 
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Form;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 
 trait HasDeferredFiltersForm
 {
+    /**
+     * @var array<string, mixed> | null
+     */
+    public ?array $filters = null;
+
+    /**
+     * @var array<string, mixed> | null
+     */
+    public ?array $deferredFilters = null;
+
+    public function mountHasDeferredFiltersForm(): void
+    {
+        $this->initializeDefaultFilters();
+
+        $this->initializeFilters();
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        //
+    }
+
+    public function initializeFilters(): void
+    {
+        if (! count($this->filters ?? [])) {
+            $this->filters = null;
+        }
+
+        $this->getFiltersForm()->fill($this->filters);
+    }
+
+    protected function getHasDeferredFiltersFormForms(): array
+    {
+        return [
+            'filtersForm' => $this->getFiltersForm(),
+        ];
+    }
+
+    public function filtersForm(Form $form): Form
+    {
+        return $form;
+    }
+
+    public function getFiltersForm(): Form
+    {
+        return $this->filtersForm($this->makeForm()
+            ->statePath('deferredFilters'));
+    }
+
+    public function updatedFilters(): void
+    {
+        $this->deferredFilters = $this->filters;
+
+        $this->handleFilterUpdates();
+    }
+
+    protected function isValidDate($date): bool
+    {
+        return strtotime($date) !== false;
+    }
+
+    protected function handleFilterUpdates(): void
+    {
+        //
+    }
+
+    public function applyFilters(): void
+    {
+        $this->filters = $this->deferredFilters;
+
+        $this->handleFilterUpdates();
+
+        $this->loadReportData();
+    }
+
+    public function applyFiltersAction(): Action
+    {
+        return Action::make('applyFilters')
+            ->label('Update Report')
+            ->action('applyFilters')
+            ->keyBindings(['mod+s'])
+            ->button();
+    }
+
+    public function getFilterState(string $name): mixed
+    {
+        return Arr::get($this->filters, $name);
+    }
+
+    public function setFilterState(string $name, mixed $value): void
+    {
+        Arr::set($this->filters, $name, $value);
+    }
+
+    public function getDeferredFilterState(string $name): mixed
+    {
+        return Arr::get($this->deferredFilters, $name);
+    }
+
+    public function setDeferredFilterState(string $name, mixed $value): void
+    {
+        Arr::set($this->deferredFilters, $name, $value);
+    }
+
+    protected function convertDatesToDateTimeString(array $filters): array
+    {
+        if (isset($filters['startDate'])) {
+            $filters['startDate'] = Carbon::parse($filters['startDate'])->startOfDay()->toDateTimeString();
+        }
+
+        if (isset($filters['endDate'])) {
+            $filters['endDate'] = Carbon::parse($filters['endDate'])->endOfDay()->toDateTimeString();
+        }
+
+        return $filters;
+    }
+
     protected function queryStringHasDeferredFiltersForm(): array
     {
         // Get the filter keys dynamically from the filters form
@@ -49,14 +170,17 @@ trait HasDeferredFiltersForm
     protected function excludeQueryStrings(): array
     {
         return [
-            'dateRange', // Example: dateRange should not have 'as' and 'keep'
+            'dateRange',
         ];
     }
 
     public function dehydrateHasDeferredFiltersForm(): void
     {
+        $flatFields = $this->getFiltersForm()->getFlatFields();
+
         foreach ($this->filters as $key => $value) {
-            if ($this->isDateFilter($value)) {
+            if (isset($flatFields[$key]) && $flatFields[$key] instanceof DatePicker) {
+                // TODO: Submit a PR to Filament to address DatePicker being dehydrated as a datetime string in filters
                 $this->filters[$key] = Carbon::parse($value)->toDateString();
             }
         }

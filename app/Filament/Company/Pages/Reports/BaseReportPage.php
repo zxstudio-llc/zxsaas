@@ -5,6 +5,7 @@ namespace App\Filament\Company\Pages\Reports;
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Concerns\HasDeferredFiltersForm;
+use App\Filament\Company\Pages\Concerns\HasToggleTableColumnForm;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
 use App\Services\DateRangeService;
@@ -17,11 +18,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Forms\Set;
 use Filament\Pages\Page;
-use Filament\Support\Enums\ActionSize;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
-use Filament\Support\Facades\FilamentIcon;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Session;
@@ -30,16 +28,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 abstract class BaseReportPage extends Page
 {
     use HasDeferredFiltersForm;
-
-    /**
-     * @var array<string, mixed> | null
-     */
-    public ?array $filters = null;
-
-    /**
-     * @var array<string, mixed> | null
-     */
-    public ?array $deferredFilters = null;
+    use HasToggleTableColumnForm;
 
     public string $fiscalYearStartDate;
 
@@ -71,112 +60,7 @@ abstract class BaseReportPage extends Page
 
         $this->loadDefaultDateRange();
 
-        $this->initializeDefaultFilters();
-
-        $this->initializeFilters();
-
         $this->loadDefaultTableColumnToggleState();
-    }
-
-    protected function initializeDefaultFilters(): void
-    {
-        //
-    }
-
-    public function initializeFilters(): void
-    {
-        if (! count($this->filters ?? [])) {
-            $this->filters = null;
-        }
-
-        $this->getFiltersForm()->fill($this->filters);
-    }
-
-    protected function convertDatesToDateTimeString(array $filters): array
-    {
-        if (isset($filters['startDate'])) {
-            $filters['startDate'] = Carbon::parse($filters['startDate'])->startOfDay()->toDateTimeString();
-        }
-
-        if (isset($filters['endDate'])) {
-            $filters['endDate'] = Carbon::parse($filters['endDate'])->endOfDay()->toDateTimeString();
-        }
-
-        return $filters;
-    }
-
-    protected function getForms(): array
-    {
-        return [
-            'toggleTableColumnForm',
-            'filtersForm' => $this->getFiltersForm(),
-        ];
-    }
-
-    public function filtersForm(Form $form): Form
-    {
-        return $form;
-    }
-
-    public function getFiltersForm(): Form
-    {
-        return $this->filtersForm($this->makeForm()
-            ->statePath('deferredFilters'));
-    }
-
-    public function updatedFilters(): void
-    {
-        $this->deferredFilters = $this->filters;
-
-        $this->handleFilterUpdates();
-    }
-
-    protected function isValidDate($date): bool
-    {
-        return strtotime($date) !== false;
-    }
-
-    protected function handleFilterUpdates(): void
-    {
-        //
-    }
-
-    public function applyFilters(): void
-    {
-        $this->filters = $this->deferredFilters;
-
-        $this->handleFilterUpdates();
-
-        $this->loadReportData();
-    }
-
-    public function getFiltersApplyAction(): Action
-    {
-        return Action::make('applyFilters')
-            ->label('Update Report')
-            ->action('applyFilters')
-            ->keyBindings(['mod+s'])
-            ->button();
-    }
-
-    public function getFilterState(string $name): mixed
-    {
-        return Arr::get($this->filters, $name);
-    }
-
-    public function setFilterState(string $name, mixed $value): void
-    {
-        Arr::set($this->filters, $name, $value);
-    }
-
-    public function getDeferredFilterState(string $name): mixed
-    {
-        return Arr::get($this->deferredFilters, $name);
-    }
-
-    public function setDeferredFilterState(string $name, mixed $value): void
-    {
-        Arr::set($this->deferredFilters, $name, $value);
     }
 
     protected function initializeProperties(): void
@@ -275,21 +159,10 @@ abstract class BaseReportPage extends Page
         return Carbon::parse($this->getFilterState('endDate'))->endOfDay()->toDateTimeString();
     }
 
-    public function toggleColumnsAction(): Action
-    {
-        return Action::make('toggleColumns')
-            ->label(__('filament-tables::table.actions.toggle_columns.label'))
-            ->iconButton()
-            ->size(ActionSize::Large)
-            ->icon(FilamentIcon::resolve('tables::actions.toggle-columns') ?? 'heroicon-m-view-columns')
-            ->color('gray');
-    }
-
     public function toggleTableColumnForm(Form $form): Form
     {
         return $form
-            ->schema($this->getTableColumnToggleFormSchema())
-            ->statePath('toggledTableColumns');
+            ->schema($this->getTableColumnToggleFormSchema());
     }
 
     protected function hasToggleableColumns(): bool

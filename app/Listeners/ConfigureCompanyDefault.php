@@ -71,17 +71,21 @@ class ConfigureCompanyDefault
         Tab::configureUsing(static function (Tab $tab) {
             $label = $tab->getLabel();
 
-            $translatedLabel = translate($label);
+            if ($label) {
+                $translatedLabel = translate($label);
 
-            $tab->label(ucwords($translatedLabel));
+                $tab->label(ucwords($translatedLabel));
+            }
         }, isImportant: true);
 
         Section::configureUsing(static function (Section $section): void {
             $heading = $section->getHeading();
 
-            $translatedHeading = translate($heading);
+            if ($heading) {
+                $translatedHeading = translate($heading);
 
-            $section->heading(ucfirst($translatedHeading));
+                $section->heading(ucfirst($translatedHeading));
+            }
         }, isImportant: true);
 
         ResourcesTab::configureUsing(static function (ResourcesTab $tab): void {
