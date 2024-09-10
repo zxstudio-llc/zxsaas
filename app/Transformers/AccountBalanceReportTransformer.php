@@ -46,6 +46,8 @@ class AccountBalanceReportTransformer extends BaseReportTransformer
                         'account_name' => [
                             'name' => $account->accountName,
                             'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
                         ],
                         'starting_balance' => $account->balance->startingBalance ?? '',
                         'debit_balance' => $account->balance->debitBalance,

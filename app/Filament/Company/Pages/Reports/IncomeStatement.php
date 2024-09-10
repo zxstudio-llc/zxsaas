@@ -7,17 +7,17 @@ use App\DTO\ReportDTO;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
-use App\Transformers\AccountBalanceReportTransformer;
+use App\Transformers\IncomeStatementReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
 use Guava\FilamentClusters\Forms\Cluster;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class AccountBalances extends BaseReportPage
+class IncomeStatement extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.detailed-report';
+    protected static string $view = 'filament.company.pages.reports.income-statement';
 
-    protected static ?string $slug = 'reports/account-balances';
+    protected static ?string $slug = 'reports/income-statement';
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -31,9 +31,6 @@ class AccountBalances extends BaseReportPage
         $this->exportService = $exportService;
     }
 
-    /**
-     * @return array<Column>
-     */
     public function getTable(): array
     {
         return [
@@ -44,25 +41,8 @@ class AccountBalances extends BaseReportPage
             Column::make('account_name')
                 ->label('Account')
                 ->alignment(Alignment::Left),
-            Column::make('starting_balance')
-                ->label('Starting Balance')
-                ->toggleable()
-                ->alignment(Alignment::Right),
-            Column::make('debit_balance')
-                ->label('Debit')
-                ->toggleable()
-                ->alignment(Alignment::Right),
-            Column::make('credit_balance')
-                ->label('Credit')
-                ->toggleable()
-                ->alignment(Alignment::Right),
             Column::make('net_movement')
-                ->label('Net Movement')
-                ->toggleable()
-                ->alignment(Alignment::Right),
-            Column::make('ending_balance')
-                ->label('Ending Balance')
-                ->toggleable()
+                ->label('Amount')
                 ->alignment(Alignment::Right),
         ];
     }
@@ -83,12 +63,12 @@ class AccountBalances extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountBalanceReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
+        return $this->reportService->buildIncomeStatementReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
     {
-        return new AccountBalanceReportTransformer($reportDTO);
+        return new IncomeStatementReportTransformer($reportDTO);
     }
 
     public function exportCSV(): StreamedResponse

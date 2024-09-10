@@ -17,7 +17,8 @@ class TransactionObserver
      */
     public function created(Transaction $transaction): void
     {
-        if ($transaction->type->isJournal()) {
+        // Additional check to avoid duplication during replication
+        if ($transaction->journalEntries()->exists() || $transaction->type->isJournal() || str_starts_with($transaction->description, '(Copy of)')) {
             return;
         }
 

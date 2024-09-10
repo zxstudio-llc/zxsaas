@@ -26,57 +26,66 @@ class ConfigureCompanyDefault
     public function handle(CompanyConfigured $event): void
     {
         $company = $event->company;
+
+        session([
+            'current_company_id' => $company->id,
+            'default_language' => $company->locale->language ?? config('transmatic.source_locale'),
+            'default_timezone' => $company->locale->timezone ?? config('app.timezone'),
+            'default_pagination_page_option' => $company->appearance->records_per_page->value ?? RecordsPerPage::DEFAULT,
+            'default_sort' => $company->appearance->table_sort_direction->value ?? TableSortDirection::DEFAULT,
+            'default_primary_color' => $company->appearance->primary_color->value ?? PrimaryColor::DEFAULT,
+            'default_font' => $company->appearance->font->value ?? Font::DEFAULT,
+            'default_date_format' => $company->locale->date_format->value ?? DateFormat::DEFAULT,
+            'default_week_start' => $company->locale->week_start->value ?? WeekStart::DEFAULT,
+        ]);
+
+        app()->setLocale(session('default_language'));
+        locale_set_default(session('default_language'));
+        config(['app.timezone' => session('default_timezone')]);
+        date_default_timezone_set(session('default_timezone'));
+
         $paginationPageOptions = RecordsPerPage::caseValues();
-        $defaultPaginationPageOption = $company->appearance->records_per_page->value ?? RecordsPerPage::DEFAULT;
-        $defaultSort = $company->appearance->table_sort_direction->value ?? TableSortDirection::DEFAULT;
-        $defaultPrimaryColor = $company->appearance->primary_color ?? PrimaryColor::from(PrimaryColor::DEFAULT);
-        $defaultFont = $company->appearance->font->value ?? Font::DEFAULT;
-        $default_language = $company->locale->language ?? config('transmatic.source_locale');
-        $defaultTimezone = $company->locale->timezone ?? config('app.timezone');
-        $dateFormat = $company->locale->date_format->value ?? DateFormat::DEFAULT;
-        $weekStart = $company->locale->week_start->value ?? WeekStart::DEFAULT;
 
-        app()->setLocale($default_language);
-        locale_set_default($default_language);
-        config(['app.timezone' => $defaultTimezone]);
-        date_default_timezone_set($defaultTimezone);
-
-        Table::configureUsing(static function (Table $table) use ($paginationPageOptions, $defaultSort, $defaultPaginationPageOption): void {
+        Table::configureUsing(static function (Table $table) use ($paginationPageOptions): void {
 
             $table
                 ->paginationPageOptions($paginationPageOptions)
-                ->defaultSort(column: 'id', direction: $defaultSort)
-                ->defaultPaginationPageOption($defaultPaginationPageOption);
+                ->defaultSort(column: 'id', direction: session('default_sort'))
+                ->defaultPaginationPageOption(session('default_pagination_page_option'));
         }, isImportant: true);
 
         FilamentColor::register([
-            'primary' => $defaultPrimaryColor->getColor(),
+            'primary' => PrimaryColor::from(session('default_primary_color'))->getColor(),
         ]);
 
         Filament::getPanel('company')
-            ->font($defaultFont)
+            ->font(session('default_font'))
             ->brandName($company->name);
 
-        DatePicker::configureUsing(static function (DatePicker $component) use ($dateFormat, $weekStart) {
+        DatePicker::configureUsing(static function (DatePicker $component) {
             $component
-                ->displayFormat($dateFormat)
-                ->firstDayOfWeek($weekStart);
+                ->displayFormat(session('default_date_format'))
+                ->firstDayOfWeek(session('default_week_start'));
         });
 
         Tab::configureUsing(static function (Tab $tab) {
             $label = $tab->getLabel();
 
-            $translatedLabel = translate($label);
+            if ($label) {
+                $translatedLabel = translate($label);
 
-            $tab->label(ucwords($translatedLabel));
+                $tab->label(ucwords($translatedLabel));
+            }
         }, isImportant: true);
 
         Section::configureUsing(static function (Section $section): void {
             $heading = $section->getHeading();
 
-            $translatedHeading = translate($heading);
+            if ($heading) {
+                $translatedHeading = translate($heading);
 
-            $section->heading(ucfirst($translatedHeading));
+                $section->heading(ucfirst($translatedHeading));
+            }
         }, isImportant: true);
 
         ResourcesTab::configureUsing(static function (ResourcesTab $tab): void {

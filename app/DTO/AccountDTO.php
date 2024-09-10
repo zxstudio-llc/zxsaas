@@ -9,5 +9,7 @@ class AccountDTO
         public string $accountCode,
         public ?int $accountId,
         public AccountBalanceDTO $balance,
+        public ?string $startDate,
+        public ?string $endDate,
     ) {}
 }

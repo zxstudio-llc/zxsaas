@@ -3,7 +3,6 @@
 namespace App\Concerns;
 
 use App\Models\User;
-use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -11,11 +10,8 @@ trait HandlesResourceRecordCreation
 {
     protected function handleRecordCreationWithUniqueField(array $data, Model $model, User $user, ?string $uniqueField = null, ?array $evaluatedTypes = null): Model
     {
-        if (is_array($evaluatedTypes)) {
-            $evaluatedTypes = $this->ensureCreationEnumValues($evaluatedTypes);
-        }
-
-        if ($uniqueField && ! in_array($data[$uniqueField] ?? '', $evaluatedTypes ?? [], true)) {
+        // If evaluatedTypes is provided, ensure the unique field value is within the allowed types
+        if ($uniqueField && $evaluatedTypes && ! in_array($data[$uniqueField] ?? '', $evaluatedTypes, true)) {
             $data['enabled'] = false;
             $instance = $model->newInstance($data);
             $instance->save();
@@ -41,13 +37,6 @@ trait HandlesResourceRecordCreation
         $instance->save();
 
         return $instance;
-    }
-
-    private function ensureCreationEnumValues(array $evaluatedTypes): array
-    {
-        return array_map(static function ($type) {
-            return $type instanceof BackedEnum ? $type->value : $type;
-        }, $evaluatedTypes);
     }
 
     private function toggleRecords(Builder $query, bool &$shouldBeEnabled): void

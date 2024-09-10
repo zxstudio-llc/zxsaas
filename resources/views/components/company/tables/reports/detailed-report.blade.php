@@ -1,4 +1,4 @@
-<table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5" x-data>
+<table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
     <thead class="divide-y divide-gray-200 dark:divide-white/5">
     <tr class="bg-gray-50 dark:bg-white/5">
         @foreach($report->getHeaders() as $index => $header)
@@ -27,14 +27,32 @@
                     <x-filament-tables::cell class="{{ $report->getAlignmentClass($cellIndex) }}">
                         <div class="px-3 py-4 text-sm leading-6 text-gray-950 dark:text-white">
                             @if(is_array($cell) && isset($cell['name']))
-                                @if(isset($cell['id']))
+                                @if($cell['name'] === 'Retained Earnings' && isset($cell['start_date']) && isset($cell['end_date']))
                                     <x-filament::link
                                         color="primary"
                                         target="_blank"
                                         icon="heroicon-o-arrow-top-right-on-square"
                                         :icon-position="\Filament\Support\Enums\IconPosition::After"
                                         :icon-size="\Filament\Support\Enums\IconSize::Small"
-                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl(['account_id' => $cell['id']]) }}"
+                                        href="{{ \App\Filament\Company\Pages\Reports\IncomeStatement::getUrl([
+                                            'startDate' => $cell['start_date'],
+                                            'endDate' => $cell['end_date']
+                                        ]) }}"
+                                    >
+                                        {{ $cell['name'] }}
+                                    </x-filament::link>
+                                @elseif(isset($cell['id']) && isset($cell['start_date']) && isset($cell['end_date']))
+                                    <x-filament::link
+                                        color="primary"
+                                        target="_blank"
+                                        icon="heroicon-o-arrow-top-right-on-square"
+                                        :icon-position="\Filament\Support\Enums\IconPosition::After"
+                                        :icon-size="\Filament\Support\Enums\IconSize::Small"
+                                        href="{{ \App\Filament\Company\Pages\Reports\AccountTransactions::getUrl([
+                                            'startDate' => $cell['start_date'],
+                                            'endDate' => $cell['end_date'],
+                                            'selectedAccount' => $cell['id']
+                                        ]) }}"
                                     >
                                         {{ $cell['name'] }}
                                     </x-filament::link>

@@ -11,14 +11,16 @@ trait Blamable
     public static function bootBlamable(): void
     {
         static::creating(static function ($model) {
-            $auth = Auth::id();
-            $model->created_by = $auth;
-            $model->updated_by = $auth;
+            if (Auth::check() && $authId = Auth::id()) {
+                $model->created_by = $model->created_by ?? $authId;
+                $model->updated_by = $model->updated_by ?? $authId;
+            }
         });
 
         static::updating(static function ($model) {
-            $auth = Auth::id();
-            $model->updated_by = $auth;
+            if (Auth::check() && $authId = Auth::id()) {
+                $model->updated_by = $authId;
+            }
         });
     }
 

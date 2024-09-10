@@ -68,7 +68,15 @@ class UserFactory extends Factory
 
         return $this->afterCreating(function (User $user) use ($countryCode) {
             Company::factory()
-                ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
+                ->has(
+                    CompanyProfile::factory()
+                        ->withCountry($countryCode)
+                        ->state([
+                            'created_by' => $user->id,
+                            'updated_by' => $user->id,
+                        ]),
+                    'profile'
+                )
                 ->afterCreating(function (Company $company) use ($user, $countryCode) {
                     DB::transaction(function () use ($company, $user, $countryCode) {
                         $companyDefaultService = app()->make(CompanyDefaultService::class);

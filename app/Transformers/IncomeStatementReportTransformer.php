@@ -6,11 +6,17 @@ use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
 use App\Support\Column;
 
-class TrialBalanceReportTransformer extends BaseReportTransformer
+class IncomeStatementReportTransformer extends BaseReportTransformer
 {
+    protected string $totalRevenue = '$0.00';
+
+    protected string $totalCogs = '$0.00';
+
+    protected string $totalExpenses = '$0.00';
+
     public function getTitle(): string
     {
-        return 'Trial Balance';
+        return 'Income Statement';
     }
 
     public function getHeaders(): array
@@ -18,9 +24,17 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
         return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
     }
 
-    /**
-     * @return ReportCategoryDTO[]
-     */
+    public function calculateTotals(): void
+    {
+        foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
+            match ($accountCategoryName) {
+                'Revenue' => $this->totalRevenue = $accountCategory->summary->netMovement ?? '',
+                'Cost of Goods Sold' => $this->totalCogs = $accountCategory->summary->netMovement ?? '',
+                'Expenses' => $this->totalExpenses = $accountCategory->summary->netMovement ?? '',
+            };
+        }
+    }
+
     public function getCategories(): array
     {
         $categories = [];
@@ -49,8 +63,7 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
                             'start_date' => $account->startDate,
                             'end_date' => $account->endDate,
                         ],
-                        'debit_balance' => $account->balance->debitBalance,
-                        'credit_balance' => $account->balance->creditBalance,
+                        'net_movement' => $account->balance->netMovement ?? '',
                         default => '',
                     };
                 }
@@ -63,8 +76,7 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
             foreach ($this->getColumns() as $column) {
                 $summary[] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
-                    'debit_balance' => $accountCategory->summary->debitBalance,
-                    'credit_balance' => $accountCategory->summary->creditBalance,
+                    'net_movement' => $accountCategory->summary->netMovement ?? '',
                     default => '',
                 };
             }
@@ -85,13 +97,36 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
 
         foreach ($this->getColumns() as $column) {
             $totals[] = match ($column->getName()) {
-                'account_name' => 'Total for all accounts',
-                'debit_balance' => $this->report->overallTotal->debitBalance,
-                'credit_balance' => $this->report->overallTotal->creditBalance,
+                'account_name' => 'Net Earnings',
+                'net_movement' => $this->report->overallTotal->netMovement ?? '',
                 default => '',
             };
         }
 
         return $totals;
+    }
+
+    public function getSummary(): array
+    {
+        $this->calculateTotals();
+
+        return [
+            [
+                'label' => 'Revenue',
+                'value' => $this->totalRevenue,
+            ],
+            [
+                'label' => 'Cost of Goods Sold',
+                'value' => $this->totalCogs,
+            ],
+            [
+                'label' => 'Expenses',
+                'value' => $this->totalExpenses,
+            ],
+            [
+                'label' => 'Net Earnings',
+                'value' => $this->report->overallTotal->netMovement ?? '',
+            ],
+        ];
     }
 }

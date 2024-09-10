@@ -11,6 +11,7 @@ use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
 use Closure;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Columns\TextColumn;
@@ -54,13 +55,25 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextColumn::macro('localizeDate', function (): static {
+        TextColumn::macro('defaultDateFormat', function (): static {
             $localization = Localization::firstOrFail();
 
             $dateFormat = $localization->date_format->value ?? DateFormat::DEFAULT;
             $timezone = $localization->timezone ?? Carbon::now()->timezoneName;
 
             $this->date($dateFormat, $timezone);
+
+            return $this;
+        });
+
+        DatePicker::macro('defaultDateFormat', function (): static {
+            $localization = Localization::firstOrFail();
+
+            $dateFormat = $localization->date_format->value ?? DateFormat::DEFAULT;
+            $timezone = $localization->timezone ?? Carbon::now()->timezoneName;
+
+            $this->displayFormat($dateFormat)
+                ->timezone($timezone);
 
             return $this;
         });
@@ -208,6 +221,15 @@ class MacroServiceProvider extends ServiceProvider
             }
 
             return '';
+        });
+
+        Carbon::macro('toDefaultDateFormat', function () {
+            $localization = Localization::firstOrFail();
+
+            $dateFormat = $localization->date_format->value ?? DateFormat::DEFAULT;
+            $timezone = $localization->timezone ?? Carbon::now()->timezoneName;
+
+            return $this->setTimezone($timezone)->format($dateFormat);
         });
     }
 }

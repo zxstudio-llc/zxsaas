@@ -11,9 +11,8 @@ use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Collection;
+use App\ValueObjects\Money;
+use Illuminate\Support\Carbon;
 
 class ReportService
 {
@@ -38,79 +37,128 @@ class ReportService
         );
     }
 
-    private function filterBalances(array $balances, array $fields): array
-    {
-        return array_filter($balances, static fn ($key) => in_array($key, $fields, true), ARRAY_FILTER_USE_KEY);
-    }
-
-    private function getCategoryGroupedAccounts(array $allCategories): Collection
-    {
-        return Account::whereHas('journalEntries')
-            ->select(['id', 'name', 'currency_code', 'category', 'code'])
-            ->get()
-            ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
-            ->sortBy(static fn (Collection $groupedAccounts, string $key) => array_search($key, $allCategories, true));
-    }
-
     public function buildAccountBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
     {
-        $allCategories = $this->accountService->getAccountCategoryOrder();
+        $orderedCategories = AccountCategory::getOrderedCategories();
 
-        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
-
-        $balanceFields = ['starting_balance', 'debit_balance', 'credit_balance', 'net_movement', 'ending_balance'];
+        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
 
         $columnNameKeys = array_map(fn (Column $column) => $column->getName(), $columns);
 
-        $updatedBalanceFields = array_filter($balanceFields, fn (string $balanceField) => in_array($balanceField, $columnNameKeys, true));
+        $accountCategories = [];
+        $reportTotalBalances = [];
 
-        return $this->buildReport(
-            $allCategories,
-            $categoryGroupedAccounts,
-            fn (Account $account) => $this->accountService->getBalances($account, $startDate, $endDate, $updatedBalanceFields),
-            $updatedBalanceFields,
-            $columns,
-            fn (string $categoryName, array &$categorySummaryBalances) => $this->adjustAccountBalanceCategoryFields($categoryName, $categorySummaryBalances),
-        );
+        foreach ($orderedCategories as $category) {
+            $accountsInCategory = $accounts->where('category', $category)
+                ->sortBy('code', SORT_NATURAL);
+
+            $relevantFields = array_intersect($category->getRelevantBalanceFields(), $columnNameKeys);
+
+            $categorySummaryBalances = array_fill_keys($relevantFields, 0);
+
+            $categoryAccounts = [];
+
+            /** @var Account $account */
+            foreach ($accountsInCategory as $account) {
+                $accountBalances = $this->calculateAccountBalances($account, $category);
+
+                foreach ($relevantFields as $field) {
+                    $categorySummaryBalances[$field] += $accountBalances[$field];
+                }
+
+                $formattedAccountBalances = $this->formatBalances($accountBalances);
+
+                $categoryAccounts[] = new AccountDTO(
+                    $account->name,
+                    $account->code,
+                    $account->id,
+                    $formattedAccountBalances,
+                    Carbon::parse($startDate)->toDateString(),
+                    Carbon::parse($endDate)->toDateString(),
+                );
+            }
+
+            foreach ($relevantFields as $field) {
+                $reportTotalBalances[$field] = ($reportTotalBalances[$field] ?? 0) + $categorySummaryBalances[$field];
+            }
+
+            $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
+
+            $accountCategories[$category->getPluralLabel()] = new AccountCategoryDTO(
+                $categoryAccounts,
+                $formattedCategorySummaryBalances,
+            );
+        }
+
+        $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
+
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+    }
+
+    private function calculateAccountBalances(Account $account, AccountCategory $category): array
+    {
+        $balances = [
+            'debit_balance' => $account->total_debit ?? 0,
+            'credit_balance' => $account->total_credit ?? 0,
+        ];
+
+        if ($category->isNormalDebitBalance()) {
+            $balances['net_movement'] = $balances['debit_balance'] - $balances['credit_balance'];
+        } else {
+            $balances['net_movement'] = $balances['credit_balance'] - $balances['debit_balance'];
+        }
+
+        if ($category->isReal()) {
+            $balances['starting_balance'] = $account->starting_balance ?? 0;
+            $balances['ending_balance'] = $balances['starting_balance'] + $balances['net_movement'];
+        }
+
+        return $balances;
+    }
+
+    public function calculateRetainedEarnings(string $startDate): Money
+    {
+        $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateTimeString();
+        $endDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateTimeString();
+
+        $revenueAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Revenue)->get();
+
+        $expenseAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Expense)->get();
+
+        $revenueTotal = 0;
+        $expenseTotal = 0;
+
+        foreach ($revenueAccounts as $account) {
+            $revenueBalances = $this->calculateAccountBalances($account, AccountCategory::Revenue);
+            $revenueTotal += $revenueBalances['net_movement'];
+        }
+
+        foreach ($expenseAccounts as $account) {
+            $expenseBalances = $this->calculateAccountBalances($account, AccountCategory::Expense);
+            $expenseTotal += $expenseBalances['net_movement'];
+        }
+
+        $retainedEarnings = $revenueTotal - $expenseTotal;
+
+        return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
     public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
     {
         $columns ??= [];
-        $query = Account::whereHas('journalEntries.transaction', function (Builder $query) use ($startDate, $endDate) {
-            $query->whereBetween('posted_at', [$startDate, $endDate]);
-        })
-            ->with(['journalEntries' => function (Relation $query) use ($startDate, $endDate) {
-                $query->whereHas('transaction', function (Builder $query) use ($startDate, $endDate) {
-                    $query->whereBetween('posted_at', [$startDate, $endDate]);
-                })
-                    ->with('transaction:id,type,description,posted_at')
-                    ->select(['account_id', 'transaction_id'])
-                    ->selectRaw('SUM(CASE WHEN type = "debit" THEN amount ELSE 0 END) AS total_debit')
-                    ->selectRaw('SUM(CASE WHEN type = "credit" THEN amount ELSE 0 END) AS total_credit')
-                    ->selectRaw('(SELECT MIN(posted_at) FROM transactions WHERE transactions.id = journal_entries.transaction_id) AS earliest_posted_at')
-                    ->groupBy('account_id', 'transaction_id')
-                    ->orderBy('earliest_posted_at');
-            }])
-            ->select(['id', 'name', 'category', 'subtype_id', 'currency_code']);
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
-        if ($accountId !== 'all') {
-            $query->where('id', $accountId);
-        }
+        $accountIds = $accountId !== 'all' ? [$accountId] : [];
 
-        $accounts = $query->get();
+        $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds);
+
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)])->get();
 
         $reportCategories = [];
 
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-
         foreach ($accounts as $account) {
             $accountTransactions = [];
-            $startingBalance = $this->accountService->getStartingBalance($account, $startDate, true);
-
-            $currentBalance = $startingBalance?->getAmount() ?? 0;
-            $totalDebit = 0;
-            $totalCredit = 0;
+            $currentBalance = $account->starting_balance;
 
             $accountTransactions[] = new AccountTransactionDTO(
                 id: null,
@@ -118,42 +166,47 @@ class ReportService
                 description: '',
                 debit: '',
                 credit: '',
-                balance: $startingBalance?->formatInDefaultCurrency() ?? 0,
+                balance: money($currentBalance, $defaultCurrency)->format(),
                 type: null,
-                tableAction: null,
+                tableAction: null
             );
 
+            /** @var Account $account */
             foreach ($account->journalEntries as $journalEntry) {
                 $transaction = $journalEntry->transaction;
-                $totalDebit += $journalEntry->total_debit;
-                $totalCredit += $journalEntry->total_credit;
+                $signedAmount = $journalEntry->signed_amount;
 
-                $currentBalance += $journalEntry->total_debit;
-                $currentBalance -= $journalEntry->total_credit;
+                if ($account->category->isNormalDebitBalance()) {
+                    $currentBalance += $signedAmount;
+                } else {
+                    $currentBalance -= $signedAmount;
+                }
+
+                $formattedAmount = money(abs($signedAmount), $defaultCurrency)->format();
 
                 $accountTransactions[] = new AccountTransactionDTO(
                     id: $transaction->id,
-                    date: $transaction->posted_at->format('Y-m-d'),
-                    description: $transaction->description ?? '',
-                    debit: $journalEntry->total_debit ? money($journalEntry->total_debit, $defaultCurrency)->format() : '',
-                    credit: $journalEntry->total_credit ? money($journalEntry->total_credit, $defaultCurrency)->format() : '',
+                    date: $transaction->posted_at->toDefaultDateFormat(),
+                    description: $transaction->description ?? 'Add a description',
+                    debit: $journalEntry->type->isDebit() ? $formattedAmount : '',
+                    credit: $journalEntry->type->isCredit() ? $formattedAmount : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),
                     type: $transaction->type,
-                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
+                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction'
                 );
             }
 
-            $balanceChange = $currentBalance - ($startingBalance?->getAmount() ?? 0);
+            $balanceChange = $currentBalance - $account->starting_balance;
 
             $accountTransactions[] = new AccountTransactionDTO(
                 id: null,
                 date: 'Totals and Ending Balance',
                 description: '',
-                debit: money($totalDebit, $defaultCurrency)->format(),
-                credit: money($totalCredit, $defaultCurrency)->format(),
+                debit: money($account->total_debit, $defaultCurrency)->format(),
+                credit: money($account->total_credit, $defaultCurrency)->format(),
                 balance: money($currentBalance, $defaultCurrency)->format(),
                 type: null,
-                tableAction: null,
+                tableAction: null
             );
 
             $accountTransactions[] = new AccountTransactionDTO(
@@ -164,7 +217,7 @@ class ReportService
                 credit: '',
                 balance: money($balanceChange, $defaultCurrency)->format(),
                 type: null,
-                tableAction: null,
+                tableAction: null
             );
 
             $reportCategories[] = [
@@ -177,79 +230,78 @@ class ReportService
         return new ReportDTO(categories: $reportCategories, fields: $columns);
     }
 
-    private function buildReport(array $allCategories, Collection $categoryGroupedAccounts, callable $balanceCalculator, array $balanceFields, array $allFields, ?callable $initializeCategoryBalances = null, bool $includeRetainedEarnings = false, ?string $startDate = null): ReportDTO
+    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
     {
+        $orderedCategories = AccountCategory::getOrderedCategories();
+
+        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+
+        $balanceFields = ['debit_balance', 'credit_balance'];
+
         $accountCategories = [];
         $reportTotalBalances = array_fill_keys($balanceFields, 0);
 
-        foreach ($allCategories as $categoryName) {
-            $accountsInCategory = $categoryGroupedAccounts[$categoryName] ?? collect();
-            $categorySummaryBalances = array_fill_keys($balanceFields, 0);
+        foreach ($orderedCategories as $category) {
+            $accountsInCategory = $accounts->where('category', $category)
+                ->sortBy('code', SORT_NATURAL);
 
-            if ($initializeCategoryBalances) {
-                $initializeCategoryBalances($categoryName, $categorySummaryBalances);
-            }
+            $categorySummaryBalances = array_fill_keys($balanceFields, 0);
 
             $categoryAccounts = [];
 
+            /** @var Account $account */
             foreach ($accountsInCategory as $account) {
-                /** @var Account $account */
-                $accountBalances = $balanceCalculator($account);
+                $accountBalances = $this->calculateAccountBalances($account, $category);
 
-                if (array_sum($accountBalances) === 0) {
-                    continue;
+                $endingBalance = $accountBalances['ending_balance'] ?? $accountBalances['net_movement'];
+
+                $trialBalance = $this->calculateTrialBalance($account->category, $endingBalance);
+
+                foreach ($trialBalance as $balanceType => $balance) {
+                    $categorySummaryBalances[$balanceType] += $balance;
                 }
 
-                foreach ($accountBalances as $accountBalanceType => $accountBalance) {
-                    if (array_key_exists($accountBalanceType, $categorySummaryBalances)) {
-                        $categorySummaryBalances[$accountBalanceType] += $accountBalance;
-                    }
-                }
-
-                $filteredAccountBalances = $this->filterBalances($accountBalances, $balanceFields);
-                $formattedAccountBalances = $this->formatBalances($filteredAccountBalances);
+                $formattedAccountBalances = $this->formatBalances($trialBalance);
 
                 $categoryAccounts[] = new AccountDTO(
                     $account->name,
                     $account->code,
                     $account->id,
                     $formattedAccountBalances,
+                    Carbon::parse($startDate)->toDateString(),
+                    Carbon::parse($endDate)->toDateString(),
                 );
             }
 
-            if ($includeRetainedEarnings && $categoryName === AccountCategory::Equity->getPluralLabel()) {
-                $retainedEarnings = $this->accountService->getRetainedEarnings($startDate);
-                $retainedEarningsAmount = $retainedEarnings->getAmount();
+            if ($category === AccountCategory::Equity) {
+                $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateString();
+                $modifiedEndDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateString();
 
-                if ($retainedEarningsAmount >= 0) {
-                    $categorySummaryBalances['credit_balance'] += $retainedEarningsAmount;
-                    $categoryAccounts[] = new AccountDTO(
-                        'Retained Earnings',
-                        'RE',
-                        null,
-                        $this->formatBalances(['debit_balance' => 0, 'credit_balance' => $retainedEarningsAmount])
-                    );
-                } else {
-                    $categorySummaryBalances['debit_balance'] += abs($retainedEarningsAmount);
-                    $categoryAccounts[] = new AccountDTO(
-                        'Retained Earnings',
-                        'RE',
-                        null,
-                        $this->formatBalances(['debit_balance' => abs($retainedEarningsAmount), 'credit_balance' => 0])
-                    );
-                }
+                $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate)->getAmount();
+                $isCredit = $retainedEarningsAmount >= 0;
+
+                $categorySummaryBalances[$isCredit ? 'credit_balance' : 'debit_balance'] += abs($retainedEarningsAmount);
+
+                $categoryAccounts[] = new AccountDTO(
+                    'Retained Earnings',
+                    'RE',
+                    null,
+                    $this->formatBalances([
+                        'debit_balance' => $isCredit ? 0 : abs($retainedEarningsAmount),
+                        'credit_balance' => $isCredit ? $retainedEarningsAmount : 0,
+                    ]),
+                    $modifiedStartDate,
+                    $modifiedEndDate,
+                );
             }
 
-            foreach ($balanceFields as $field) {
-                if (array_key_exists($field, $categorySummaryBalances)) {
-                    $reportTotalBalances[$field] += $categorySummaryBalances[$field];
-                }
+            foreach ($categorySummaryBalances as $balanceType => $balance) {
+                $reportTotalBalances[$balanceType] += $balance;
             }
 
-            $filteredCategorySummaryBalances = $this->filterBalances($categorySummaryBalances, $balanceFields);
-            $formattedCategorySummaryBalances = $this->formatBalances($filteredCategorySummaryBalances);
+            $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
 
-            $accountCategories[$categoryName] = new AccountCategoryDTO(
+            $accountCategories[$category->getPluralLabel()] = new AccountCategoryDTO(
                 $categoryAccounts,
                 $formattedCategorySummaryBalances,
             );
@@ -257,38 +309,12 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $allFields);
-    }
-
-    private function adjustAccountBalanceCategoryFields(string $categoryName, array &$categorySummaryBalances): void
-    {
-        if (in_array($categoryName, [AccountCategory::Expense->getPluralLabel(), AccountCategory::Revenue->getPluralLabel()], true)) {
-            unset($categorySummaryBalances['starting_balance'], $categorySummaryBalances['ending_balance']);
-        }
-    }
-
-    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
-    {
-        $allCategories = $this->accountService->getAccountCategoryOrder();
-
-        $categoryGroupedAccounts = $this->getCategoryGroupedAccounts($allCategories);
-
-        $balanceFields = ['debit_balance', 'credit_balance'];
-
-        return $this->buildReport($allCategories, $categoryGroupedAccounts, function (Account $account) use ($startDate, $endDate) {
-            $endingBalance = $this->accountService->getEndingBalance($account, $startDate, $endDate)?->getAmount() ?? 0;
-
-            if ($endingBalance === 0) {
-                return [];
-            }
-
-            return $this->calculateTrialBalance($account->category, $endingBalance);
-        }, $balanceFields, $columns, null, true, $startDate);
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 
     private function calculateTrialBalance(AccountCategory $category, int $endingBalance): array
     {
-        if (in_array($category, [AccountCategory::Asset, AccountCategory::Expense], true)) {
+        if ($category->isNormalDebitBalance()) {
             if ($endingBalance >= 0) {
                 return ['debit_balance' => $endingBalance, 'credit_balance' => 0];
             }
@@ -301,5 +327,75 @@ class ReportService
         }
 
         return ['debit_balance' => abs($endingBalance), 'credit_balance' => 0];
+    }
+
+    public function buildIncomeStatementReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+
+        $accountCategories = [];
+        $totalRevenue = 0;
+        $cogs = 0;
+        $totalExpenses = 0;
+
+        $categoryGroups = [
+            'Revenue' => [
+                'accounts' => $accounts->where('category', AccountCategory::Revenue),
+                'total' => &$totalRevenue,
+            ],
+            'Cost of Goods Sold' => [
+                'accounts' => $accounts->where('subtype.name', 'Cost of Goods Sold'),
+                'total' => &$cogs,
+            ],
+            'Expenses' => [
+                'accounts' => $accounts->where('category', AccountCategory::Expense)->where('subtype.name', '!=', 'Cost of Goods Sold'),
+                'total' => &$totalExpenses,
+            ],
+        ];
+
+        foreach ($categoryGroups as $label => $group) {
+            $categoryAccounts = [];
+            $netMovement = 0;
+
+            foreach ($group['accounts']->sortBy('code', SORT_NATURAL) as $account) {
+                $category = null;
+
+                if ($label === 'Revenue') {
+                    $category = AccountCategory::Revenue;
+                } elseif ($label === 'Expenses') {
+                    $category = AccountCategory::Expense;
+                } elseif ($label === 'Cost of Goods Sold') {
+                    // COGS is treated as part of Expenses, so we use AccountCategory::Expense
+                    $category = AccountCategory::Expense;
+                }
+
+                if ($category !== null) {
+                    $accountBalances = $this->calculateAccountBalances($account, $category);
+                    $movement = $accountBalances['net_movement'];
+                    $netMovement += $movement;
+                    $group['total'] += $movement;
+
+                    $categoryAccounts[] = new AccountDTO(
+                        $account->name,
+                        $account->code,
+                        $account->id,
+                        $this->formatBalances(['net_movement' => $movement]),
+                        Carbon::parse($startDate)->toDateString(),
+                        Carbon::parse($endDate)->toDateString(),
+                    );
+                }
+            }
+
+            $accountCategories[$label] = new AccountCategoryDTO(
+                $categoryAccounts,
+                $this->formatBalances(['net_movement' => $netMovement]),
+            );
+        }
+
+        $grossProfit = $totalRevenue - $cogs;
+        $netProfit = $grossProfit - $totalExpenses;
+        $formattedReportTotalBalances = $this->formatBalances(['net_movement' => $netProfit]);
+
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 }

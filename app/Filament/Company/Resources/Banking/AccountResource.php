@@ -15,6 +15,7 @@ use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Unique;
@@ -44,6 +45,7 @@ class AccountResource extends Resource
                             ->localizeLabel()
                             ->searchable()
                             ->columnSpan(1)
+                            ->disabledOn('edit')
                             ->default(BankAccountType::DEFAULT)
                             ->live()
                             ->afterStateUpdated(static function (Forms\Set $set, $state, ?BankAccount $bankAccount, string $operation) {
@@ -64,6 +66,7 @@ class AccountResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('subtype_id')
                                     ->options(static fn (Forms\Get $get) => static::groupSubtypesBySubtypeType(BankAccountType::parse($get('data.type', true))))
+                                    ->disabledOn('edit')
                                     ->localizeLabel()
                                     ->searchable()
                                     ->live()
@@ -79,6 +82,7 @@ class AccountResource extends Resource
                                     ->localizeLabel()
                                     ->required(),
                                 CreateCurrencySelect::make('currency_code')
+                                    ->disabledOn('edit')
                                     ->relationship('currency', 'name'),
                             ]),
                         Forms\Components\Group::make()
@@ -104,6 +108,12 @@ class AccountResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $query->with([
+                    'account',
+                    'account.subtype',
+                ]);
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('account.name')
                     ->localizeLabel('Account')
@@ -138,10 +148,7 @@ class AccountResource extends Resource
             ])
             ->checkIfRecordIsSelectableUsing(static function (BankAccount $record) {
                 return $record->isDisabled();
-            })
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
-            ]);
+            });
     }
 
     public static function getPages(): array

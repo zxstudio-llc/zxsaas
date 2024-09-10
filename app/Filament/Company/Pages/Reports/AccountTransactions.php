@@ -14,11 +14,11 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountTransactions extends BaseReportPage
@@ -33,13 +33,22 @@ class AccountTransactions extends BaseReportPage
 
     protected ExportService $exportService;
 
-    #[Url]
-    public ?string $account_id = 'all';
-
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
         $this->reportService = $reportService;
         $this->exportService = $exportService;
+    }
+
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-[90rem]';
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        if (empty($this->getFilterState('selectedAccount'))) {
+            $this->setFilterState('selectedAccount', 'all');
+        }
     }
 
     /**
@@ -50,6 +59,7 @@ class AccountTransactions extends BaseReportPage
         return [
             Column::make('date')
                 ->label('Date')
+                ->markAsDate()
                 ->alignment(Alignment::Left),
             Column::make('description')
                 ->label('Description')
@@ -66,13 +76,12 @@ class AccountTransactions extends BaseReportPage
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->columns(4)
-            ->live()
             ->schema([
-                Select::make('account_id')
+                Select::make('selectedAccount')
                     ->label('Account')
                     ->options($this->getAccountOptions())
                     ->selectablePlaceholder(false)
@@ -83,10 +92,11 @@ class AccountTransactions extends BaseReportPage
                     $this->getEndDateFormComponent(),
                 ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
                 Actions::make([
-                    Actions\Action::make('loadReportData')
+                    Actions\Action::make('applyFilters')
                         ->label('Update Report')
-                        ->submit('loadReportData')
-                        ->keyBindings(['mod+s']),
+                        ->action('applyFilters')
+                        ->keyBindings(['mod+s'])
+                        ->button(),
                 ])->alignEnd()->verticallyAlignEnd(),
             ]);
     }
@@ -96,7 +106,7 @@ class AccountTransactions extends BaseReportPage
         $accounts = Account::query()
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
-            ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
+            ->map(fn (Collection $accounts) => $accounts->pluck('name', 'id'))
             ->toArray();
 
         $allAccountsOption = [
@@ -108,7 +118,7 @@ class AccountTransactions extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->startDate, $this->endDate, $columns, $this->account_id);
+        return $this->reportService->buildAccountTransactionsReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns, $this->getFilterState('selectedAccount'));
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -118,12 +128,12 @@ class AccountTransactions extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function getEmptyStateHeading(): string | Htmlable
