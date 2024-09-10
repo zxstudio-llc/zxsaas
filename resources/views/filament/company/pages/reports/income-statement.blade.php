@@ -1,22 +1,20 @@
 <x-filament-panels::page>
     <x-filament::section>
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-8">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <!-- Form Container -->
             @if(method_exists($this, 'filtersForm'))
                 {{ $this->filtersForm }}
             @endif
 
             <!-- Grouping Button and Column Toggle -->
-            <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 flex-shrink-0">
-                @if($this->hasToggleableColumns())
-                    <x-filament-tables::column-toggle.dropdown
-                        :form="$this->toggleTableColumnForm"
-                        :trigger-action="$this->toggleColumnsAction"
-                    />
-                @endif
-            </div>
+            @if($this->hasToggleableColumns())
+                <x-filament-tables::column-toggle.dropdown
+                    :form="$this->toggleTableColumnForm"
+                    :trigger-action="$this->toggleColumnsAction"
+                />
+            @endif
 
-            <div class="inline-flex items-center flex-shrink-0 min-w-[8.5rem] justify-end">
+            <div class="inline-flex items-center min-w-0 md:min-w-[9.5rem] justify-end">
                 {{ $this->applyFiltersAction }}
             </div>
         </div>

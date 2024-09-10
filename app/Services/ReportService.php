@@ -274,6 +274,9 @@ class ReportService
             }
 
             if ($category === AccountCategory::Equity) {
+                $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateString();
+                $modifiedEndDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateString();
+
                 $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate)->getAmount();
                 $isCredit = $retainedEarningsAmount >= 0;
 
@@ -287,8 +290,8 @@ class ReportService
                         'debit_balance' => $isCredit ? 0 : abs($retainedEarningsAmount),
                         'credit_balance' => $isCredit ? $retainedEarningsAmount : 0,
                     ]),
-                    null,
-                    null,
+                    $modifiedStartDate,
+                    $modifiedEndDate,
                 );
             }
 

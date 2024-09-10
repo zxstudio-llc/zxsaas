@@ -62,8 +62,6 @@ trait HasDeferredFiltersForm
     public function updatedFilters(): void
     {
         $this->deferredFilters = $this->filters;
-
-        $this->handleFilterUpdates();
     }
 
     protected function isValidDate($date): bool
@@ -71,16 +69,9 @@ trait HasDeferredFiltersForm
         return strtotime($date) !== false;
     }
 
-    protected function handleFilterUpdates(): void
-    {
-        //
-    }
-
     public function applyFilters(): void
     {
         $this->filters = $this->deferredFilters;
-
-        $this->handleFilterUpdates();
 
         $this->loadReportData();
     }
@@ -184,10 +175,5 @@ trait HasDeferredFiltersForm
                 $this->filters[$key] = Carbon::parse($value)->toDateString();
             }
         }
-    }
-
-    protected function isDateFilter($value): bool
-    {
-        return $value instanceof Carbon || strtotime($value) !== false;
     }
 }

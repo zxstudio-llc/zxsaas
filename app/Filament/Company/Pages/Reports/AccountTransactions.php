@@ -14,6 +14,7 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
@@ -38,16 +39,16 @@ class AccountTransactions extends BaseReportPage
         $this->exportService = $exportService;
     }
 
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-[90rem]';
+    }
+
     protected function initializeDefaultFilters(): void
     {
         if (empty($this->getFilterState('selectedAccount'))) {
             $this->setFilterState('selectedAccount', 'all');
         }
-    }
-
-    protected function extraQueryStrings(): array
-    {
-        return ['selectedAccount'];
     }
 
     /**

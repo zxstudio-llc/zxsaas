@@ -46,6 +46,8 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
                         'account_name' => [
                             'name' => $account->accountName,
                             'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
                         ],
                         'debit_balance' => $account->balance->debitBalance,
                         'credit_balance' => $account->balance->creditBalance,

@@ -22,12 +22,16 @@ trait CompanyOwned
                     session(['current_company_id' => $companyId]);
                 }
 
+                if (! $companyId) {
+                    $companyId = Auth::user()->currentCompany->id;
+                }
+
                 if ($companyId) {
                     $model->company_id = $companyId;
                 } else {
                     Log::error('CurrentCompanyScope: No company_id found for user ' . Auth::id());
 
-                    throw new ModelNotFoundException('CurrentCompanyScope: No company_id set in the session or on the user.');
+                    throw new ModelNotFoundException('CurrentCompanyScope: No company_id set in the session, user, or database.');
                 }
             }
         });

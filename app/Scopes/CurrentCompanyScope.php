@@ -16,11 +16,19 @@ class CurrentCompanyScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
+        if (app()->runningInConsole()) {
+            return;
+        }
+
         $companyId = session('current_company_id');
 
         if (! $companyId && Auth::check() && Auth::user()->currentCompany) {
             $companyId = Auth::user()->currentCompany->id;
             session(['current_company_id' => $companyId]);
+        }
+
+        if (! $companyId) {
+            $companyId = Auth::user()->currentCompany->id;
         }
 
         if ($companyId) {
