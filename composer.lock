@@ -497,16 +497,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.321.7",
+            "version": "3.321.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "c64ee32d80ec2ab5d8d6a0b77297c2d69602ef3b"
+                "reference": "df456658bdc2ad84a00cf35a7b5af874fdcc7a53"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/c64ee32d80ec2ab5d8d6a0b77297c2d69602ef3b",
-                "reference": "c64ee32d80ec2ab5d8d6a0b77297c2d69602ef3b",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/df456658bdc2ad84a00cf35a7b5af874fdcc7a53",
+                "reference": "df456658bdc2ad84a00cf35a7b5af874fdcc7a53",
                 "shasum": ""
             },
             "require": {
@@ -589,9 +589,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.321.7"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.321.8"
             },
-            "time": "2024-09-09T18:09:23+00:00"
+            "time": "2024-09-10T18:18:03+00:00"
         },
         {
             "name": "aws/aws-sdk-php-laravel",
@@ -2852,16 +2852,16 @@
         },
         {
             "name": "kirschbaum-development/eloquent-power-joins",
-            "version": "3.5.7",
+            "version": "3.5.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/kirschbaum-development/eloquent-power-joins.git",
-                "reference": "3f57b398117d97bae4dfd5c37ea0f8f48f296c97"
+                "reference": "397ef08f15ceff48111fd7f57d9f1fd41bf1a453"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kirschbaum-development/eloquent-power-joins/zipball/3f57b398117d97bae4dfd5c37ea0f8f48f296c97",
-                "reference": "3f57b398117d97bae4dfd5c37ea0f8f48f296c97",
+                "url": "https://api.github.com/repos/kirschbaum-development/eloquent-power-joins/zipball/397ef08f15ceff48111fd7f57d9f1fd41bf1a453",
+                "reference": "397ef08f15ceff48111fd7f57d9f1fd41bf1a453",
                 "shasum": ""
             },
             "require": {
@@ -2908,9 +2908,9 @@
             ],
             "support": {
                 "issues": "https://github.com/kirschbaum-development/eloquent-power-joins/issues",
-                "source": "https://github.com/kirschbaum-development/eloquent-power-joins/tree/3.5.7"
+                "source": "https://github.com/kirschbaum-development/eloquent-power-joins/tree/3.5.8"
             },
-            "time": "2024-06-26T13:09:29+00:00"
+            "time": "2024-09-10T10:28:05+00:00"
         },
         {
             "name": "knplabs/knp-snappy",
@@ -4365,16 +4365,16 @@
         },
         {
             "name": "matomo/device-detector",
-            "version": "6.3.2",
+            "version": "6.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/matomo-org/device-detector.git",
-                "reference": "fd4042cb6a7f3f985a81aedc075dd59e0b991a51"
+                "reference": "05dca429cfe7b6a59947a0d449dbeb60cddc02f2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/matomo-org/device-detector/zipball/fd4042cb6a7f3f985a81aedc075dd59e0b991a51",
-                "reference": "fd4042cb6a7f3f985a81aedc075dd59e0b991a51",
+                "url": "https://api.github.com/repos/matomo-org/device-detector/zipball/05dca429cfe7b6a59947a0d449dbeb60cddc02f2",
+                "reference": "05dca429cfe7b6a59947a0d449dbeb60cddc02f2",
                 "shasum": ""
             },
             "require": {
@@ -4430,7 +4430,7 @@
                 "source": "https://github.com/matomo-org/matomo",
                 "wiki": "https://dev.matomo.org/"
             },
-            "time": "2024-05-28T10:16:19+00:00"
+            "time": "2024-09-10T08:27:24+00:00"
         },
         {
             "name": "monolog/monolog",

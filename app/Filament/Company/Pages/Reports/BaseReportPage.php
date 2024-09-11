@@ -5,7 +5,7 @@ namespace App\Filament\Company\Pages\Reports;
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Concerns\HasDeferredFiltersForm;
-use App\Filament\Company\Pages\Concerns\HasToggleTableColumnForm;
+use App\Filament\Company\Pages\Concerns\HasTableColumnToggleForm;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
 use App\Services\DateRangeService;
@@ -14,7 +14,6 @@ use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Form;
 use Filament\Forms\Set;
 use Filament\Pages\Page;
 use Filament\Support\Enums\IconPosition;
@@ -26,7 +25,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 abstract class BaseReportPage extends Page
 {
     use HasDeferredFiltersForm;
-    use HasToggleTableColumnForm;
+    use HasTableColumnToggleForm;
 
     public string $fiscalYearStartDate;
 
@@ -116,12 +115,6 @@ abstract class BaseReportPage extends Page
     public function getFormattedEndDate(): string
     {
         return Carbon::parse($this->getFilterState('endDate'))->endOfDay()->toDateTimeString();
-    }
-
-    public function toggleTableColumnForm(Form $form): Form
-    {
-        return $form
-            ->schema($this->getTableColumnToggleFormSchema());
     }
 
     protected function getHeaderActions(): array
