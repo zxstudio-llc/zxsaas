@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\DB;
 class TransactionObserver
 {
     /**
+     * Handle the Transaction "saving" event.
+     */
+    public function saving(Transaction $transaction): void
+    {
+        if ($transaction->type->isTransfer() && $transaction->description === null) {
+            $transaction->description = 'Account Transfer';
+        }
+    }
+
+    /**
      * Handle the Transaction "created" event.
      */
     public function created(Transaction $transaction): void
@@ -77,6 +87,13 @@ class TransactionObserver
     {
         $chartAccount = $transaction->account;
         $bankAccount = $transaction->bankAccount?->account;
+
+        if ($transaction->type->isTransfer()) {
+            // Essentially a withdrawal from the bank account and a deposit to the chart account (which is a bank account)
+            // Credit: bankAccount (source of funds, money is being withdrawn)
+            // Debit: chartAccount (destination of funds, money is being deposited)
+            return [$chartAccount, $bankAccount];
+        }
 
         $debitAccount = $transaction->type->isWithdrawal() ? $chartAccount : $bankAccount;
         $creditAccount = $transaction->type->isWithdrawal() ? $bankAccount : $chartAccount;
