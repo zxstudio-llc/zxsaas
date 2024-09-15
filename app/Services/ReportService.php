@@ -12,6 +12,7 @@ use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\ValueObjects\Money;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 class ReportService
@@ -116,14 +117,12 @@ class ReportService
         return $balances;
     }
 
-    public function calculateRetainedEarnings(string $startDate): Money
+    public function calculateRetainedEarnings(?string $startDate, string $endDate): Money
     {
-        $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateTimeString();
-        $endDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateTimeString();
+        $startDate ??= Carbon::parse($this->accountService->getEarliestTransactionDate())->toDateTimeString();
+        $revenueAccounts = $this->accountService->getAccountBalances($startDate, $endDate)->where('category', AccountCategory::Revenue)->get();
 
-        $revenueAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Revenue)->get();
-
-        $expenseAccounts = $this->accountService->getAccountBalances($modifiedStartDate, $endDate)->where('category', AccountCategory::Expense)->get();
+        $expenseAccounts = $this->accountService->getAccountBalances($startDate, $endDate)->where('category', AccountCategory::Expense)->get();
 
         $revenueTotal = 0;
         $expenseTotal = 0;
@@ -230,11 +229,18 @@ class ReportService
         return new ReportDTO(categories: $reportCategories, fields: $columns);
     }
 
-    public function buildTrialBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    public function buildTrialBalanceReport(string $trialBalanceType, string $asOfDate, array $columns = []): ReportDTO
     {
+        $asOfDateCarbon = Carbon::parse($asOfDate);
+        $startDateCarbon = Carbon::parse($this->accountService->getEarliestTransactionDate());
+
         $orderedCategories = AccountCategory::getOrderedCategories();
 
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+        $isPostClosingTrialBalance = $trialBalanceType === 'postClosing';
+
+        $accounts = $this->accountService->getAccountBalances($startDateCarbon->toDateTimeString(), $asOfDateCarbon->toDateTimeString())
+            ->when($isPostClosingTrialBalance, fn (Builder $query) => $query->whereNotIn('category', [AccountCategory::Revenue, AccountCategory::Expense]))
+            ->get();
 
         $balanceFields = ['debit_balance', 'credit_balance'];
 
@@ -268,16 +274,13 @@ class ReportService
                     $account->code,
                     $account->id,
                     $formattedAccountBalances,
-                    Carbon::parse($startDate)->toDateString(),
-                    Carbon::parse($endDate)->toDateString(),
+                    startDate: $startDateCarbon->toDateString(),
+                    endDate: $asOfDateCarbon->toDateString(),
                 );
             }
 
-            if ($category === AccountCategory::Equity) {
-                $modifiedStartDate = Carbon::parse($this->accountService->getEarliestTransactionDate())->startOfYear()->toDateString();
-                $modifiedEndDate = Carbon::parse($startDate)->subYear()->endOfYear()->toDateString();
-
-                $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate)->getAmount();
+            if ($category === AccountCategory::Equity && $isPostClosingTrialBalance) {
+                $retainedEarningsAmount = $this->calculateRetainedEarnings($startDateCarbon->toDateTimeString(), $asOfDateCarbon->toDateTimeString())->getAmount();
                 $isCredit = $retainedEarningsAmount >= 0;
 
                 $categorySummaryBalances[$isCredit ? 'credit_balance' : 'debit_balance'] += abs($retainedEarningsAmount);
@@ -290,8 +293,8 @@ class ReportService
                         'debit_balance' => $isCredit ? 0 : abs($retainedEarningsAmount),
                         'credit_balance' => $isCredit ? $retainedEarningsAmount : 0,
                     ]),
-                    $modifiedStartDate,
-                    $modifiedEndDate,
+                    startDate: $startDateCarbon->toDateString(),
+                    endDate: $asOfDateCarbon->toDateString(),
                 );
             }
 

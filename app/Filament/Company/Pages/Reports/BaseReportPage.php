@@ -12,12 +12,12 @@ use App\Services\DateRangeService;
 use App\Support\Column;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Set;
 use Filament\Pages\Page;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Computed;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -64,16 +64,63 @@ abstract class BaseReportPage extends Page
 
     protected function loadDefaultDateRange(): void
     {
-        $startDate = $this->getFilterState('startDate');
-        $endDate = $this->getFilterState('endDate');
+        $flatFields = $this->getFiltersForm()->getFlatFields();
 
-        if ($this->isValidDate($startDate) && $this->isValidDate($endDate)) {
-            $matchingDateRange = app(DateRangeService::class)->getMatchingDateRangeOption(Carbon::parse($startDate), Carbon::parse($endDate));
-            $this->setFilterState('dateRange', $matchingDateRange);
-        } else {
-            $this->setFilterState('dateRange', $this->getDefaultDateRange());
-            $this->setDateRange(Carbon::parse($this->fiscalYearStartDate), Carbon::parse($this->fiscalYearEndDate));
+        $dateRangeField = Arr::first($flatFields, static fn ($field) => $field instanceof DateRangeSelect);
+
+        if (! $dateRangeField) {
+            return;
         }
+
+        $startDateField = $dateRangeField->getStartDateField();
+        $endDateField = $dateRangeField->getEndDateField();
+
+        $startDate = $startDateField ? $this->getFilterState($startDateField) : null;
+        $endDate = $endDateField ? $this->getFilterState($endDateField) : null;
+
+        $startDateCarbon = $this->isValidDate($startDate) ? Carbon::parse($startDate) : null;
+        $endDateCarbon = $this->isValidDate($endDate) ? Carbon::parse($endDate) : null;
+
+        if ($startDateCarbon && $endDateCarbon) {
+            $this->setMatchingDateRange($startDateCarbon, $endDateCarbon);
+
+            return;
+        }
+
+        if ($endDateCarbon && ! $startDateField) {
+            $this->setAsOfDateRange($endDateCarbon);
+
+            return;
+        }
+
+        if ($endDateField && ! $startDateField) {
+            $this->setFilterState('dateRange', $this->getDefaultDateRange());
+            $defaultEndDate = Carbon::parse($this->fiscalYearEndDate);
+            $this->setFilterState($endDateField, $defaultEndDate->isFuture() ? now()->endOfDay()->toDateTimeString() : $defaultEndDate->endOfDay()->toDateTimeString());
+
+            return;
+        }
+
+        if ($startDateField && $endDateField) {
+            $this->setFilterState('dateRange', $this->getDefaultDateRange());
+            $defaultStartDate = Carbon::parse($this->fiscalYearStartDate);
+            $defaultEndDate = Carbon::parse($this->fiscalYearEndDate);
+            $this->setDateRange($defaultStartDate, $defaultEndDate);
+        }
+    }
+
+    protected function setMatchingDateRange($startDate, $endDate): void
+    {
+        $matchingDateRange = app(DateRangeService::class)->getMatchingDateRangeOption($startDate, $endDate);
+        $this->setFilterState('dateRange', $matchingDateRange);
+    }
+
+    protected function setAsOfDateRange($endDate): void
+    {
+        $fiscalYearStart = Carbon::parse($this->fiscalYearStartDate);
+        $asOfStartDate = $endDate->copy()->setMonth($fiscalYearStart->month)->setDay($fiscalYearStart->day);
+
+        $this->setMatchingDateRange($asOfStartDate, $endDate);
     }
 
     public function loadReportData(): void
@@ -117,6 +164,11 @@ abstract class BaseReportPage extends Page
         return Carbon::parse($this->getFilterState('endDate'))->endOfDay()->toDateTimeString();
     }
 
+    public function getFormattedAsOfDate(): string
+    {
+        return Carbon::parse($this->getFilterState('asOfDate'))->endOfDay()->toDateTimeString();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -139,7 +191,7 @@ abstract class BaseReportPage extends Page
         ];
     }
 
-    protected function getDateRangeFormComponent(): Component
+    protected function getDateRangeFormComponent(): DateRangeSelect
     {
         return DateRangeSelect::make('dateRange')
             ->label('Date Range')
@@ -148,7 +200,7 @@ abstract class BaseReportPage extends Page
             ->endDateField('endDate');
     }
 
-    protected function getStartDateFormComponent(): Component
+    protected function getStartDateFormComponent(): DatePicker
     {
         return DatePicker::make('startDate')
             ->label('Start Date')
@@ -158,7 +210,7 @@ abstract class BaseReportPage extends Page
             });
     }
 
-    protected function getEndDateFormComponent(): Component
+    protected function getEndDateFormComponent(): DatePicker
     {
         return DatePicker::make('endDate')
             ->label('End Date')
@@ -166,5 +218,18 @@ abstract class BaseReportPage extends Page
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
             });
+    }
+
+    protected function getAsOfDateFormComponent(): DatePicker
+    {
+        return DatePicker::make('asOfDate')
+            ->label('As of Date')
+            ->live()
+            ->afterStateUpdated(static function (Set $set) {
+                $set('dateRange', 'Custom');
+            })
+            ->extraFieldWrapperAttributes([
+                'class' => 'report-hidden-label',
+            ]);
     }
 }

@@ -4,6 +4,14 @@
 
 @config './tailwind.config.js';
 
+.fi-fo-field-wrp.report-hidden-label div.flex.items-center {
+    @apply hidden;
+}
+
+.fi-fo-field-wrp.report-hidden-label {
+    @apply lg:mt-8;
+}
+
 .choices__list.choices__list--single {
     @apply w-full;
 }

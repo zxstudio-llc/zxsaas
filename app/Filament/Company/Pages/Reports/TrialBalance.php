@@ -4,18 +4,19 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Forms\Components\DateRangeSelect;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
 use App\Transformers\TrialBalanceReportTransformer;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
-use Guava\FilamentClusters\Forms\Cluster;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrialBalance extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.detailed-report';
+    protected static string $view = 'filament.company.pages.reports.trial-balance';
 
     protected static ?string $slug = 'reports/trial-balance';
 
@@ -29,6 +30,13 @@ class TrialBalance extends BaseReportPage
     {
         $this->reportService = $reportService;
         $this->exportService = $exportService;
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        if (empty($this->getFilterState('trialBalanceType'))) {
+            $this->setFilterState('trialBalanceType', 'regular');
+        }
     }
 
     public function getTable(): array
@@ -53,20 +61,26 @@ class TrialBalance extends BaseReportPage
     public function filtersForm(Form $form): Form
     {
         return $form
-            ->inlineLabel()
-            ->columns()
+            ->columns(4)
             ->schema([
-                $this->getDateRangeFormComponent(),
-                Cluster::make([
-                    $this->getStartDateFormComponent(),
-                    $this->getEndDateFormComponent(),
-                ])->hiddenLabel(),
+                Select::make('trialBalanceType')
+                    ->label('Trial Balance Type')
+                    ->options([
+                        'regular' => 'Regular',
+                        'postClosing' => 'Post-Closing',
+                    ])
+                    ->selectablePlaceholder(false),
+                DateRangeSelect::make('dateRange')
+                    ->label('As of Date')
+                    ->selectablePlaceholder(false)
+                    ->endDateField('asOfDate'),
+                $this->getAsOfDateFormComponent(),
             ]);
     }
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildTrialBalanceReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
+        return $this->reportService->buildTrialBalanceReport($this->getFilterState('trialBalanceType'), $this->getFormattedAsOfDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport

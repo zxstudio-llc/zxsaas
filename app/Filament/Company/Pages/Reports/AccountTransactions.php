@@ -90,7 +90,9 @@ class AccountTransactions extends BaseReportPage
                 Cluster::make([
                     $this->getStartDateFormComponent(),
                     $this->getEndDateFormComponent(),
-                ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
+                ])->extraFieldWrapperAttributes([
+                    'class' => 'report-hidden-label',
+                ]),
                 Actions::make([
                     Actions\Action::make('applyFilters')
                         ->label('Update Report')
