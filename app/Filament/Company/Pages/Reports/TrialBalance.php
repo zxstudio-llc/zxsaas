@@ -34,8 +34,8 @@ class TrialBalance extends BaseReportPage
 
     protected function initializeDefaultFilters(): void
     {
-        if (empty($this->getFilterState('trialBalanceType'))) {
-            $this->setFilterState('trialBalanceType', 'regular');
+        if (empty($this->getFilterState('reportType'))) {
+            $this->setFilterState('reportType', 'standard');
         }
     }
 
@@ -63,15 +63,15 @@ class TrialBalance extends BaseReportPage
         return $form
             ->columns(4)
             ->schema([
-                Select::make('trialBalanceType')
-                    ->label('Trial Balance Type')
+                Select::make('reportType')
+                    ->label('Report Type')
                     ->options([
-                        'regular' => 'Regular',
+                        'standard' => 'Standard',
                         'postClosing' => 'Post-Closing',
                     ])
                     ->selectablePlaceholder(false),
                 DateRangeSelect::make('dateRange')
-                    ->label('As of Date')
+                    ->label('As of')
                     ->selectablePlaceholder(false)
                     ->endDateField('asOfDate'),
                 $this->getAsOfDateFormComponent(),
@@ -80,7 +80,7 @@ class TrialBalance extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildTrialBalanceReport($this->getFilterState('trialBalanceType'), $this->getFormattedAsOfDate(), $columns);
+        return $this->reportService->buildTrialBalanceReport($this->getFilterState('reportType'), $this->getFormattedAsOfDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport

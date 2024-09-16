@@ -93,7 +93,15 @@ class TransactionFactory extends Factory
                 ->where('company_id', $company->id)
                 ->where('id', '<>', $accountIdForBankAccount)
                 ->inRandomOrder()
-                ->firstOrFail();
+                ->first();
+
+            // If no matching account is found, use a fallback
+            if (! $account) {
+                $account = Account::where('company_id', $company->id)
+                    ->where('id', '<>', $accountIdForBankAccount)
+                    ->inRandomOrder()
+                    ->firstOrFail(); // Ensure there is at least some account
+            }
 
             return [
                 'company_id' => $company->id,

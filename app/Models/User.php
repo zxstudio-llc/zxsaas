@@ -96,4 +96,21 @@ class User extends Authenticatable implements FilamentUser, HasAvatar, HasDefaul
     {
         return $this->hasMany(Department::class, 'manager_id');
     }
+
+    public function switchCompany(mixed $company): bool
+    {
+        if (! $this->belongsToCompany($company)) {
+            return false;
+        }
+
+        $this->forceFill([
+            'current_company_id' => $company->id,
+        ])->save();
+
+        $this->setRelation('currentCompany', $company);
+
+        session(['current_company_id' => $company->id]);
+
+        return true;
+    }
 }

@@ -315,7 +315,7 @@ class ReportService
         return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 
-    private function calculateTrialBalance(AccountCategory $category, int $endingBalance): array
+    public function calculateTrialBalance(AccountCategory $category, int $endingBalance): array
     {
         if ($category->isNormalDebitBalance()) {
             if ($endingBalance >= 0) {
@@ -334,43 +334,56 @@ class ReportService
 
     public function buildIncomeStatementReport(string $startDate, string $endDate, array $columns = []): ReportDTO
     {
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+        // Query only relevant accounts and sort them at the query level
+        $revenueAccounts = $this->accountService->getAccountBalances($startDate, $endDate)
+            ->where('category', AccountCategory::Revenue)
+            ->orderByRaw('LENGTH(code), code')
+            ->get();
+
+        $cogsAccounts = $this->accountService->getAccountBalances($startDate, $endDate)
+            ->whereRelation('subtype', 'name', 'Cost of Goods Sold')
+            ->orderByRaw('LENGTH(code), code')
+            ->get();
+
+        $expenseAccounts = $this->accountService->getAccountBalances($startDate, $endDate)
+            ->where('category', AccountCategory::Expense)
+            ->whereRelation('subtype', 'name', '!=', 'Cost of Goods Sold')
+            ->orderByRaw('LENGTH(code), code')
+            ->get();
 
         $accountCategories = [];
         $totalRevenue = 0;
-        $cogs = 0;
+        $totalCogs = 0;
         $totalExpenses = 0;
 
+        // Define category groups
         $categoryGroups = [
-            'Revenue' => [
-                'accounts' => $accounts->where('category', AccountCategory::Revenue),
+            AccountCategory::Revenue->getPluralLabel() => [
+                'accounts' => $revenueAccounts,
                 'total' => &$totalRevenue,
             ],
             'Cost of Goods Sold' => [
-                'accounts' => $accounts->where('subtype.name', 'Cost of Goods Sold'),
-                'total' => &$cogs,
+                'accounts' => $cogsAccounts,
+                'total' => &$totalCogs,
             ],
-            'Expenses' => [
-                'accounts' => $accounts->where('category', AccountCategory::Expense)->where('subtype.name', '!=', 'Cost of Goods Sold'),
+            AccountCategory::Expense->getPluralLabel() => [
+                'accounts' => $expenseAccounts,
                 'total' => &$totalExpenses,
             ],
         ];
 
+        // Process each category group
         foreach ($categoryGroups as $label => $group) {
             $categoryAccounts = [];
             $netMovement = 0;
 
-            foreach ($group['accounts']->sortBy('code', SORT_NATURAL) as $account) {
-                $category = null;
-
-                if ($label === 'Revenue') {
-                    $category = AccountCategory::Revenue;
-                } elseif ($label === 'Expenses') {
-                    $category = AccountCategory::Expense;
-                } elseif ($label === 'Cost of Goods Sold') {
-                    // COGS is treated as part of Expenses, so we use AccountCategory::Expense
-                    $category = AccountCategory::Expense;
-                }
+            foreach ($group['accounts'] as $account) {
+                // Use the category type based on label
+                $category = match ($label) {
+                    AccountCategory::Revenue->getPluralLabel() => AccountCategory::Revenue,
+                    AccountCategory::Expense->getPluralLabel(), 'Cost of Goods Sold' => AccountCategory::Expense,
+                    default => null
+                };
 
                 if ($category !== null) {
                     $accountBalances = $this->calculateAccountBalances($account, $category);
@@ -391,11 +404,12 @@ class ReportService
 
             $accountCategories[$label] = new AccountCategoryDTO(
                 $categoryAccounts,
-                $this->formatBalances(['net_movement' => $netMovement]),
+                $this->formatBalances(['net_movement' => $netMovement])
             );
         }
 
-        $grossProfit = $totalRevenue - $cogs;
+        // Calculate gross and net profit
+        $grossProfit = $totalRevenue - $totalCogs;
         $netProfit = $grossProfit - $totalExpenses;
         $formattedReportTotalBalances = $this->formatBalances(['net_movement' => $netProfit]);
 

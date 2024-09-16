@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Database\Factories\CompanyFactory;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -14,7 +15,9 @@ class DatabaseSeeder extends Seeder
     {
         // Create a single admin user and their personal company
         $adminUser = User::factory()
-            ->withPersonalCompany()  // Ensures the user has a personal company created alongside
+            ->withPersonalCompany(function (CompanyFactory $factory) {
+                return $factory->withTransactions();
+            })
             ->create([
                 'name' => 'Admin',
                 'email' => 'admin@gmail.com',
