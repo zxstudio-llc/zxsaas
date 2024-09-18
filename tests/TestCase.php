@@ -4,9 +4,12 @@ namespace Tests;
 
 use App\Models\Company;
 use App\Models\User;
+use App\Testing\TestsReport;
 use Database\Seeders\TestDatabaseSeeder;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Livewire\Features\SupportTesting\Testable;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -30,13 +33,16 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        Testable::mixin(new TestsReport);
+
         $this->testUser = User::first();
 
         $this->testCompany = $this->testUser->ownedCompanies->first();
 
         $this->testUser->switchCompany($this->testCompany);
 
-        $this->actingAs($this->testUser)
-            ->withSession(['current_company_id' => $this->testCompany->id]);
+        $this->actingAs($this->testUser);
+
+        Filament::setTenant($this->testCompany);
     }
 }

@@ -4,7 +4,7 @@
 
 @config './tailwind.config.js';
 
-.fi-fo-field-wrp.report-hidden-label div.flex.items-center {
+.fi-fo-field-wrp.report-hidden-label > div.grid.gap-y-2 > div.flex.items-center {
     @apply hidden;
 }
 
