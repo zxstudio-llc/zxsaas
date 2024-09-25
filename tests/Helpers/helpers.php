@@ -38,3 +38,10 @@ function calculateRetainedEarningsBalances(ReportService $reportService, $startD
         'credit_balance' => $retainedEarningsCreditAmount,
     ]);
 }
+
+function formatReportBalances(array $balances): AccountBalanceDTO
+{
+    $reportService = app(ReportService::class);
+
+    return $reportService->formatBalances($balances);
+}

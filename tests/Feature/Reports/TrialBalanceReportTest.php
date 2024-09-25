@@ -27,6 +27,8 @@ it('correctly builds a standard trial balance report', function () {
     $expectedBankAccountDebit = 10000;
     $expectedBankAccountCredit = 0;
 
+    $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
+
     livewire(TrialBalance::class)
         ->assertFormSet([
             'deferredFilters.reportType' => $defaultReportType,
@@ -42,8 +44,8 @@ it('correctly builds a standard trial balance report', function () {
         ->assertDontSeeText('Retained Earnings')
         ->assertSeeTextInOrder([
             'Cash on Hand',
-            money($expectedBankAccountDebit, CurrencyAccessor::getDefaultCurrency(), true),
-            money($expectedBankAccountCredit, CurrencyAccessor::getDefaultCurrency(), true),
+            money($expectedBankAccountDebit, $defaultCurrencyCode, true),
+            money($expectedBankAccountCredit, $defaultCurrencyCode, true),
         ])
         ->assertReportTableData();
 });
@@ -58,13 +60,13 @@ it('correctly builds a post-closing trial balance report', function () {
     $defaultReportType = 'postClosing';
 
     // Create transactions for the company
-    $transaction1 = Transaction::factory()
+    Transaction::factory()
         ->forDefaultBankAccount()
         ->forUncategorizedRevenue()
         ->asDeposit(1000)
         ->create();
 
-    $transaction2 = Transaction::factory()
+    Transaction::factory()
         ->forDefaultBankAccount()
         ->forUncategorizedExpense()
         ->asWithdrawal(500)

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static Money getNetMovement(Account $account, string $startDate, string $endDate)
  * @method static Money|null getStartingBalance(Account $account, string $startDate)
  * @method static Money|null getEndingBalance(Account $account, string $startDate, string $endDate)
- * @method static array getBalances(Account $account, string $startDate, string $endDate)
+ * @method static array getBalances(Account $account, string $startDate, string $endDate, array $fields)
  * @method static Money getTotalBalanceForAllBankAccounts(string $startDate, string $endDate)
  * @method static string getEarliestTransactionDate()
  *
