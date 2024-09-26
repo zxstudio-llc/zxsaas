@@ -4,6 +4,7 @@ namespace App\Repositories\Accounting;
 
 use App\Models\Accounting\Account;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 
 class JournalEntryRepository
 {
@@ -11,13 +12,16 @@ class JournalEntryRepository
     {
         $query = $account->journalEntries()->where('type', $type);
 
+        $startDateCarbon = Carbon::parse($startDate)->startOfDay();
+        $endDateCarbon = Carbon::parse($endDate)->endOfDay();
+
         if ($startDate && $endDate) {
-            $query->whereHas('transaction', static function (Builder $query) use ($startDate, $endDate) {
-                $query->whereBetween('posted_at', [$startDate, $endDate]);
+            $query->whereHas('transaction', static function (Builder $query) use ($startDateCarbon, $endDateCarbon) {
+                $query->whereBetween('posted_at', [$startDateCarbon, $endDateCarbon]);
             });
         } elseif ($startDate) {
-            $query->whereHas('transaction', static function (Builder $query) use ($startDate) {
-                $query->where('posted_at', '<=', $startDate);
+            $query->whereHas('transaction', static function (Builder $query) use ($startDateCarbon) {
+                $query->where('posted_at', '<=', $startDateCarbon);
             });
         }
 

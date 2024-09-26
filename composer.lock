@@ -8,16 +8,16 @@
     "packages": [
         {
             "name": "akaunting/laravel-money",
-            "version": "5.2.1",
+            "version": "5.2.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/akaunting/laravel-money.git",
-                "reference": "6cc8abb912286c671de5993ffbcd3225588aeace"
+                "reference": "d99a9e8e576cac40668d0a5afaf7ea153590aff9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/6cc8abb912286c671de5993ffbcd3225588aeace",
-                "reference": "6cc8abb912286c671de5993ffbcd3225588aeace",
+                "url": "https://api.github.com/repos/akaunting/laravel-money/zipball/d99a9e8e576cac40668d0a5afaf7ea153590aff9",
+                "reference": "d99a9e8e576cac40668d0a5afaf7ea153590aff9",
                 "shasum": ""
             },
             "require": {
@@ -71,9 +71,9 @@
             ],
             "support": {
                 "issues": "https://github.com/akaunting/laravel-money/issues",
-                "source": "https://github.com/akaunting/laravel-money/tree/5.2.1"
+                "source": "https://github.com/akaunting/laravel-money/tree/5.2.2"
             },
-            "time": "2024-07-23T15:01:26+00:00"
+            "time": "2024-09-25T10:06:11+00:00"
         },
         {
             "name": "andrewdwallo/filament-companies",
@@ -497,16 +497,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.322.4",
+            "version": "3.322.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "f6d2c64cb87d9e70ad99aeaffcd879a412d2ccb5"
+                "reference": "968fe51da0854eac0e0aeac6ec8b86856c6bd83e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/f6d2c64cb87d9e70ad99aeaffcd879a412d2ccb5",
-                "reference": "f6d2c64cb87d9e70ad99aeaffcd879a412d2ccb5",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/968fe51da0854eac0e0aeac6ec8b86856c6bd83e",
+                "reference": "968fe51da0854eac0e0aeac6ec8b86856c6bd83e",
                 "shasum": ""
             },
             "require": {
@@ -589,9 +589,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.322.4"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.322.5"
             },
-            "time": "2024-09-24T18:10:10+00:00"
+            "time": "2024-09-25T18:14:27+00:00"
         },
         {
             "name": "aws/aws-sdk-php-laravel",
@@ -2981,16 +2981,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v11.24.0",
+            "version": "v11.24.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "557da2b02e298acbd12b3fb7d04d16ea253c5f20"
+                "reference": "e063fa80ac5818099f45a3a57dd803476c8f3a2a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/557da2b02e298acbd12b3fb7d04d16ea253c5f20",
-                "reference": "557da2b02e298acbd12b3fb7d04d16ea253c5f20",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/e063fa80ac5818099f45a3a57dd803476c8f3a2a",
+                "reference": "e063fa80ac5818099f45a3a57dd803476c8f3a2a",
                 "shasum": ""
             },
             "require": {
@@ -3186,7 +3186,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2024-09-24T14:46:11+00:00"
+            "time": "2024-09-25T07:21:24+00:00"
         },
         {
             "name": "laravel/prompts",
@@ -9450,26 +9450,26 @@
         },
         {
             "name": "filp/whoops",
-            "version": "2.15.4",
+            "version": "2.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/filp/whoops.git",
-                "reference": "a139776fa3f5985a50b509f2a02ff0f709d2a546"
+                "reference": "befcdc0e5dce67252aa6322d82424be928214fa2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/filp/whoops/zipball/a139776fa3f5985a50b509f2a02ff0f709d2a546",
-                "reference": "a139776fa3f5985a50b509f2a02ff0f709d2a546",
+                "url": "https://api.github.com/repos/filp/whoops/zipball/befcdc0e5dce67252aa6322d82424be928214fa2",
+                "reference": "befcdc0e5dce67252aa6322d82424be928214fa2",
                 "shasum": ""
             },
             "require": {
-                "php": "^5.5.9 || ^7.0 || ^8.0",
+                "php": "^7.1 || ^8.0",
                 "psr/log": "^1.0.1 || ^2.0 || ^3.0"
             },
             "require-dev": {
-                "mockery/mockery": "^0.9 || ^1.0",
-                "phpunit/phpunit": "^4.8.36 || ^5.7.27 || ^6.5.14 || ^7.5.20 || ^8.5.8 || ^9.3.3",
-                "symfony/var-dumper": "^2.6 || ^3.0 || ^4.0 || ^5.0"
+                "mockery/mockery": "^1.0",
+                "phpunit/phpunit": "^7.5.20 || ^8.5.8 || ^9.3.3",
+                "symfony/var-dumper": "^4.0 || ^5.0"
             },
             "suggest": {
                 "symfony/var-dumper": "Pretty print complex values better with var-dumper available",
@@ -9509,7 +9509,7 @@
             ],
             "support": {
                 "issues": "https://github.com/filp/whoops/issues",
-                "source": "https://github.com/filp/whoops/tree/2.15.4"
+                "source": "https://github.com/filp/whoops/tree/2.16.0"
             },
             "funding": [
                 {
@@ -9517,7 +9517,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2023-11-03T12:00:00+00:00"
+            "time": "2024-09-25T12:00:00+00:00"
         },
         {
             "name": "hamcrest/hamcrest-php",
@@ -10000,16 +10000,16 @@
         },
         {
             "name": "pestphp/pest",
-            "version": "v3.2.2",
+            "version": "v3.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/pestphp/pest.git",
-                "reference": "989e43d1a01e5a3b5333cffe5c8e633ac4d17da2"
+                "reference": "4e2987d438a3c3b2f291d2c991049544ab2f52bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pestphp/pest/zipball/989e43d1a01e5a3b5333cffe5c8e633ac4d17da2",
-                "reference": "989e43d1a01e5a3b5333cffe5c8e633ac4d17da2",
+                "url": "https://api.github.com/repos/pestphp/pest/zipball/4e2987d438a3c3b2f291d2c991049544ab2f52bb",
+                "reference": "4e2987d438a3c3b2f291d2c991049544ab2f52bb",
                 "shasum": ""
             },
             "require": {
@@ -10095,7 +10095,7 @@
             ],
             "support": {
                 "issues": "https://github.com/pestphp/pest/issues",
-                "source": "https://github.com/pestphp/pest/tree/v3.2.2"
+                "source": "https://github.com/pestphp/pest/tree/v3.2.3"
             },
             "funding": [
                 {
@@ -10107,7 +10107,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-09-24T09:23:43+00:00"
+            "time": "2024-09-25T15:19:39+00:00"
         },
         {
             "name": "pestphp/pest-plugin",

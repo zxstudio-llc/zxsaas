@@ -240,9 +240,8 @@ class AccountService implements AccountHandler
 
     public function getEarliestTransactionDate(): string
     {
-        $earliestDate = Transaction::oldest('posted_at')
-            ->value('posted_at');
+        $earliestDate = Transaction::min('posted_at');
 
-        return $earliestDate ?? now()->toDateString();
+        return $earliestDate ?? now()->toDateTimeString();
     }
 }

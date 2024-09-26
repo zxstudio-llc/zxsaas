@@ -7,20 +7,19 @@ use App\Models\Accounting\Transaction;
 
 use function Pest\Livewire\livewire;
 
-it('correctly builds a account balances report', function () {
+it('correctly builds an account balances report for the current fiscal year', function () {
     $testCompany = $this->testCompany;
 
-    $reportDatesDTO = ReportDateFactory::create($testCompany);
-    $defaultDateRange = $reportDatesDTO->defaultDateRange;
-    $defaultStartDate = $reportDatesDTO->defaultStartDate->toImmutable();
-    $defaultEndDate = $reportDatesDTO->defaultEndDate->toImmutable();
+    $reportDates = ReportDateFactory::create($testCompany);
+    $defaultDateRange = $reportDates->defaultDateRange;
+    $defaultStartDate = $reportDates->defaultStartDate->toImmutable();
+    $defaultEndDate = $reportDates->defaultEndDate->toImmutable();
 
     $depositAmount = 1000;
     $withdrawalAmount = 1000;
     $depositCount = 10;
     $withdrawalCount = 10;
 
-    // Create transactions for the company
     Transaction::factory()
         ->forDefaultBankAccount()
         ->forUncategorizedRevenue()
@@ -41,11 +40,16 @@ it('correctly builds a account balances report', function () {
         ])
         ->create();
 
-    $defaultBankAccount = $testCompany->default->bankAccount->account;
+    $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
 
-    $fields = $defaultBankAccount->category->getRelevantBalanceFields();
+    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
 
-    $expectedBalances = Accounting::getBalances($defaultBankAccount, $defaultStartDate->toDateString(), $defaultEndDate->toDateString(), $fields);
+    $expectedBalances = Accounting::getBalances(
+        $defaultBankAccountAccount,
+        $defaultStartDate->toDateString(),
+        $defaultEndDate->toDateString(),
+        $fields
+    );
 
     $formattedExpectedBalances = formatReportBalances($expectedBalances);
 
@@ -62,7 +66,7 @@ it('correctly builds a account balances report', function () {
         ])
         ->call('applyFilters')
         ->assertSeeTextInOrder([
-            'Cash on Hand',
+            $defaultBankAccountAccount->name,
             $formattedExpectedBalances->startingBalance,
             $formattedExpectedBalances->debitBalance,
             $formattedExpectedBalances->creditBalance,
@@ -70,8 +74,51 @@ it('correctly builds a account balances report', function () {
             $formattedExpectedBalances->endingBalance,
         ])
         ->assertReportTableData();
+});
 
-    $expectedBalancesSubYear = Accounting::getBalances($defaultBankAccount, $defaultStartDate->subYear()->startOfYear()->toDateString(), $defaultEndDate->subYear()->endOfYear()->toDateString(), $fields);
+it('correctly builds an account balances report for the previous fiscal year', function () {
+    $testCompany = $this->testCompany;
+
+    $reportDatesDTO = ReportDateFactory::create($testCompany);
+    $defaultDateRange = $reportDatesDTO->defaultDateRange;
+    $defaultStartDate = $reportDatesDTO->defaultStartDate->toImmutable();
+    $defaultEndDate = $reportDatesDTO->defaultEndDate->toImmutable();
+
+    $depositAmount = 1000;
+    $withdrawalAmount = 1000;
+    $depositCount = 10;
+    $withdrawalCount = 10;
+
+    Transaction::factory()
+        ->forDefaultBankAccount()
+        ->forUncategorizedRevenue()
+        ->asDeposit($depositAmount)
+        ->count($depositCount)
+        ->state([
+            'posted_at' => $defaultStartDate->subWeek(),
+        ])
+        ->create();
+
+    Transaction::factory()
+        ->forDefaultBankAccount()
+        ->forUncategorizedExpense()
+        ->asWithdrawal($withdrawalAmount)
+        ->count($withdrawalCount)
+        ->state([
+            'posted_at' => $defaultEndDate,
+        ])
+        ->create();
+
+    $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
+
+    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
+
+    $expectedBalancesSubYear = Accounting::getBalances(
+        $defaultBankAccountAccount,
+        $defaultStartDate->subYear()->startOfYear()->toDateString(),
+        $defaultEndDate->subYear()->endOfYear()->toDateString(),
+        $fields
+    );
 
     $formattedExpectedBalancesSubYear = formatReportBalances($expectedBalancesSubYear);
 
@@ -92,7 +139,7 @@ it('correctly builds a account balances report', function () {
         ])
         ->call('applyFilters')
         ->assertSeeTextInOrder([
-            'Cash on Hand',
+            $defaultBankAccountAccount->name,
             $formattedExpectedBalancesSubYear->startingBalance,
             $formattedExpectedBalancesSubYear->debitBalance,
             $formattedExpectedBalancesSubYear->creditBalance,

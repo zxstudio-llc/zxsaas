@@ -96,7 +96,7 @@ class ReportService
         return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 
-    private function calculateAccountBalances(Account $account, AccountCategory $category): array
+    public function calculateAccountBalances(Account $account, AccountCategory $category): array
     {
         $balances = [
             'debit_balance' => $account->total_debit ?? 0,

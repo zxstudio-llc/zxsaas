@@ -1,6 +1,7 @@
 <?php
 
 use App\DTO\AccountBalanceDTO;
+use App\Enums\Accounting\AccountCategory;
 use App\Enums\Setting\EntityType;
 use App\Filament\Company\Pages\CreateCompany;
 use App\Models\Company;
@@ -44,4 +45,11 @@ function formatReportBalances(array $balances): AccountBalanceDTO
     $reportService = app(ReportService::class);
 
     return $reportService->formatBalances($balances);
+}
+
+function calculateTrialBalances(AccountCategory $accountCategory, int $endingBalance): array
+{
+    $reportService = app(ReportService::class);
+
+    return $reportService->calculateTrialBalance($accountCategory, $endingBalance);
 }
