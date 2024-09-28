@@ -75,7 +75,7 @@ enum AccountCategory: string implements HasLabel
     /**
      * Determines if the account is a real account.
      *
-     * In accounting, real accounts are permanent accounts that retain their balances across accounting periods.
+     * In accounting, assets, liabilities, and equity are real accounts which are permanent accounts that retain their balances across accounting periods.
      * They are not closed at the end of each accounting period.
      */
     public function isReal(): bool

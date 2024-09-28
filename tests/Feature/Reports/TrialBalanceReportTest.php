@@ -1,11 +1,10 @@
 <?php
 
 use App\Facades\Accounting;
+use App\Facades\Reporting;
 use App\Factories\ReportDateFactory;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Models\Accounting\Transaction;
-use App\Services\AccountService;
-use App\Services\ReportService;
 
 use function Pest\Livewire\livewire;
 
@@ -47,18 +46,15 @@ it('correctly builds a standard trial balance report', function () {
     $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
     $earliestTransactionDate = $reportDates->refresh()->earliestTransactionDate;
 
-    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
-
     $expectedBalances = Accounting::getBalances(
         $defaultBankAccountAccount,
         $earliestTransactionDate->toDateString(),
         $defaultEndDate->toDateString(),
-        $fields
     );
 
-    $calculatedTrialBalances = calculateTrialBalances($defaultBankAccountAccount->category, $expectedBalances['ending_balance']);
+    $calculatedTrialBalances = Reporting::calculateTrialBalances($defaultBankAccountAccount->category, $expectedBalances['ending_balance']);
 
-    $formattedExpectedBalances = formatReportBalances($calculatedTrialBalances);
+    $formattedExpectedBalances = Reporting::formatBalances($calculatedTrialBalances);
 
     livewire(TrialBalance::class)
         ->assertFormSet([
@@ -74,6 +70,7 @@ it('correctly builds a standard trial balance report', function () {
         ->call('applyFilters')
         ->assertDontSeeText('Retained Earnings')
         ->assertSeeTextInOrder([
+            $defaultBankAccountAccount->code,
             $defaultBankAccountAccount->name,
             $formattedExpectedBalances->debitBalance,
             $formattedExpectedBalances->creditBalance,
@@ -117,23 +114,19 @@ it('correctly builds a post-closing trial balance report', function () {
         ->create();
 
     $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
-    $earliestTransactionDate = $reportDates->refresh()->earliestTransactionDate->toImmutable();
+    $earliestTransactionDate = $reportDates->refresh()->earliestTransactionDate;
 
-    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
+    $expectedBalances = Accounting::getBalances(
+        $defaultBankAccountAccount,
+        $earliestTransactionDate->toDateString(),
+        $defaultEndDate->toDateString(),
+    );
 
-    $accountService = app(AccountService::class);
+    $calculatedTrialBalances = Reporting::calculateTrialBalances($defaultBankAccountAccount->category, $expectedBalances['ending_balance']);
 
-    $balances = $accountService->getAccountBalances($earliestTransactionDate->toDateTimeString(), $defaultEndDate->toDateTimeString(), [$defaultBankAccountAccount->id]);
+    $formattedExpectedBalances = Reporting::formatBalances($calculatedTrialBalances);
 
-    $account = $balances->find($defaultBankAccountAccount->id);
-
-    $reportService = app(ReportService::class);
-
-    $calculatedBalances = $reportService->calculateAccountBalances($account, $account->category);
-
-    $calculatedTrialBalances = calculateTrialBalances($defaultBankAccountAccount->category, $calculatedBalances['ending_balance']);
-
-    $formattedExpectedBalances = formatReportBalances($calculatedTrialBalances);
+    $formattedRetainedEarningsBalances = Reporting::getRetainedEarningsBalances($earliestTransactionDate->toDateTimeString(), $defaultEndDate->toDateTimeString());
 
     // Use Livewire to assert the report's filters and displayed data
     livewire(TrialBalance::class)
@@ -149,11 +142,28 @@ it('correctly builds a post-closing trial balance report', function () {
             'dateRange' => $defaultDateRange,
             'asOfDate' => $defaultEndDate->toDateString(),
         ])
-        ->assertSeeText('Retained Earnings')
         ->assertSeeTextInOrder([
+            $defaultBankAccountAccount->code,
             $defaultBankAccountAccount->name,
             $formattedExpectedBalances->debitBalance,
             $formattedExpectedBalances->creditBalance,
+        ])
+        ->assertSeeText('Retained Earnings')
+        ->assertSeeTextInOrder([
+            'RE',
+            'Retained Earnings',
+            $formattedRetainedEarningsBalances->debitBalance,
+            $formattedRetainedEarningsBalances->creditBalance,
+        ])
+        ->assertSeeTextInOrder([
+            'Total Revenue',
+            '$0.00',
+            '$0.00',
+        ])
+        ->assertSeeTextInOrder([
+            'Total Expenses',
+            '$0.00',
+            '$0.00',
         ])
         ->assertReportTableData();
 });

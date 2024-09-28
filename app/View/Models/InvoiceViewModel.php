@@ -80,7 +80,7 @@ class InvoiceViewModel
 
     public function invoice_number(): string
     {
-        return DocumentDefault::getNumberNext(padded: true, format: true, prefix: $this->number_prefix(), digits: $this->number_digits(), next: $this->number_next());
+        return $this->invoice->getNumberNext(padded: true, format: true, prefix: $this->number_prefix(), digits: $this->number_digits(), next: $this->number_next());
     }
 
     // Invoice date related methods

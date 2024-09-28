@@ -1,6 +1,7 @@
 <?php
 
 use App\Facades\Accounting;
+use App\Facades\Reporting;
 use App\Factories\ReportDateFactory;
 use App\Filament\Company\Pages\Reports\AccountBalances;
 use App\Models\Accounting\Transaction;
@@ -42,16 +43,13 @@ it('correctly builds an account balances report for the current fiscal year', fu
 
     $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
 
-    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
-
     $expectedBalances = Accounting::getBalances(
         $defaultBankAccountAccount,
         $defaultStartDate->toDateString(),
         $defaultEndDate->toDateString(),
-        $fields
     );
 
-    $formattedExpectedBalances = formatReportBalances($expectedBalances);
+    $formattedExpectedBalances = Reporting::formatBalances($expectedBalances);
 
     livewire(AccountBalances::class)
         ->assertFormSet([
@@ -111,16 +109,13 @@ it('correctly builds an account balances report for the previous fiscal year', f
 
     $defaultBankAccountAccount = $testCompany->default->bankAccount->account;
 
-    $fields = $defaultBankAccountAccount->category->getRelevantBalanceFields();
-
     $expectedBalancesSubYear = Accounting::getBalances(
         $defaultBankAccountAccount,
         $defaultStartDate->subYear()->startOfYear()->toDateString(),
         $defaultEndDate->subYear()->endOfYear()->toDateString(),
-        $fields
     );
 
-    $formattedExpectedBalancesSubYear = formatReportBalances($expectedBalancesSubYear);
+    $formattedExpectedBalancesSubYear = Reporting::formatBalances($expectedBalancesSubYear);
 
     livewire(AccountBalances::class)
         ->assertFormSet([

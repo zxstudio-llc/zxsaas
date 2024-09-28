@@ -261,7 +261,7 @@ class ReportService
 
                 $endingBalance = $accountBalances['ending_balance'] ?? $accountBalances['net_movement'];
 
-                $trialBalance = $this->calculateTrialBalance($account->category, $endingBalance);
+                $trialBalance = $this->calculateTrialBalances($account->category, $endingBalance);
 
                 foreach ($trialBalance as $balanceType => $balance) {
                     $categorySummaryBalances[$balanceType] += $balance;
@@ -315,7 +315,21 @@ class ReportService
         return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 
-    public function calculateTrialBalance(AccountCategory $category, int $endingBalance): array
+    public function getRetainedEarningsBalances(string $startDate, string $endDate): AccountBalanceDTO
+    {
+        $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate, $endDate)->getAmount();
+
+        $isCredit = $retainedEarningsAmount >= 0;
+        $retainedEarningsDebitAmount = $isCredit ? 0 : abs($retainedEarningsAmount);
+        $retainedEarningsCreditAmount = $isCredit ? $retainedEarningsAmount : 0;
+
+        return $this->formatBalances([
+            'debit_balance' => $retainedEarningsDebitAmount,
+            'credit_balance' => $retainedEarningsCreditAmount,
+        ]);
+    }
+
+    public function calculateTrialBalances(AccountCategory $category, int $endingBalance): array
     {
         if ($category->isNormalDebitBalance()) {
             if ($endingBalance >= 0) {

@@ -137,13 +137,15 @@ class Invoice extends Page
                 TextInput::make('number_next')
                     ->softRequired()
                     ->localizeLabel()
-                    ->maxLength(static fn (Get $get) => $get('number_digits'))
-                    ->hint(static function (Get $get, $state) {
+                    ->mask(static function (Get $get) {
+                        return str_repeat('9', $get('number_digits'));
+                    })
+                    ->hint(function (Get $get, $state) {
                         $number_prefix = $get('number_prefix');
                         $number_digits = $get('number_digits');
                         $number_next = $state;
 
-                        return InvoiceModel::getNumberNext(true, true, $number_prefix, $number_digits, $number_next);
+                        return $this->record->getNumberNext(true, true, $number_prefix, $number_digits, $number_next);
                     }),
                 Select::make('payment_terms')
                     ->softRequired()

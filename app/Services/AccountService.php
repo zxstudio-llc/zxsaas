@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Contracts\AccountHandler;
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
@@ -14,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
 
-class AccountService implements AccountHandler
+class AccountService
 {
     public function __construct(
         protected JournalEntryRepository $journalEntryRepository
@@ -22,107 +21,93 @@ class AccountService implements AccountHandler
 
     public function getDebitBalance(Account $account, string $startDate, string $endDate): Money
     {
-        $amount = $this->journalEntryRepository->sumDebitAmounts($account, $startDate, $endDate);
+        $query = $this->getAccountBalances($startDate, $endDate, [$account->id])->first();
 
-        return new Money($amount, $account->currency_code);
+        return new Money($query->total_debit, $account->currency_code);
     }
 
     public function getCreditBalance(Account $account, string $startDate, string $endDate): Money
     {
-        $amount = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
+        $query = $this->getAccountBalances($startDate, $endDate, [$account->id])->first();
 
-        return new Money($amount, $account->currency_code);
+        return new Money($query->total_credit, $account->currency_code);
     }
 
     public function getNetMovement(Account $account, string $startDate, string $endDate): Money
     {
-        $balances = $this->calculateBalances($account, $startDate, $endDate);
+        $query = $this->getAccountBalances($startDate, $endDate, [$account->id])->first();
 
-        return new Money($balances['net_movement'], $account->currency_code);
+        $netMovement = $this->calculateNetMovementByCategory(
+            $account->category,
+            $query->total_debit ?? 0,
+            $query->total_credit ?? 0
+        );
+
+        return new Money($netMovement, $account->currency_code);
     }
 
     public function getStartingBalance(Account $account, string $startDate, bool $override = false): ?Money
     {
-        if ($override === false && in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
+        if ($override === false && $account->category->isNominal()) {
             return null;
         }
 
-        $balances = $this->calculateStartingBalances($account, $startDate);
+        $query = $this->getAccountBalances($startDate, $startDate, [$account->id])->first();
 
-        return new Money($balances['starting_balance'], $account->currency_code);
+        return new Money($query->starting_balance ?? 0, $account->currency_code);
     }
 
     public function getEndingBalance(Account $account, string $startDate, string $endDate): ?Money
     {
-        $calculatedBalances = $this->calculateBalances($account, $startDate, $endDate);
-        $startingBalances = $this->calculateStartingBalances($account, $startDate);
+        $query = $this->getAccountBalances($startDate, $endDate, [$account->id])->first();
 
-        $netMovement = $calculatedBalances['net_movement'];
+        $netMovement = $this->calculateNetMovementByCategory(
+            $account->category,
+            $query->total_debit ?? 0,
+            $query->total_credit ?? 0
+        );
 
-        if (in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)) {
+        if ($account->category->isNominal()) {
             return new Money($netMovement, $account->currency_code);
         }
 
-        $endingBalance = $startingBalances['starting_balance'] + $netMovement;
+        $endingBalance = ($query->starting_balance ?? 0) + $netMovement;
 
         return new Money($endingBalance, $account->currency_code);
     }
 
     private function calculateNetMovementByCategory(AccountCategory $category, int $debitBalance, int $creditBalance): int
     {
-        return match ($category) {
-            AccountCategory::Asset, AccountCategory::Expense => $debitBalance - $creditBalance,
-            AccountCategory::Liability, AccountCategory::Equity, AccountCategory::Revenue => $creditBalance - $debitBalance,
-        };
-    }
-
-    private function calculateBalances(Account $account, string $startDate, string $endDate): array
-    {
-        $debitBalance = $this->journalEntryRepository->sumDebitAmounts($account, $startDate, $endDate);
-        $creditBalance = $this->journalEntryRepository->sumCreditAmounts($account, $startDate, $endDate);
-
-        return [
-            'debit_balance' => $debitBalance,
-            'credit_balance' => $creditBalance,
-            'net_movement' => $this->calculateNetMovementByCategory($account->category, $debitBalance, $creditBalance),
-        ];
-    }
-
-    private function calculateStartingBalances(Account $account, string $startDate): array
-    {
-        $debitBalanceBefore = $this->journalEntryRepository->sumDebitAmounts($account, $startDate);
-        $creditBalanceBefore = $this->journalEntryRepository->sumCreditAmounts($account, $startDate);
-
-        return [
-            'debit_balance_before' => $debitBalanceBefore,
-            'credit_balance_before' => $creditBalanceBefore,
-            'starting_balance' => $this->calculateNetMovementByCategory($account->category, $debitBalanceBefore, $creditBalanceBefore),
-        ];
-    }
-
-    public function getBalances(Account $account, string $startDate, string $endDate, array $fields): array
-    {
-        $balances = [];
-        $calculatedBalances = $this->calculateBalances($account, $startDate, $endDate);
-
-        // Calculate starting balances only if needed
-        $startingBalances = null;
-        $needStartingBalances = ! in_array($account->category, [AccountCategory::Expense, AccountCategory::Revenue], true)
-                                && (in_array('starting_balance', $fields) || in_array('ending_balance', $fields));
-
-        if ($needStartingBalances) {
-            $startingBalances = $this->calculateStartingBalances($account, $startDate);
+        if ($category->isNormalDebitBalance()) {
+            return $debitBalance - $creditBalance;
+        } else {
+            return $creditBalance - $debitBalance;
         }
+    }
 
-        foreach ($fields as $field) {
-            $balances[$field] = match ($field) {
-                'debit_balance', 'credit_balance', 'net_movement' => $calculatedBalances[$field],
-                'starting_balance' => $needStartingBalances ? $startingBalances['starting_balance'] : null,
-                'ending_balance' => $needStartingBalances ? $startingBalances['starting_balance'] + $calculatedBalances['net_movement'] : null,
-                default => null,
-            };
-        }
+    public function getBalances(Account $account, string $startDate, string $endDate): array
+    {
+        $query = $this->getAccountBalances($startDate, $endDate, [$account->id])->first();
 
+        $needStartingBalances = $account->category->isReal();
+
+        $netMovement = $this->calculateNetMovementByCategory(
+            $account->category,
+            $query->total_debit ?? 0,
+            $query->total_credit ?? 0
+        );
+
+        $balances = [
+            'debit_balance' => $query->total_debit,
+            'credit_balance' => $query->total_credit,
+            'net_movement' => $netMovement,
+            'starting_balance' => $needStartingBalances ? ($query->starting_balance ?? 0) : null,
+            'ending_balance' => $needStartingBalances
+                ? ($query->starting_balance ?? 0) + $netMovement
+                : $netMovement, // For nominal accounts, ending balance is just the net movement
+        ];
+
+        // Return balances, filtering out any null values
         return array_filter($balances, static fn ($value) => $value !== null);
     }
 
