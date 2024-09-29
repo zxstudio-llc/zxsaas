@@ -59,7 +59,7 @@ class CompanyDefault extends Page
         return translate(static::$title);
     }
 
-    public function getMaxContentWidth(): MaxWidth
+    public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::ScreenTwoExtraLarge;
     }

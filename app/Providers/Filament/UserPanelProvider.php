@@ -2,17 +2,18 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Components\PanelShiftDropdown;
+use App\Filament\User\Clusters\Account;
 use App\Http\Middleware\Authenticate;
 use Exception;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationBuilder;
 use Filament\Navigation\NavigationItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -33,33 +34,36 @@ class UserPanelProvider extends PanelProvider
         return $panel
             ->id('user')
             ->path('user')
-            ->userMenuItems([
-                'profile' => MenuItem::make()
-                    ->label('Profile')
-                    ->icon('heroicon-o-user-circle')
-                    ->url(static fn () => url(Profile::getUrl())),
-            ])
-            ->navigationItems([
-                NavigationItem::make('Personal Access Tokens')
-                    ->label(static fn (): string => __('filament-companies::default.navigation.links.tokens'))
-                    ->icon('heroicon-o-key')
-                    ->url(static fn () => url(PersonalAccessTokens::getUrl())),
-            ])
+            ->plugin(
+                PanelShiftDropdown::make()
+                    ->logoutItem()
+                    ->companySettings(false)
+                    ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
+                        return $builder
+                            ->items([
+                                ...Account::getNavigationItems(),
+                                NavigationItem::make('company')
+                                    ->label('Company Dashboard')
+                                    ->icon('heroicon-s-building-office-2')
+                                    ->url(static fn (): string => Pages\Dashboard::getUrl(panel: 'company', tenant: auth()->user()->personalCompany())),
+                            ]);
+                    }),
+            )
             ->colors([
                 'primary' => Color::Indigo,
             ])
+            ->navigation(false)
             ->viteTheme('resources/css/filament/user/theme.css')
             ->discoverResources(in: app_path('Filament/User/Resources'), for: 'App\\Filament\\User\\Resources')
             ->discoverPages(in: app_path('Filament/User/Pages'), for: 'App\\Filament\\User\\Pages')
+            ->discoverClusters(in: app_path('Filament/User/Clusters'), for: 'App\\Filament\\User\\Clusters')
+            ->discoverWidgets(in: app_path('Filament/User/Widgets'), for: 'App\\Filament\\User\\Widgets')
             ->pages([
-                Pages\Dashboard::class,
                 Profile::class,
                 PersonalAccessTokens::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/User/Widgets'), for: 'App\\Filament\\User\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                //
             ])
             ->middleware([
                 EncryptCookies::class,

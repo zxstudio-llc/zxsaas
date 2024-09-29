@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use App\Services\DateRangeService;
-use BezhanSalleh\PanelSwitch\PanelSwitch;
+use Filament\Http\Responses\Auth\Contracts\LoginResponse;
 use Filament\Notifications\Livewire\Notifications;
 use Filament\Support\Assets\Js;
 use Filament\Support\Enums\Alignment;
@@ -18,6 +18,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(DateRangeService::class);
+        $this->app->singleton(LoginResponse::class, \App\Http\Responses\LoginResponse::class);
     }
 
     /**
@@ -27,38 +28,8 @@ class AppServiceProvider extends ServiceProvider
     {
         Notifications::alignment(Alignment::Center);
 
-        $this->configurePanelSwitch();
-
         FilamentAsset::register([
             Js::make('TopNavigation', __DIR__ . '/../../resources/js/TopNavigation.js'),
         ]);
-    }
-
-    /**
-     * Configure the panel switch.
-     */
-    protected function configurePanelSwitch(): void
-    {
-        PanelSwitch::configureUsing(function (PanelSwitch $panelSwitch) {
-            $panelSwitch
-                ->modalHeading('Switch Panel')
-                ->modalWidth('md')
-                ->slideOver()
-                ->excludes(['admin'])
-                ->iconSize(16)
-                ->icons(function () {
-                    if (auth()->user()?->belongsToCompany(auth()->user()?->currentCompany)) {
-                        return [
-                            'user' => 'heroicon-o-user',
-                            'company' => 'heroicon-o-building-office',
-                        ];
-                    }
-
-                    return [
-                        'user' => 'heroicon-o-user',
-                        'company' => 'icon-building-add',
-                    ];
-                });
-        });
     }
 }
