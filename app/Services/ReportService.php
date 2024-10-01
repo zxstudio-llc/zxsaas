@@ -312,7 +312,7 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns, $trialBalanceType);
     }
 
     public function getRetainedEarningsBalances(string $startDate, string $endDate): AccountBalanceDTO
