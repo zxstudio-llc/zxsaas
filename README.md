@@ -191,6 +191,29 @@ public static function getAllLanguages(): array
 }
 ```
 
+## Testing
+
+This project includes testing using [Pest](https://pestphp.com/). The current
+test suite covers some reporting features and other core functionality. While it's not yet a fully comprehensive test
+suite, it provides a foundation for testing critical features.
+
+### Setting Up the Testing Environment
+
+#### Create a testing database
+
+Ensure that you create a separate testing database named `erpsaas_test` in your database management system (e.g.,
+MySQL).
+
+```bash
+CREATE DATABASE erpsaas_test;
+```
+
+### Running Tests
+
+The testing process automatically handles refreshing and seeding the test database with each test run, so no manual
+migration is required. For more information on how to write and run tests using
+Pest, refer to the official documentation: [Pest Documentation](https://pestphp.com/docs).
+
 ## Dependencies
 
 - [filamentphp/filament](https://github.com/filamentphp/filament) - A collection of beautiful full-stack components
