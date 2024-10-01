@@ -63,11 +63,7 @@ class Transactions extends Page implements HasTable
 
     protected static ?string $model = Transaction::class;
 
-    protected static ?string $navigationParentItem = 'Chart of Accounts';
-
     protected static ?string $navigationGroup = 'Accounting';
-
-    public ?string $bankAccountIdFiltered = 'all';
 
     public string $fiscalYearStartDate = '';
 
@@ -96,6 +92,15 @@ class Transactions extends Page implements HasTable
         return [
             $this->buildTransactionAction('addIncome', 'Add Income', TransactionType::Deposit),
             $this->buildTransactionAction('addExpense', 'Add Expense', TransactionType::Withdrawal),
+            Actions\CreateAction::make('addTransfer')
+                ->label('Add Transfer')
+                ->modalHeading('Add Transfer')
+                ->modalWidth(MaxWidth::ThreeExtraLarge)
+                ->model(static::getModel())
+                ->fillForm(fn (): array => $this->getFormDefaultsForType(TransactionType::Transfer))
+                ->form(fn (Form $form) => $this->transferForm($form))
+                ->button()
+                ->outlined(),
             Actions\ActionGroup::make([
                 Actions\CreateAction::make('addJournalTransaction')
                     ->label('Add Journal Transaction')
@@ -124,21 +129,57 @@ class Transactions extends Page implements HasTable
         ];
     }
 
-    public function form(Form $form): Form
+    public function transferForm(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('bankAccountIdFiltered')
+                Forms\Components\DatePicker::make('posted_at')
+                    ->label('Date')
+                    ->required(),
+                Forms\Components\TextInput::make('description')
+                    ->label('Description'),
+                Forms\Components\Select::make('bank_account_id')
+                    ->label('From Account')
+                    ->options(fn (Get $get, ?Transaction $transaction) => $this->getBankAccountOptions(excludedAccountId: $get('account_id'), currentBankAccountId: $transaction?->bank_account_id))
                     ->live()
-                    ->allowHtml()
-                    ->hiddenLabel()
-                    ->columnSpan(2)
-                    ->label('Account')
-                    ->selectablePlaceholder(false)
-                    ->extraAttributes(['wire:key' => Str::random()])
-                    ->options(fn () => $this->getBankAccountOptions(true, true)),
+                    ->searchable()
+                    ->afterStateUpdated(function (Set $set, $state, $old, Get $get) {
+                        $amount = CurrencyConverter::convertAndSet(
+                            BankAccount::find($state)->account->currency_code,
+                            BankAccount::find($old)->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(),
+                            $get('amount')
+                        );
+
+                        if ($amount !== null) {
+                            $set('amount', $amount);
+                        }
+                    })
+                    ->required(),
+                Forms\Components\Select::make('type')
+                    ->label('Type')
+                    ->options([
+                        TransactionType::Transfer->value => TransactionType::Transfer->getLabel(),
+                    ])
+                    ->disabled()
+                    ->dehydrated()
+                    ->required(),
+                Forms\Components\TextInput::make('amount')
+                    ->label('Amount')
+                    ->money(static fn (Forms\Get $get) => BankAccount::find($get('bank_account_id'))?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency())
+                    ->required(),
+                Forms\Components\Select::make('account_id')
+                    ->label('To Account')
+                    ->live()
+                    ->options(fn (Get $get, ?Transaction $transaction) => $this->getBankAccountAccountOptions(excludedBankAccountId: $get('bank_account_id'), currentAccountId: $transaction?->account_id))
+                    ->searchable()
+                    ->required(),
+                Forms\Components\Textarea::make('notes')
+                    ->label('Notes')
+                    ->autosize()
+                    ->rows(10)
+                    ->columnSpanFull(),
             ])
-            ->columns(7);
+            ->columns();
     }
 
     public function transactionForm(Form $form): Form
@@ -222,16 +263,16 @@ class Transactions extends Page implements HasTable
                     'bankAccount.account',
                     'journalEntries.account',
                 ]);
-
-                if ($this->bankAccountIdFiltered !== 'all') {
-                    $query->where('bank_account_id', $this->bankAccountIdFiltered);
-                }
             })
             ->columns([
                 Tables\Columns\TextColumn::make('posted_at')
                     ->label('Date')
                     ->sortable()
                     ->defaultDateFormat(),
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Type')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')
                     ->limit(30)
@@ -241,6 +282,7 @@ class Transactions extends Page implements HasTable
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('account.name')
                     ->label('Category')
+                    ->prefix(static fn (Transaction $transaction) => $transaction->type->isTransfer() ? 'Transfer to ' : null)
                     ->toggleable()
                     ->state(static fn (Transaction $transaction) => $transaction->account->name ?? 'Journal Entry'),
                 Tables\Columns\TextColumn::make('amount')
@@ -253,68 +295,51 @@ class Transactions extends Page implements HasTable
                             default => null,
                         }
                     )
+                    ->sortable()
                     ->currency(static fn (Transaction $transaction) => $transaction->bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(), true),
             ])
             ->recordClasses(static fn (Transaction $transaction) => $transaction->reviewed ? 'bg-primary-300/10' : null)
             ->defaultSort('posted_at', 'desc')
             ->filters([
-                Tables\Filters\Filter::make('filters')
-                    ->columnSpanFull()
-                    ->form([
-                        Grid::make()
-                            ->schema([
-                                Select::make('account_id')
-                                    ->label('Category')
-                                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: true))
-                                    ->multiple()
-                                    ->searchable(),
-                                Select::make('reviewed')
-                                    ->label('Status')
-                                    ->native(false)
-                                    ->options([
-                                        '1' => 'Reviewed',
-                                        '0' => 'Not Reviewed',
-                                    ]),
-                                Select::make('type')
-                                    ->label('Type')
-                                    ->options(TransactionType::class)
-                                    ->multiple(),
-                            ])
-                            ->extraAttributes([
-                                'class' => 'border-b border-gray-200 dark:border-white/10 pb-8',
-                            ]),
-                    ])->query(function (Builder $query, array $data): Builder {
-                        if (filled($data['reviewed'])) {
-                            $reviewedStatus = $data['reviewed'] === '1';
-                            $query->where('reviewed', $reviewedStatus);
-                        }
-
-                        $query
-                            ->when($data['account_id'], fn (Builder $query, $accountIds) => $query->whereIn('account_id', $accountIds))
-                            ->when($data['type'], fn (Builder $query, $types) => $query->whereIn('type', $types));
-
-                        return $query;
-                    })
-                    ->indicateUsing(function (array $data): array {
-                        $indicators = [];
-
-                        $this->addIndicatorForSingleSelection($data, 'reviewed', $data['reviewed'] === '1' ? 'Reviewed' : 'Not Reviewed', $indicators);
-                        $this->addMultipleSelectionIndicator($data, 'account_id', fn ($accountId) => Account::find($accountId)->name, 'account_id', $indicators);
-                        $this->addMultipleSelectionIndicator($data, 'type', fn ($type) => TransactionType::parse($type)->getLabel(), 'type', $indicators);
-
-                        return $indicators;
-                    }),
+                Tables\Filters\SelectFilter::make('bank_account_id')
+                    ->label('Account')
+                    ->searchable()
+                    ->options(fn () => $this->getBankAccountOptions(false)),
+                Tables\Filters\SelectFilter::make('account_id')
+                    ->label('Category')
+                    ->multiple()
+                    ->options(fn () => $this->getChartAccountOptions(nominalAccountsOnly: false)),
+                Tables\Filters\TernaryFilter::make('reviewed')
+                    ->label('Status')
+                    ->native(false)
+                    ->trueLabel('Reviewed')
+                    ->falseLabel('Not Reviewed'),
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Type')
+                    ->native(false)
+                    ->options(TransactionType::class),
                 $this->buildDateRangeFilter('posted_at', 'Posted', true),
                 $this->buildDateRangeFilter('updated_at', 'Last Modified'),
             ], layout: Tables\Enums\FiltersLayout::Modal)
+            ->filtersFormSchema(fn (array $filters): array => [
+                Grid::make()
+                    ->schema([
+                        $filters['bank_account_id'],
+                        $filters['account_id'],
+                        $filters['reviewed'],
+                        $filters['type'],
+                    ])
+                    ->columnSpanFull()
+                    ->extraAttributes(['class' => 'border-b border-gray-200 dark:border-white/10 pb-8']),
+                $filters['posted_at'],
+                $filters['updated_at'],
+            ])
             ->deferFilters()
             ->deferLoading()
-            ->filtersFormColumns(2)
+            ->filtersFormWidth(MaxWidth::ThreeExtraLarge)
             ->filtersTriggerAction(
                 fn (Tables\Actions\Action $action) => $action
-                    ->stickyModalHeader()
-                    ->stickyModalFooter()
-                    ->modalWidth(MaxWidth::ThreeExtraLarge)
+                    ->slideOver()
                     ->modalFooterActionsAlignment(Alignment::End)
                     ->modalCancelAction(false)
                     ->extraModalFooterActions(function (Table $table) use ($action) {
@@ -360,7 +385,13 @@ class Transactions extends Page implements HasTable
                         ->modalHeading('Edit Transaction')
                         ->modalWidth(MaxWidth::ThreeExtraLarge)
                         ->form(fn (Form $form) => $this->transactionForm($form))
-                        ->hidden(static fn (Transaction $transaction) => $transaction->type->isJournal()),
+                        ->visible(static fn (Transaction $transaction) => $transaction->type->isStandard()),
+                    Tables\Actions\EditAction::make('updateTransfer')
+                        ->label('Edit Transfer')
+                        ->modalHeading('Edit Transfer')
+                        ->modalWidth(MaxWidth::ThreeExtraLarge)
+                        ->form(fn (Form $form) => $this->transferForm($form))
+                        ->visible(static fn (Transaction $transaction) => $transaction->type->isTransfer()),
                     Tables\Actions\EditAction::make('updateJournalTransaction')
                         ->label('Edit Journal Transaction')
                         ->modalHeading('Journal Entry')
@@ -392,9 +423,7 @@ class Transactions extends Page implements HasTable
                                 ])->save();
                             });
                         }),
-                ])
-                    ->dropdownPlacement('bottom-start')
-                    ->dropdownWidth('max-w-fit'),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -434,7 +463,7 @@ class Transactions extends Page implements HasTable
         ];
 
         return match ($type) {
-            TransactionType::Deposit, TransactionType::Withdrawal => array_merge($commonDefaults, $this->transactionDefaults($type)),
+            TransactionType::Deposit, TransactionType::Withdrawal, TransactionType::Transfer => array_merge($commonDefaults, $this->transactionDefaults($type)),
             TransactionType::Journal => array_merge($commonDefaults, $this->journalEntryDefaults()),
         };
     }
@@ -464,7 +493,7 @@ class Transactions extends Page implements HasTable
             'type' => $type,
             'bank_account_id' => BankAccount::where('enabled', true)->first()?->id,
             'amount' => '0.00',
-            'account_id' => static::getUncategorizedAccountByType($type)?->id,
+            'account_id' => ! $type->isTransfer() ? static::getUncategorizedAccountByType($type)->id : null,
         ];
     }
 
@@ -739,6 +768,46 @@ class Transactions extends Page implements HasTable
         return 'uncategorized';
     }
 
+    protected function getBankAccountOptions(?int $excludedAccountId = null, ?int $currentBankAccountId = null): array
+    {
+        return BankAccount::join('accounts', 'accounts.bank_account_id', '=', 'bank_accounts.id')
+            ->where('accounts.archived', false)
+            ->select(['bank_accounts.id', 'accounts.name', 'accounts.subtype_id'])
+            ->with(['account.subtype' => static function ($query) {
+                $query->select(['id', 'name']);
+            }])
+            ->when($excludedAccountId, function (Builder $query) use ($excludedAccountId) {
+                $query->whereNot('accounts.id', $excludedAccountId);
+            })
+            ->when($currentBankAccountId, function (Builder $query) use ($currentBankAccountId) {
+                // Ensure the current bank account is included even if archived
+                $query->orWhere('bank_accounts.id', $currentBankAccountId);
+            })
+            ->get()
+            ->groupBy('account.subtype.name')
+            ->map(fn (Collection $bankAccounts, string $subtype) => $bankAccounts->pluck('account.name', 'id'))
+            ->toArray();
+    }
+
+    protected function getBankAccountAccountOptions(?int $excludedBankAccountId = null, ?int $currentAccountId = null): array
+    {
+        return Account::query()
+            ->whereHas('bankAccount', function (Builder $query) use ($excludedBankAccountId) {
+                // Exclude the specific bank account if provided
+                if ($excludedBankAccountId) {
+                    $query->whereNot('id', $excludedBankAccountId);
+                }
+            })
+            ->where(function (Builder $query) use ($currentAccountId) {
+                $query->where('archived', false)
+                    ->orWhere('id', $currentAccountId);
+            })
+            ->get()
+            ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
+            ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
+            ->toArray();
+    }
+
     protected function getChartAccountOptions(?TransactionType $type = null, ?bool $nominalAccountsOnly = null, ?int $currentAccountId = null): array
     {
         $nominalAccountsOnly ??= false;
@@ -760,46 +829,6 @@ class Transactions extends Page implements HasTable
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
             ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
             ->toArray();
-    }
-
-    protected function getBankAccountOptions(?bool $onlyWithTransactions = null, ?bool $isFilter = null, ?int $currentBankAccountId = null): array
-    {
-        $isFilter ??= false;
-        $onlyWithTransactions ??= false;
-
-        $options = $isFilter ? [
-            '' => ['all' => "All Accounts <span class='float-right'>{$this->getBalanceForAllAccounts()}</span>"],
-        ] : [];
-
-        $bankAccountOptions = BankAccount::with('account.subtype')
-            ->whereHas('account', function (Builder $query) use ($isFilter, $currentBankAccountId) {
-                if ($isFilter === false) {
-                    $query->where('archived', false);
-                }
-
-                if ($currentBankAccountId) {
-                    $query->orWhereHas('bankAccount', function (Builder $query) use ($currentBankAccountId) {
-                        $query->where('id', $currentBankAccountId);
-                    });
-                }
-            })
-            ->when($onlyWithTransactions, fn (Builder $query) => $query->has('transactions'))
-            ->get()
-            ->groupBy('account.subtype.name')
-            ->mapWithKeys(function (Collection $bankAccounts, string $subtype) use ($isFilter) {
-                return [$subtype => $bankAccounts->mapWithKeys(static function (BankAccount $bankAccount) use ($isFilter) {
-                    $label = $bankAccount->account->name;
-                    if ($isFilter) {
-                        $balance = $bankAccount->account->ending_balance->convert()->formatWithCode(true);
-                        $label .= "<span class='float-right'>{$balance}</span>";
-                    }
-
-                    return [$bankAccount->id => $label];
-                })];
-            })
-            ->toArray();
-
-        return array_merge($options, $bankAccountOptions);
     }
 
     protected function getBalanceForAllAccounts(): string

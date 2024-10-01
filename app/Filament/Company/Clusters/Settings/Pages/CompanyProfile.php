@@ -62,7 +62,7 @@ class CompanyProfile extends Page
         return translate(static::$title);
     }
 
-    public function getMaxContentWidth(): MaxWidth
+    public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::ScreenTwoExtraLarge;
     }
@@ -183,7 +183,7 @@ class CompanyProfile extends Page
                     ->imageResizeMode('contain')
                     ->imageCropAspectRatio('1:1')
                     ->panelAspectRatio('1:1')
-                    ->panelLayout('compact')
+                    ->panelLayout('integrated')
                     ->removeUploadedFileButtonPosition('center bottom')
                     ->uploadButtonPosition('center bottom')
                     ->uploadProgressIndicatorPosition('center bottom')

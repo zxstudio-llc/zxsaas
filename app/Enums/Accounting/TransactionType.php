@@ -12,6 +12,7 @@ enum TransactionType: string implements HasLabel
     case Deposit = 'deposit';
     case Withdrawal = 'withdrawal';
     case Journal = 'journal';
+    case Transfer = 'transfer';
 
     public function getLabel(): ?string
     {
@@ -31,5 +32,15 @@ enum TransactionType: string implements HasLabel
     public function isJournal(): bool
     {
         return $this === self::Journal;
+    }
+
+    public function isTransfer(): bool
+    {
+        return $this === self::Transfer;
+    }
+
+    public function isStandard(): bool
+    {
+        return in_array($this, [self::Deposit, self::Withdrawal]);
     }
 }

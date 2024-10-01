@@ -132,10 +132,19 @@ class UpdateProfileInformation extends Component implements HasForms
             ->schema([
                 Forms\Components\FileUpload::make('profile_photo_path')
                     ->label('Photo')
-                    ->avatar()
                     ->extraAttributes([
                         'style' => 'width: 6rem; height: 6rem;',
                     ])
+                    ->panelLayout('compact circle')
+                    ->removeUploadedFileButtonPosition('center bottom')
+                    ->uploadButtonPosition('center bottom')
+                    ->imageResizeMode('cover')
+                    ->imageResizeUpscale(false)
+                    ->imageResizeTargetHeight('500')
+                    ->imageResizeTargetWidth('500')
+                    ->imageCropAspectRatio('1:1')
+                    ->uploadProgressIndicatorPosition('center bottom')
+                    ->loadingIndicatorPosition('center bottom')
                     ->placeholder(static function () {
                         return new HtmlString('
                             <div style="display: inline-block; cursor: pointer;">

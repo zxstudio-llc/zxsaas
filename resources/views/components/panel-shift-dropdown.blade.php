@@ -1,4 +1,5 @@
 @php
+    $user = filament()->auth()->user();
     $items = filament()->getUserMenuItems();
     $logoutItem = $items['logout'] ?? null;
     $currentTenant = filament()->getTenant();
@@ -15,12 +16,19 @@
     <div x-on:click="toggleDropdown" class="flex cursor-pointer">
         <button
             type="button"
-            class="fi-tenant-menu-trigger group flex w-full items-center justify-center gap-x-3 rounded-lg p-2 text-sm font-medium outline-none transition duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+            class="flex items-center justify-center gap-x-3 rounded-lg p-2 text-sm font-medium outline-none transition duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
         >
-            <x-filament-panels::avatar.tenant
-                :tenant="$currentTenant"
-                class="shrink-0"
-            />
+            @if($currentTenant)
+                <x-filament-panels::avatar.tenant
+                    :tenant="$currentTenant"
+                    class="shrink-0"
+                />
+            @else
+                <x-filament-panels::avatar.user
+                    :user="$user"
+                    class="shrink-0"
+                />
+            @endif
 
             <span class="grid justify-items-start text-start">
                 @if ($currentTenant instanceof \Filament\Models\Contracts\HasCurrentTenantLabel)
@@ -30,7 +38,7 @@
                 @endif
 
                 <span class="text-gray-950 dark:text-white">
-                    {{ $currentTenantName }}
+                    {{ $currentTenantName ?? filament()->getUserName($user) }}
                 </span>
             </span>
 

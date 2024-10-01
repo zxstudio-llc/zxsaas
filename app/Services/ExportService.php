@@ -12,14 +12,20 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportService
 {
-    public function exportToCsv(Company $company, ExportableReport $report, string $startDate, string $endDate): StreamedResponse
+    public function exportToCsv(Company $company, ExportableReport $report, ?string $startDate = null, ?string $endDate = null): StreamedResponse
     {
-        $formattedStartDate = Carbon::parse($startDate)->toDateString();
-        $formattedEndDate = Carbon::parse($endDate)->toDateString();
+        if ($startDate && $endDate) {
+            $formattedStartDate = Carbon::parse($startDate)->toDateString();
+            $formattedEndDate = Carbon::parse($endDate)->toDateString();
+            $dateLabel = $formattedStartDate . ' to ' . $formattedEndDate;
+        } else {
+            $formattedAsOfDate = Carbon::parse($endDate)->toDateString();
+            $dateLabel = $formattedAsOfDate;
+        }
 
         $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
 
-        $filename = $company->name . ' ' . $report->getTitle() . ' ' . $formattedStartDate . ' to ' . $formattedEndDate . ' ' . $timestamp . '.csv';
+        $filename = $company->name . ' ' . $report->getTitle() . ' ' . $dateLabel . ' ' . $timestamp . '.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
@@ -29,12 +35,17 @@ class ExportService
         $callback = function () use ($startDate, $endDate, $report, $company) {
             $file = fopen('php://output', 'wb');
 
-            $defaultStartDateFormat = Carbon::parse($startDate)->toDefaultDateFormat();
-            $defaultEndDateFormat = Carbon::parse($endDate)->toDefaultDateFormat();
+            if ($startDate && $endDate) {
+                $defaultStartDateFormat = Carbon::parse($startDate)->toDefaultDateFormat();
+                $defaultEndDateFormat = Carbon::parse($endDate)->toDefaultDateFormat();
+                $dateLabel = 'Date Range: ' . $defaultStartDateFormat . ' to ' . $defaultEndDateFormat;
+            } else {
+                $dateLabel = 'As of ' . Carbon::parse($endDate)->toDefaultDateFormat();
+            }
 
             fputcsv($file, [$report->getTitle()]);
             fputcsv($file, [$company->name]);
-            fputcsv($file, ['Date Range: ' . $defaultStartDateFormat . ' to ' . $defaultEndDateFormat]);
+            fputcsv($file, [$dateLabel]);
             fputcsv($file, []);
 
             fputcsv($file, $report->getHeaders());
@@ -92,20 +103,26 @@ class ExportService
         return response()->streamDownload($callback, $filename, $headers);
     }
 
-    public function exportToPdf(Company $company, ExportableReport $report, string $startDate, string $endDate): StreamedResponse
+    public function exportToPdf(Company $company, ExportableReport $report, ?string $startDate = null, ?string $endDate = null): StreamedResponse
     {
-        $formattedStartDate = Carbon::parse($startDate)->toDateString();
-        $formattedEndDate = Carbon::parse($endDate)->toDateString();
+        if ($startDate && $endDate) {
+            $formattedStartDate = Carbon::parse($startDate)->toDateString();
+            $formattedEndDate = Carbon::parse($endDate)->toDateString();
+            $dateLabel = $formattedStartDate . ' to ' . $formattedEndDate;
+        } else {
+            $formattedAsOfDate = Carbon::parse($endDate)->toDateString();
+            $dateLabel = $formattedAsOfDate;
+        }
 
         $timestamp = Carbon::now()->format('Y-m-d_H-i-s');
 
-        $filename = $company->name . ' ' . $report->getTitle() . ' ' . $formattedStartDate . ' to ' . $formattedEndDate . ' ' . $timestamp . '.pdf';
+        $filename = $company->name . ' ' . $report->getTitle() . ' ' . $dateLabel . ' ' . $timestamp . '.pdf';
 
         $pdf = SnappyPdf::loadView($report->getPdfView(), [
             'company' => $company,
             'report' => $report,
-            'startDate' => Carbon::parse($startDate)->toDefaultDateFormat(),
-            'endDate' => Carbon::parse($endDate)->toDefaultDateFormat(),
+            'startDate' => $startDate ? Carbon::parse($startDate)->toDefaultDateFormat() : null,
+            'endDate' => $endDate ? Carbon::parse($endDate)->toDefaultDateFormat() : null,
         ]);
 
         return response()->streamDownload(function () use ($pdf) {

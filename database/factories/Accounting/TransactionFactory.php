@@ -2,13 +2,16 @@
 
 namespace Database\Factories\Accounting;
 
-use App\Enums\Accounting\JournalEntryType;
+use App\Enums\Accounting\AccountType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
+use App\Models\Setting\CompanyDefault;
+use App\Services\TransactionService;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Transaction>
@@ -45,35 +48,9 @@ class TransactionFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Transaction $transaction) {
-            $chartAccount = $transaction->account;
-            $bankAccount = $transaction->bankAccount->account;
-
-            $debitAccount = $transaction->type->isWithdrawal() ? $chartAccount : $bankAccount;
-            $creditAccount = $transaction->type->isWithdrawal() ? $bankAccount : $chartAccount;
-
-            if ($debitAccount === null || $creditAccount === null) {
-                return;
+            if (DB::getDefaultConnection() === 'sqlite') {
+                app(TransactionService::class)->createJournalEntries($transaction);
             }
-
-            $debitAccount->journalEntries()->create([
-                'company_id' => $transaction->company_id,
-                'transaction_id' => $transaction->id,
-                'type' => JournalEntryType::Debit,
-                'amount' => $transaction->amount,
-                'description' => $transaction->description,
-                'created_by' => $transaction->created_by,
-                'updated_by' => $transaction->updated_by,
-            ]);
-
-            $creditAccount->journalEntries()->create([
-                'company_id' => $transaction->company_id,
-                'transaction_id' => $transaction->id,
-                'type' => JournalEntryType::Credit,
-                'amount' => $transaction->amount,
-                'description' => $transaction->description,
-                'created_by' => $transaction->created_by,
-                'updated_by' => $transaction->updated_by,
-            ]);
         });
     }
 
@@ -93,13 +70,74 @@ class TransactionFactory extends Factory
                 ->where('company_id', $company->id)
                 ->where('id', '<>', $accountIdForBankAccount)
                 ->inRandomOrder()
-                ->firstOrFail();
+                ->first();
+
+            // If no matching account is found, use a fallback
+            if (! $account) {
+                $account = Account::where('company_id', $company->id)
+                    ->where('id', '<>', $accountIdForBankAccount)
+                    ->inRandomOrder()
+                    ->firstOrFail(); // Ensure there is at least some account
+            }
 
             return [
                 'company_id' => $company->id,
                 'bank_account_id' => $bankAccount->id,
                 'account_id' => $account->id,
                 'type' => $type,
+            ];
+        });
+    }
+
+    public function forDefaultBankAccount(): static
+    {
+        return $this->state(function (array $attributes) {
+            $defaultBankAccount = CompanyDefault::first()->bankAccount;
+
+            return [
+                'bank_account_id' => $defaultBankAccount->id,
+            ];
+        });
+    }
+
+    public function forUncategorizedRevenue(): static
+    {
+        return $this->state(function (array $attributes) {
+            $account = Account::where('type', AccountType::UncategorizedRevenue)->firstOrFail();
+
+            return [
+                'account_id' => $account->id,
+            ];
+        });
+    }
+
+    public function forUncategorizedExpense(): static
+    {
+        return $this->state(function (array $attributes) {
+            $account = Account::where('type', AccountType::UncategorizedExpense)->firstOrFail();
+
+            return [
+                'account_id' => $account->id,
+            ];
+        });
+    }
+
+    public function asDeposit(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Deposit,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    public function asWithdrawal(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Withdrawal,
+                'amount' => $amount,
             ];
         });
     }

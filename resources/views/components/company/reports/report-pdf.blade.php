@@ -93,7 +93,11 @@
 <div class="header">
     <div class="title">{{ $report->getTitle() }}</div>
     <div class="company-name">{{ $company->name }}</div>
-    <div class="date-range">Date Range: {{ $startDate }} to {{ $endDate }}</div>
+    @if($startDate && $endDate)
+        <div class="date-range">Date Range: {{ $startDate }} to {{ $endDate }}</div>
+    @else
+        <div class="date-range">As of {{ $endDate }}</div>
+    @endif
 </div>
 <table class="table-class">
     <thead class="table-head">

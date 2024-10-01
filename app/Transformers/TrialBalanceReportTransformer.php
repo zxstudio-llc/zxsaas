@@ -10,7 +10,10 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
 {
     public function getTitle(): string
     {
-        return 'Trial Balance';
+        return match ($this->report->reportType) {
+            'postClosing' => 'Post-Closing Trial Balance',
+            default => 'Standard Trial Balance',
+        };
     }
 
     public function getHeaders(): array

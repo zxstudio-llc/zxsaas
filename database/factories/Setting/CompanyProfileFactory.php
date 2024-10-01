@@ -3,8 +3,8 @@
 namespace Database\Factories\Setting;
 
 use App\Enums\Setting\EntityType;
-use App\Faker\PhoneNumber;
 use App\Faker\State;
+use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,26 +25,34 @@ class CompanyProfileFactory extends Factory
      */
     public function definition(): array
     {
+        $countryCode = $this->faker->countryCode;
+
         return [
             'address' => $this->faker->streetAddress,
             'zip_code' => $this->faker->postcode,
+            'state_id' => $this->faker->state($countryCode),
+            'country' => $countryCode,
+            'phone_number' => $this->faker->phoneNumberForCountryCode($countryCode),
             'email' => $this->faker->email,
             'entity_type' => $this->faker->randomElement(EntityType::class),
         ];
     }
 
-    public function withCountry(string $code): static
+    public function withCountry(string $code): self
     {
-        /** @var PhoneNumber $phoneFaker */
-        $phoneFaker = $this->faker;
-
-        /** @var State $stateFaker */
-        $stateFaker = $this->faker;
-
         return $this->state([
             'country' => $code,
-            'state_id' => $stateFaker->state($code),
-            'phone_number' => $phoneFaker->phoneNumberForCountryCode($code),
+            'state_id' => $this->faker->state($code),
+            'phone_number' => $this->faker->phoneNumberForCountryCode($code),
+        ]);
+    }
+
+    public function forCompany(Company $company): self
+    {
+        return $this->state([
+            'company_id' => $company->id,
+            'created_by' => $company->owner->id,
+            'updated_by' => $company->owner->id,
         ]);
     }
 }

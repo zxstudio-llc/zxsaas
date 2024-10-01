@@ -193,7 +193,7 @@ class PanelShiftDropdown implements Plugin
             $panels['main']['items'][] = [
                 'panelId' => $companySettingsId,
                 'label' => 'Company Settings',
-                'icon' => 'heroicon-m-building-office-2',
+                'icon' => 'heroicon-s-building-office-2',
             ];
 
             $panels[$companySettingsId] = [

@@ -1,6 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     handleTopbarAndSidebarHover();
-
     handleScroll();
 });
 
@@ -10,18 +9,25 @@ const handleTopbarAndSidebarHover = () => {
 
     const addHoveredClass = () => {
         topbarNav.classList.add('topbar-hovered');
-        sidebarHeader.classList.add('topbar-hovered');
+        if (sidebarHeader) {
+            sidebarHeader.classList.add('topbar-hovered');
+        }
     };
 
     const removeHoveredClass = () => {
         topbarNav.classList.remove('topbar-hovered');
-        sidebarHeader.classList.remove('topbar-hovered');
+        if (sidebarHeader) {
+            sidebarHeader.classList.remove('topbar-hovered');
+        }
     };
 
     topbarNav.addEventListener('mouseenter', addHoveredClass);
-    sidebarHeader.addEventListener('mouseenter', addHoveredClass);
     topbarNav.addEventListener('mouseleave', removeHoveredClass);
-    sidebarHeader.addEventListener('mouseleave', removeHoveredClass);
+
+    if (sidebarHeader) {
+        sidebarHeader.addEventListener('mouseenter', addHoveredClass);
+        sidebarHeader.addEventListener('mouseleave', removeHoveredClass);
+    }
 };
 
 const handleScroll = () => {
@@ -31,11 +37,16 @@ const handleScroll = () => {
     window.addEventListener('scroll', () => {
         if (window.scrollY > 0) {
             topbarNav.classList.add('topbar-scrolled');
-            sidebarHeader.classList.add('topbar-scrolled');
+            if (sidebarHeader) {
+                sidebarHeader.classList.add('topbar-scrolled');
+            }
         } else {
             topbarNav.classList.remove('topbar-scrolled');
-            sidebarHeader.classList.remove('topbar-scrolled');
+            if (sidebarHeader) {
+                sidebarHeader.classList.remove('topbar-scrolled');
+            }
         }
     });
-}
+};
+
 

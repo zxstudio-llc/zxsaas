@@ -28,9 +28,7 @@ class DateRangeSelect extends Select
         $this->options(app(DateRangeService::class)->getDateRangeOptions())
             ->live()
             ->afterStateUpdated(function ($state, Set $set) {
-                if ($this->startDateField && $this->endDateField) {
-                    $this->updateDateRange($state, $set);
-                }
+                $this->updateDateRange($state, $set);
             });
     }
 
@@ -48,11 +46,26 @@ class DateRangeSelect extends Select
         return $this;
     }
 
+    public function getStartDateField(): ?string
+    {
+        return $this->startDateField;
+    }
+
+    public function getEndDateField(): ?string
+    {
+        return $this->endDateField;
+    }
+
     public function updateDateRange($state, Set $set): void
     {
         if ($state === null) {
-            $set($this->startDateField, null);
-            $set($this->endDateField, null);
+            if ($this->startDateField) {
+                $set($this->startDateField, null);
+            }
+
+            if ($this->endDateField) {
+                $set($this->endDateField, null);
+            }
 
             return;
         }
@@ -116,7 +129,12 @@ class DateRangeSelect extends Select
 
     public function setDateRange(Carbon $start, Carbon $end, Set $set): void
     {
-        $set($this->startDateField, $start->startOfDay()->toDateTimeString());
-        $set($this->endDateField, $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString());
+        if ($this->startDateField) {
+            $set($this->startDateField, $start->startOfDay()->toDateTimeString());
+        }
+
+        if ($this->endDateField) {
+            $set($this->endDateField, $end->isFuture() ? now()->endOfDay()->toDateTimeString() : $end->endOfDay()->toDateTimeString());
+        }
     }
 }
