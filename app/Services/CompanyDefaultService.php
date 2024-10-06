@@ -13,21 +13,18 @@ class CompanyDefaultService
     {
         DB::transaction(function () use ($user, $company, $currencyCode, $countryCode, $language) {
             // Create the company defaults
-            $companyDefaultFactory = CompanyDefault::factory()->withDefault($user, $company, $currencyCode, $countryCode, $language);
-            $companyDefaults = $companyDefaultFactory->make()->toArray();
-
-            $companyDefault = CompanyDefault::create($companyDefaults);
+            $companyDefaultInstance = CompanyDefault::factory()->withDefault($user, $company, $currencyCode, $countryCode, $language);
 
             // Create Chart of Accounts
-            $chartOfAccountsService = app()->make(ChartOfAccountsService::class);
+            $chartOfAccountsService = app(ChartOfAccountsService::class);
             $chartOfAccountsService->createChartOfAccounts($company);
 
             // Get the default bank account and update the company default record
-            $defaultBankAccount = $chartOfAccountsService->getDefaultBankAccount($company);
+            $defaultBankAccount = $company->bankAccounts()->where('enabled', true)->firstOrFail();
 
-            $companyDefault->update([
-                'bank_account_id' => $defaultBankAccount?->id,
-            ]);
-        }, 5);
+            $companyDefaultInstance->state([
+                'bank_account_id' => $defaultBankAccount->id,
+            ])->createQuietly();
+        });
     }
 }

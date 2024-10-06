@@ -9,9 +9,7 @@ use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Models\Setting\CompanyDefault;
-use App\Services\TransactionService;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Transaction>
@@ -43,15 +41,6 @@ class TransactionFactory extends Factory
             'created_by' => 1,
             'updated_by' => 1,
         ];
-    }
-
-    public function configure(): static
-    {
-        return $this->afterCreating(function (Transaction $transaction) {
-            if (DB::getDefaultConnection() === 'sqlite') {
-                app(TransactionService::class)->createJournalEntries($transaction);
-            }
-        });
     }
 
     public function forCompanyAndBankAccount(Company $company, BankAccount $bankAccount): static

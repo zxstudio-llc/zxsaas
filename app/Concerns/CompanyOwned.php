@@ -17,13 +17,9 @@ trait CompanyOwned
             if (empty($model->company_id)) {
                 $companyId = session('current_company_id');
 
-                if (! $companyId && Auth::check() && Auth::user()->currentCompany) {
+                if (! $companyId && Auth::check()) {
                     $companyId = Auth::user()->currentCompany->id;
                     session(['current_company_id' => $companyId]);
-                }
-
-                if (! $companyId) {
-                    $companyId = Auth::user()->currentCompany->id;
                 }
 
                 if ($companyId) {

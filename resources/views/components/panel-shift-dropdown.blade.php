@@ -61,11 +61,11 @@
                         <x-panel-shift-dropdown.content-handler :item="$item"/>
                     @endforeach
                 @endif
-                @if($panelId === 'company-settings')
+                @if($panelId === 'company-settings' && $currentTenant)
                     <x-panel-shift-dropdown.company-settings :current-tenant="$currentTenant"
                                                              icon="heroicon-m-building-office-2"/>
                 @endif
-                @if($panelId === 'company-switcher')
+                @if($panelId === 'company-switcher' && $currentTenant)
                     <x-panel-shift-dropdown.company-switcher :current-tenant="$currentTenant"
                                                              icon="heroicon-m-adjustments-horizontal"/>
                 @endif

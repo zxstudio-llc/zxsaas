@@ -25,12 +25,22 @@ class TaxFactory extends Factory
      */
     public function definition(): array
     {
+        $computation = $this->faker->randomElement(TaxComputation::class);
+
+        if ($computation === TaxComputation::Fixed) {
+            $rate = $this->faker->biasedNumberBetween(1, 10) * 100; // $1 - $10
+        } else {
+            $rate = $this->faker->biasedNumberBetween(3, 25) * 10000; // 3% - 25%
+        }
+
         return [
+            'name' => $this->faker->unique()->word,
             'description' => $this->faker->sentence,
-            'rate' => $this->faker->biasedNumberBetween(300, 5000) * 100, // 3% - 50%
-            'computation' => $this->faker->randomElement(TaxComputation::class),
+            'rate' => $rate,
+            'computation' => $computation,
+            'type' => $this->faker->randomElement(TaxType::class),
             'scope' => $this->faker->randomElement(TaxScope::class),
-            'enabled' => true,
+            'enabled' => false,
         ];
     }
 
@@ -38,7 +48,6 @@ class TaxFactory extends Factory
     {
         return $this->state([
             'name' => 'State Sales Tax',
-            'rate' => $this->faker->biasedNumberBetween(300, 1200) * 100, // 3% - 12%
             'type' => TaxType::Sales,
         ]);
     }
@@ -47,7 +56,6 @@ class TaxFactory extends Factory
     {
         return $this->state([
             'name' => 'State Purchase Tax',
-            'rate' => $this->faker->biasedNumberBetween(300, 1200) * 100, // 3% - 12%
             'type' => TaxType::Purchase,
         ]);
     }

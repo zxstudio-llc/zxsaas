@@ -229,6 +229,8 @@ class TransactionService
                 'type' => JournalEntryType::Debit,
                 'amount' => $convertedTransactionAmount,
                 'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
             ]);
 
             $creditAccount->journalEntries()->create([
@@ -237,6 +239,8 @@ class TransactionService
                 'type' => JournalEntryType::Credit,
                 'amount' => $convertedTransactionAmount,
                 'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
             ]);
         });
     }

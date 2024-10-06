@@ -50,13 +50,13 @@ class DiscountResource extends Resource
                             ->localizeLabel()
                             ->maxLength(255)
                             ->rule(static function (Forms\Get $get, Forms\Components\Component $component): Closure {
-                                return static function (string $attribute, $value, Closure $fail) use ($get, $component) {
-                                    $existingDiscount = Discount::where('company_id', auth()->user()->currentCompany->id)
-                                        ->where('name', $value)
+                                return static function (string $attribute, $value, Closure $fail) use ($component, $get) {
+                                    $existingDiscount = Discount::where('name', $value)
+                                        ->whereKeyNot($component->getRecord()?->getKey())
                                         ->where('type', $get('type'))
                                         ->first();
 
-                                    if ($existingDiscount && $existingDiscount->getKey() !== $component->getRecord()?->getKey()) {
+                                    if ($existingDiscount) {
                                         $message = translate('The :Type :record ":name" already exists.', [
                                             'Type' => $existingDiscount->type->getLabel(),
                                             'record' => strtolower(static::getModelLabel()),
@@ -90,35 +90,13 @@ class DiscountResource extends Resource
                             ->nullable(),
                         Forms\Components\DateTimePicker::make('start_date')
                             ->localizeLabel()
-                            ->minDate(static function ($context, ?Discount $record = null) {
-                                if ($context === 'create' || $record?->start_date?->isFuture()) {
-                                    return today()->addDay();
-                                }
-
-                                return $record?->start_date;
-                            })
-                            ->maxDate(static function (callable $get, ?Discount $record = null) {
-                                $end_date = $get('end_date') ?? $record?->end_date;
-
-                                return $end_date ?: today()->addYear();
-                            })
-                            ->format('Y-m-d H:i:s')
-                            ->displayFormat('F d, Y H:i')
+                            ->beforeOrEqual('end_date')
                             ->seconds(false)
-                            ->live()
-                            ->disabled(static fn ($context, ?Discount $record = null) => $context === 'edit' && $record?->start_date?->isPast() ?? false)
+                            ->disabled(static fn (string $operation, ?Discount $record = null) => $operation === 'edit' && $record?->start_date?->isPast() ?? false)
                             ->helperText(static fn (Forms\Components\DateTimePicker $component) => $component->isDisabled() ? 'Start date cannot be changed after the discount has begun.' : null),
                         Forms\Components\DateTimePicker::make('end_date')
-                            ->live()
                             ->localizeLabel()
-                            ->minDate(static function (callable $get, ?Discount $record = null) {
-                                $start_date = $get('start_date') ?? $record?->start_date;
-
-                                return $start_date ?: today()->addDay();
-                            })
-                            ->maxDate(today()->addYear())
-                            ->format('Y-m-d H:i:s')
-                            ->displayFormat('F d, Y H:i')
+                            ->afterOrEqual('start_date')
                             ->seconds(false),
                         ToggleButton::make('enabled')
                             ->localizeLabel('Default')
@@ -137,12 +115,14 @@ class DiscountResource extends Resource
                     ->weight(FontWeight::Medium)
                     ->icon(static fn (Discount $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static function (Discount $record) {
-                        $tooltipMessage = translate('Default :Type :Record', [
+                        if ($record->isDisabled()) {
+                            return null;
+                        }
+
+                        return translate('Default :Type :Record', [
                             'Type' => $record->type->getLabel(),
                             'Record' => static::getModelLabel(),
                         ]);
-
-                        return $record->isEnabled() ? $tooltipMessage : null;
                     })
                     ->iconPosition('after')
                     ->searchable()
