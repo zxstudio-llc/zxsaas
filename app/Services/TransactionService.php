@@ -249,12 +249,9 @@ class TransactionService
     {
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
         $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
-        $chartAccountCurrency = $transaction->account->currency_code;
 
         if ($bankAccountCurrency !== $defaultCurrency) {
             return $this->convertToDefaultCurrency($transaction->amount, $bankAccountCurrency, $defaultCurrency);
-        } elseif ($chartAccountCurrency !== $defaultCurrency) {
-            return $this->convertToDefaultCurrency($transaction->amount, $chartAccountCurrency, $defaultCurrency);
         }
 
         return $transaction->amount;

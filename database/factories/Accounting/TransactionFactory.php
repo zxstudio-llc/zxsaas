@@ -89,6 +89,28 @@ class TransactionFactory extends Factory
         });
     }
 
+    public function forBankAccount(?BankAccount $bankAccount = null): static
+    {
+        return $this->state(function (array $attributes) use ($bankAccount) {
+            $bankAccount = $bankAccount ?? BankAccount::factory()->create();
+
+            return [
+                'bank_account_id' => $bankAccount->id,
+            ];
+        });
+    }
+
+    public function forDestinationBankAccount(?Account $account = null): static
+    {
+        return $this->state(function (array $attributes) use ($account) {
+            $destinationBankAccount = $account ?? Account::factory()->withBankAccount('Destination Bank Account')->create();
+
+            return [
+                'account_id' => $destinationBankAccount->id,
+            ];
+        });
+    }
+
     public function forUncategorizedRevenue(): static
     {
         return $this->state(function (array $attributes) {
@@ -126,6 +148,26 @@ class TransactionFactory extends Factory
         return $this->state(function () use ($amount) {
             return [
                 'type' => TransactionType::Withdrawal,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    public function asJournal(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Journal,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    public function asTransfer(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Transfer,
                 'amount' => $amount,
             ];
         });
