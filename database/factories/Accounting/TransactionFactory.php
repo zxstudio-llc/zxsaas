@@ -133,6 +133,18 @@ class TransactionFactory extends Factory
         });
     }
 
+    public function forAccount(Account $account): static
+    {
+        return $this->state([
+            'account_id' => $account->id,
+        ]);
+    }
+
+    public function forType(TransactionType $type, int $amount): static
+    {
+        return $this->state(compact('type', 'amount'));
+    }
+
     public function asDeposit(int $amount): static
     {
         return $this->state(function () use ($amount) {
