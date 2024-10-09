@@ -4,11 +4,11 @@ namespace App\Services;
 
 use App\Enums\Accounting\AccountType;
 use App\Enums\Banking\BankAccountType;
-use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Utilities\Currency\CurrencyAccessor;
+use Exception;
 
 class ChartOfAccountsService
 {
@@ -18,16 +18,27 @@ class ChartOfAccountsService
 
         foreach ($chartOfAccounts as $type => $subtypes) {
             foreach ($subtypes as $subtypeName => $subtypeConfig) {
-                $subtype = AccountSubtype::create([
-                    'company_id' => $company->id,
-                    'multi_currency' => $subtypeConfig['multi_currency'] ?? false,
-                    'category' => AccountType::from($type)->getCategory()->value,
-                    'type' => $type,
-                    'name' => $subtypeName,
-                    'description' => $subtypeConfig['description'] ?? 'No description available.',
-                ]);
+                $subtype = $company->accountSubtypes()
+                    ->createQuietly([
+                        'multi_currency' => $subtypeConfig['multi_currency'] ?? false,
+                        'category' => AccountType::from($type)->getCategory()->value,
+                        'type' => $type,
+                        'name' => $subtypeName,
+                        'description' => $subtypeConfig['description'] ?? 'No description available.',
+                    ]);
 
-                $this->createDefaultAccounts($company, $subtype, $subtypeConfig);
+                try {
+                    $this->createDefaultAccounts($company, $subtype, $subtypeConfig);
+                } catch (Exception $e) {
+                    // Log the error
+                    logger()->alert('Failed to create a company with its defaults, blocking critical business functionality.', [
+                        'error' => $e->getMessage(),
+                        'userId' => $company->owner->id,
+                        'companyId' => $company->id,
+                    ]);
+
+                    throw $e;
+                }
             }
         }
     }
@@ -37,6 +48,12 @@ class ChartOfAccountsService
         if (isset($subtypeConfig['accounts']) && is_array($subtypeConfig['accounts'])) {
             $baseCode = $subtypeConfig['base_code'];
 
+            $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
+
+            if (empty($defaultCurrencyCode)) {
+                throw new Exception('No default currency available for creating accounts.');
+            }
+
             foreach ($subtypeConfig['accounts'] as $accountName => $accountDetails) {
                 $bankAccount = null;
 
@@ -44,46 +61,32 @@ class ChartOfAccountsService
                     $bankAccount = $this->createBankAccountForMultiCurrency($company, $subtypeConfig['bank_account_type']);
                 }
 
-                $account = Account::create([
-                    'company_id' => $company->id,
+                $company->accounts()->createQuietly([
+                    'bank_account_id' => $bankAccount?->id,
                     'subtype_id' => $subtype->id,
                     'category' => $subtype->type->getCategory()->value,
                     'type' => $subtype->type->value,
                     'code' => $baseCode++,
                     'name' => $accountName,
-                    'currency_code' => CurrencyAccessor::getDefaultCurrency(),
+                    'currency_code' => $defaultCurrencyCode,
                     'description' => $accountDetails['description'] ?? 'No description available.',
                     'default' => true,
                     'created_by' => $company->owner->id,
                     'updated_by' => $company->owner->id,
                 ]);
-
-                if ($bankAccount) {
-                    $account->bankAccount()->associate($bankAccount);
-                }
-
-                $account->save();
             }
         }
     }
 
     private function createBankAccountForMultiCurrency(Company $company, string $bankAccountType): BankAccount
     {
-        $bankAccountType = BankAccountType::from($bankAccountType) ?? BankAccountType::Other;
+        $noDefaultBankAccount = $company->bankAccounts()->where('enabled', true)->doesntExist();
 
-        return BankAccount::create([
-            'company_id' => $company->id,
-            'institution_id' => null,
-            'type' => $bankAccountType,
-            'number' => null,
-            'enabled' => BankAccount::where('company_id', $company->id)->where('enabled', true)->doesntExist(),
+        return $company->bankAccounts()->createQuietly([
+            'type' => BankAccountType::from($bankAccountType) ?? BankAccountType::Other,
+            'enabled' => $noDefaultBankAccount,
             'created_by' => $company->owner->id,
             'updated_by' => $company->owner->id,
         ]);
-    }
-
-    public function getDefaultBankAccount(Company $company): ?BankAccount
-    {
-        return $company->bankAccounts()->where('enabled', true)->first();
     }
 }

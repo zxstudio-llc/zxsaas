@@ -171,16 +171,24 @@ class MacroServiceProvider extends ServiceProvider
 
         Money::macro('swapAmountFor', function ($newCurrency) {
             $oldCurrency = $this->currency->getCurrency();
-            $balanceInMajorUnits = $this->getAmount();
+            $balanceInSubunits = $this->getAmount();
+
+            $oldCurrencySubunit = currency($oldCurrency)->getSubunit();
+            $newCurrencySubunit = currency($newCurrency)->getSubunit();
+
+            $balanceInMajorUnits = $balanceInSubunits / $oldCurrencySubunit;
 
             $oldRate = currency($oldCurrency)->getRate();
             $newRate = currency($newCurrency)->getRate();
 
             $ratio = $newRate / $oldRate;
+            $convertedBalanceInMajorUnits = $balanceInMajorUnits * $ratio;
 
-            $convertedBalance = bcmul($balanceInMajorUnits, $ratio, 2);
+            $roundedConvertedBalanceInMajorUnits = round($convertedBalanceInMajorUnits, currency($newCurrency)->getPrecision());
 
-            return (int) round($convertedBalance);
+            $convertedBalanceInSubunits = $roundedConvertedBalanceInMajorUnits * $newCurrencySubunit;
+
+            return (int) round($convertedBalanceInSubunits);
         });
 
         Money::macro('formatWithCode', function (bool $codeBefore = false) {

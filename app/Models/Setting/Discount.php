@@ -51,6 +51,8 @@ class Discount extends Model
         'enabled' => 'boolean',
     ];
 
+    protected ?string $evaluatedDefault = 'type';
+
     public function defaultSalesDiscount(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'sales_discount_id');

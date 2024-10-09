@@ -47,13 +47,13 @@ class TaxResource extends Resource
                             ->localizeLabel()
                             ->maxLength(255)
                             ->rule(static function (Forms\Get $get, Forms\Components\Component $component): Closure {
-                                return static function (string $attribute, $value, Closure $fail) use ($get, $component) {
-                                    $existingTax = Tax::where('company_id', auth()->user()->currentCompany->id)
-                                        ->where('name', $value)
+                                return static function (string $attribute, $value, Closure $fail) use ($component, $get) {
+                                    $existingTax = Tax::where('name', $value)
+                                        ->whereKeyNot($component->getRecord()?->getKey())
                                         ->where('type', $get('type'))
                                         ->first();
 
-                                    if ($existingTax && $existingTax->getKey() !== $component->getRecord()?->getKey()) {
+                                    if ($existingTax) {
                                         $message = translate('The :Type :record ":name" already exists.', [
                                             'Type' => $existingTax->type->getLabel(),
                                             'record' => strtolower(static::getModelLabel()),
@@ -100,12 +100,14 @@ class TaxResource extends Resource
                     ->weight(FontWeight::Medium)
                     ->icon(static fn (Tax $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static function (Tax $record) {
-                        $tooltipMessage = translate('Default :Type :Record', [
+                        if ($record->isDisabled()) {
+                            return null;
+                        }
+
+                        return translate('Default :Type :Record', [
                             'Type' => $record->type->getLabel(),
                             'Record' => static::getModelLabel(),
                         ]);
-
-                        return $record->isEnabled() ? $tooltipMessage : null;
                     })
                     ->iconPosition('after')
                     ->searchable()

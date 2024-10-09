@@ -229,6 +229,8 @@ class TransactionService
                 'type' => JournalEntryType::Debit,
                 'amount' => $convertedTransactionAmount,
                 'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
             ]);
 
             $creditAccount->journalEntries()->create([
@@ -237,6 +239,8 @@ class TransactionService
                 'type' => JournalEntryType::Credit,
                 'amount' => $convertedTransactionAmount,
                 'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
             ]);
         });
     }
@@ -245,12 +249,9 @@ class TransactionService
     {
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
         $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
-        $chartAccountCurrency = $transaction->account->currency_code;
 
         if ($bankAccountCurrency !== $defaultCurrency) {
             return $this->convertToDefaultCurrency($transaction->amount, $bankAccountCurrency, $defaultCurrency);
-        } elseif ($chartAccountCurrency !== $defaultCurrency) {
-            return $this->convertToDefaultCurrency($transaction->amount, $chartAccountCurrency, $defaultCurrency);
         }
 
         return $transaction->amount;

@@ -3,15 +3,18 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class TestDatabaseSeeder extends Seeder
 {
+    use WithoutModelEvents;
+
     public function run(): void
     {
         User::factory()
             ->withPersonalCompany()
-            ->createQuietly([
+            ->create([
                 'name' => 'Test Company Owner',
                 'email' => 'test@gmail.com',
                 'password' => bcrypt('password'),

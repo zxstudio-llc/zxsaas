@@ -2,13 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Accounting\Transaction;
 use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use App\Models\User;
 use App\Services\CompanyDefaultService;
-use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 class CompanyFactory extends Factory
 {
@@ -36,7 +35,7 @@ class CompanyFactory extends Factory
     public function withCompanyProfile(): self
     {
         return $this->afterCreating(function (Company $company) {
-            CompanyProfile::factory()->forCompany($company)->create();
+            CompanyProfile::factory()->forCompany($company)->withCountry('US')->create();
         });
     }
 
@@ -46,11 +45,9 @@ class CompanyFactory extends Factory
     public function withCompanyDefaults(): self
     {
         return $this->afterCreating(function (Company $company) {
-            DB::transaction(function () use ($company) {
-                $countryCode = $company->profile->country;
-                $companyDefaultService = app(CompanyDefaultService::class);
-                $companyDefaultService->createCompanyDefaults($company, $company->owner, 'USD', $countryCode, 'en');
-            });
+            $countryCode = $company->profile->country;
+            $companyDefaultService = app(CompanyDefaultService::class);
+            $companyDefaultService->createCompanyDefaults($company, $company->owner, 'USD', $countryCode, 'en');
         });
     }
 
@@ -59,10 +56,10 @@ class CompanyFactory extends Factory
         return $this->afterCreating(function (Company $company) use ($count) {
             $defaultBankAccount = $company->default->bankAccount;
 
-            TransactionFactory::new()
+            Transaction::factory()
                 ->forCompanyAndBankAccount($company, $defaultBankAccount)
                 ->count($count)
-                ->createQuietly([
+                ->create([
                     'created_by' => $company->user_id,
                     'updated_by' => $company->user_id,
                 ]);

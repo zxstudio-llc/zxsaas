@@ -9,9 +9,7 @@ use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Models\Setting\CompanyDefault;
-use App\Services\TransactionService;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Transaction>
@@ -43,15 +41,6 @@ class TransactionFactory extends Factory
             'created_by' => 1,
             'updated_by' => 1,
         ];
-    }
-
-    public function configure(): static
-    {
-        return $this->afterCreating(function (Transaction $transaction) {
-            if (DB::getDefaultConnection() === 'sqlite') {
-                app(TransactionService::class)->createJournalEntries($transaction);
-            }
-        });
     }
 
     public function forCompanyAndBankAccount(Company $company, BankAccount $bankAccount): static
@@ -100,6 +89,28 @@ class TransactionFactory extends Factory
         });
     }
 
+    public function forBankAccount(?BankAccount $bankAccount = null): static
+    {
+        return $this->state(function (array $attributes) use ($bankAccount) {
+            $bankAccount = $bankAccount ?? BankAccount::factory()->create();
+
+            return [
+                'bank_account_id' => $bankAccount->id,
+            ];
+        });
+    }
+
+    public function forDestinationBankAccount(?Account $account = null): static
+    {
+        return $this->state(function (array $attributes) use ($account) {
+            $destinationBankAccount = $account ?? Account::factory()->withBankAccount('Destination Bank Account')->create();
+
+            return [
+                'account_id' => $destinationBankAccount->id,
+            ];
+        });
+    }
+
     public function forUncategorizedRevenue(): static
     {
         return $this->state(function (array $attributes) {
@@ -122,6 +133,18 @@ class TransactionFactory extends Factory
         });
     }
 
+    public function forAccount(Account $account): static
+    {
+        return $this->state([
+            'account_id' => $account->id,
+        ]);
+    }
+
+    public function forType(TransactionType $type, int $amount): static
+    {
+        return $this->state(compact('type', 'amount'));
+    }
+
     public function asDeposit(int $amount): static
     {
         return $this->state(function () use ($amount) {
@@ -137,6 +160,26 @@ class TransactionFactory extends Factory
         return $this->state(function () use ($amount) {
             return [
                 'type' => TransactionType::Withdrawal,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    public function asJournal(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Journal,
+                'amount' => $amount,
+            ];
+        });
+    }
+
+    public function asTransfer(int $amount): static
+    {
+        return $this->state(function () use ($amount) {
+            return [
+                'type' => TransactionType::Transfer,
                 'amount' => $amount,
             ];
         });

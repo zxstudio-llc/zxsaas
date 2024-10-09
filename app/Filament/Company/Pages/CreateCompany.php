@@ -21,6 +21,8 @@ use Wallo\FilamentCompanies\Pages\Company\CreateCompany as FilamentCreateCompany
 
 class CreateCompany extends FilamentCreateCompany
 {
+    protected bool $hasTopbar = false;
+
     public function form(Form $form): Form
     {
         return $form
@@ -85,7 +87,7 @@ class CreateCompany extends FilamentCreateCompany
 
             $user?->switchCompany($company);
 
-            $companyDefaultService = app()->make(CompanyDefaultService::class);
+            $companyDefaultService = app(CompanyDefaultService::class);
             $user = $company->owner ?? $user;
             $companyDefaultService->createCompanyDefaults($company, $user, $data['currencies']['code'], $data['profile']['country'], $data['locale']['language']);
 

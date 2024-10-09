@@ -47,6 +47,8 @@ class Tax extends Model
         'enabled' => 'boolean',
     ];
 
+    protected ?string $evaluatedDefault = 'type';
+
     public function defaultSalesTax(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'sales_tax_id');

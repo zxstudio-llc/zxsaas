@@ -7,6 +7,7 @@ use App\Enums\Setting\DiscountScope;
 use App\Enums\Setting\DiscountType;
 use App\Models\Setting\Discount;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 
 /**
  * @extends Factory<Discount>
@@ -26,16 +27,26 @@ class DiscountFactory extends Factory
     public function definition(): array
     {
         $startDate = $this->faker->dateTimeBetween('now', '+1 year');
-        $endDate = $this->faker->dateTimeBetween($startDate, strtotime('+1 year'));
+        $endDate = $this->faker->dateTimeBetween($startDate, Carbon::parse($startDate)->addYear());
+
+        $computation = $this->faker->randomElement(DiscountComputation::class);
+
+        if ($computation === DiscountComputation::Fixed) {
+            $rate = $this->faker->numberBetween(5, 100) * 100; // $5 - $100
+        } else {
+            $rate = $this->faker->numberBetween(3, 50) * 10000; // 3% - 50%
+        }
 
         return [
+            'name' => $this->faker->unique()->word,
             'description' => $this->faker->sentence,
-            'rate' => $this->faker->biasedNumberBetween(300, 5000) * 100, // 3% - 50%
-            'computation' => $this->faker->randomElement(DiscountComputation::class),
+            'rate' => $rate,
+            'computation' => $computation,
+            'type' => $this->faker->randomElement(DiscountType::class),
             'scope' => $this->faker->randomElement(DiscountScope::class),
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'enabled' => true,
+            'enabled' => false,
         ];
     }
 
@@ -43,7 +54,6 @@ class DiscountFactory extends Factory
     {
         return $this->state([
             'name' => 'Summer Sale',
-            'rate' => $this->faker->biasedNumberBetween(300, 1200) * 100, // 3% - 12%
             'type' => DiscountType::Sales,
         ]);
     }
@@ -52,7 +62,6 @@ class DiscountFactory extends Factory
     {
         return $this->state([
             'name' => 'Bulk Purchase',
-            'rate' => $this->faker->biasedNumberBetween(300, 1200) * 100, // 3% - 12%
             'type' => DiscountType::Purchase,
         ]);
     }

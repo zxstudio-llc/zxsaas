@@ -40,14 +40,14 @@ class CurrencyFactory extends Factory
     /**
      * Define a state for a specific currency.
      */
-    public function forCurrency(string $code): Factory
+    public function forCurrency(string $code, ?float $rate = null): static
     {
         $currency = currency($code);
 
         return $this->state([
             'name' => $currency->getName(),
             'code' => $currency->getCurrency(),
-            'rate' => $currency->getRate(),
+            'rate' => $rate ?? $currency->getRate(),
             'precision' => $currency->getPrecision(),
             'symbol' => $currency->getSymbol(),
             'symbol_first' => $currency->isSymbolFirst(),
