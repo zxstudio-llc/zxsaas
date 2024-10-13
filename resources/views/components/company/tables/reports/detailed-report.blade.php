@@ -83,15 +83,17 @@
         </tr>
         </tbody>
     @endforeach
-    <tfoot>
-    <tr class="bg-gray-50 dark:bg-white/5">
-        @foreach($report->getOverallTotals() as $index => $total)
-            <x-filament-tables::cell class="{{ $report->getAlignmentClass($index) }}">
-                <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
-                    {{ $total }}
-                </div>
-            </x-filament-tables::cell>
-        @endforeach
-    </tr>
-    </tfoot>
+    @if(! empty($report->getOverallTotals()))
+        <tfoot>
+        <tr class="bg-gray-50 dark:bg-white/5">
+            @foreach($report->getOverallTotals() as $index => $total)
+                <x-filament-tables::cell class="{{ $report->getAlignmentClass($index) }}">
+                    <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
+                        {{ $total }}
+                    </div>
+                </x-filament-tables::cell>
+            @endforeach
+        </tr>
+        </tfoot>
+    @endif
 </table>

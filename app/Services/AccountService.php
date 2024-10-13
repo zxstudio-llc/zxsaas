@@ -138,6 +138,7 @@ class AccountService
                 'accounts.id',
                 'accounts.name',
                 'accounts.category',
+                'accounts.type',
                 'accounts.subtype_id',
                 'accounts.currency_code',
                 'accounts.code',

@@ -45,6 +45,28 @@ enum AccountType: string implements HasLabel
         };
     }
 
+    public function getPluralLabel(): ?string
+    {
+        return match ($this) {
+            self::CurrentAsset => 'Current Assets',
+            self::NonCurrentAsset => 'Non-Current Assets',
+            self::ContraAsset => 'Contra Assets',
+            self::CurrentLiability => 'Current Liabilities',
+            self::NonCurrentLiability => 'Non-Current Liabilities',
+            self::ContraLiability => 'Contra Liabilities',
+            self::Equity => 'Equity',
+            self::ContraEquity => 'Contra Equity',
+            self::OperatingRevenue => 'Operating Revenue',
+            self::NonOperatingRevenue => 'Non-Operating Revenue',
+            self::ContraRevenue => 'Contra Revenue',
+            self::UncategorizedRevenue => 'Uncategorized Revenue',
+            self::OperatingExpense => 'Operating Expenses',
+            self::NonOperatingExpense => 'Non-Operating Expenses',
+            self::ContraExpense => 'Contra Expenses',
+            self::UncategorizedExpense => 'Uncategorized Expenses',
+        };
+    }
+
     public function getCategory(): AccountCategory
     {
         return match ($this) {

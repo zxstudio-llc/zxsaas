@@ -4,6 +4,7 @@ namespace App\Filament\Company\Pages;
 
 use App\Filament\Company\Pages\Reports\AccountBalances;
 use App\Filament\Company\Pages\Reports\AccountTransactions;
+use App\Filament\Company\Pages\Reports\BalanceSheet;
 use App\Filament\Company\Pages\Reports\IncomeStatement;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
@@ -41,7 +42,7 @@ class Reports extends Page
                             ->description('Snapshot of assets, liabilities, and equity at a specific point in time.')
                             ->icon('heroicon-o-clipboard-document-list')
                             ->iconColor(Color::Emerald)
-                            ->url('#'),
+                            ->url(BalanceSheet::getUrl()),
                         ReportEntry::make('cash_flow_statement')
                             ->hiddenLabel()
                             ->heading('Cash Flow Statement')
