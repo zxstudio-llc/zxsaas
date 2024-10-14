@@ -228,6 +228,6 @@ class AccountService
     {
         $earliestDate = Transaction::min('posted_at');
 
-        return $earliestDate ?? now()->toDateTimeString();
+        return $earliestDate ?? today()->toDateTimeString();
     }
 }

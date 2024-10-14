@@ -67,11 +67,21 @@ return [
                 'description' => 'Accounts that accumulate depreciation of tangible assets and amortization of intangible assets, reflecting the reduction in value over time.',
                 'multi_currency' => false,
                 'base_code' => '1900',
+                'accounts' => [
+                    'Accumulated Depreciation' => [
+                        'description' => 'Used to account for the depreciation of fixed assets over time, offsetting assets like equipment or property.',
+                    ],
+                ],
             ],
             'Allowances for Receivables' => [
                 'description' => 'Accounts representing estimated uncollected receivables, used to adjust the value of gross receivables to a realistic collectible amount.',
                 'multi_currency' => false,
                 'base_code' => '1940',
+                'accounts' => [
+                    'Allowance for Doubtful Accounts' => [
+                        'description' => 'Used to account for potential bad debts that may not be collectable, offsetting receivables.',
+                    ],
+                ],
             ],
             'Valuation Adjustments' => [
                 'description' => 'Accounts used to record adjustments in asset values due to impairments, market changes, or other factors affecting their recoverable amount.',
@@ -154,19 +164,6 @@ return [
                     'Owner\'s Investment' => [
                         'description' => 'The amount of money invested by the owner(s) or shareholders to start or expand the business.',
                     ],
-                    'Owner\'s Drawings' => [
-                        'description' => 'The amount of money withdrawn by the owner(s) or shareholders from the business for personal use.',
-                    ],
-                ],
-            ],
-            'Retained Earnings: Profit' => [
-                'description' => 'Cumulative profits retained in the business and not distributed as dividends. Indicates the company\'s financial health and profit-generating ability.',
-                'multi_currency' => false,
-                'base_code' => '3100',
-                'accounts' => [
-                    'Owner\'s Equity' => [
-                        'description' => 'Owner\'s equity is what remains after you subtract business liabilities from business assets. In other words, it\'s what\'s left over for you if you sell all your assets and pay all your debts.',
-                    ],
                 ],
             ],
         ],
@@ -175,6 +172,11 @@ return [
                 'description' => 'Equity that is deducted from gross equity to arrive at net equity. This includes treasury stock, which is stock that has been repurchased by the company.',
                 'multi_currency' => false,
                 'base_code' => '3900',
+                'accounts' => [
+                    'Owner\'s Drawings' => [
+                        'description' => 'The amount of money withdrawn by the owner(s) or shareholders from the business for personal use, reducing equity.',
+                    ],
+                ],
             ],
         ],
         'operating_revenue' => [

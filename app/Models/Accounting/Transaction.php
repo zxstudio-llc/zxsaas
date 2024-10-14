@@ -48,7 +48,7 @@ class Transaction extends Model
         'amount' => TransactionAmountCast::class,
         'pending' => 'boolean',
         'reviewed' => 'boolean',
-        'posted_at' => 'datetime',
+        'posted_at' => 'date',
     ];
 
     public function account(): BelongsTo

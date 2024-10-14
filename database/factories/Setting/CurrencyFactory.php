@@ -33,7 +33,7 @@ class CurrencyFactory extends Factory
             'symbol_first' => $defaultCurrency->isSymbolFirst(),
             'decimal_mark' => $defaultCurrency->getDecimalMark(),
             'thousands_separator' => $defaultCurrency->getThousandsSeparator(),
-            'enabled' => true,
+            'enabled' => false,
         ];
     }
 
@@ -53,7 +53,7 @@ class CurrencyFactory extends Factory
             'symbol_first' => $currency->isSymbolFirst(),
             'decimal_mark' => $currency->getDecimalMark(),
             'thousands_separator' => $currency->getThousandsSeparator(),
-            'enabled' => true,
+            'enabled' => false,
         ]);
     }
 }

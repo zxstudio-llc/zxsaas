@@ -6,6 +6,7 @@ use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
 use App\DTO\ReportTypeDTO;
 use App\Support\Column;
+use App\Utilities\Currency\CurrencyAccessor;
 
 class BalanceSheetReportTransformer extends BaseReportTransformer
 {
@@ -41,8 +42,8 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
         $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
+            // Header for the main category
             $header = [];
-
             foreach ($this->getColumns() as $index => $column) {
                 if ($column->getName() === 'account_name') {
                     $header[$index] = $accountCategoryName;
@@ -61,6 +62,26 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 };
             }
 
+            // Accounts directly under the main category
+            $data = array_map(function (AccountDTO $account) {
+                $row = [];
+                foreach ($this->getColumns() as $column) {
+                    $row[] = match ($column->getName()) {
+                        'account_code' => $account->accountCode,
+                        'account_name' => [
+                            'name' => $account->accountName,
+                            'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
+                        ],
+                        'ending_balance' => $account->balance->endingBalance ?? '',
+                        default => '',
+                    };
+                }
+
+                return $row;
+            }, $accountCategory->accounts ?? []);
+
             // Subcategories (types) under the main category
             $types = [];
             foreach ($accountCategory->types as $typeName => $type) {
@@ -71,7 +92,7 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 }
 
                 // Account data for the subcategory
-                $data = array_map(function (AccountDTO $account) {
+                $typeData = array_map(function (AccountDTO $account) {
                     $row = [];
                     foreach ($this->getColumns() as $column) {
                         $row[] = match ($column->getName()) {
@@ -103,21 +124,113 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 // Add subcategory (type) to the list
                 $types[$typeName] = new ReportTypeDTO(
                     header: $typeHeader,
-                    data: $data,
+                    data: $typeData,
                     summary: $typeSummary,
                 );
             }
 
-            // Add the category to the final array with its subcategories (types)
+            // Add the category to the final array with its direct accounts and subcategories (types)
             $categories[$accountCategoryName] = new ReportCategoryDTO(
                 header: $header,
+                data: $data, // Direct accounts under the category
+                summary: $categorySummary,
+                types: $types, // Subcategories (types) under the category
+            );
+        }
+
+        return $categories;
+    }
+
+    public function getSummaryCategories(): array
+    {
+        $summaryCategories = [];
+
+        $columns = [
+            'account_name',
+            'ending_balance',
+        ];
+
+        foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
+            $categoryHeader = [];
+
+            foreach ($columns as $index => $column) {
+                $categoryHeader[$index] = $column === 'account_name' ? $accountCategoryName : '';
+            }
+
+            $categorySummary = [];
+            foreach ($columns as $column) {
+                $categorySummary[] = match ($column) {
+                    'account_name' => 'Total ' . $accountCategoryName,
+                    'ending_balance' => $accountCategory->summary->endingBalance ?? '',
+                    default => '',
+                };
+            }
+
+            $types = [];
+            $totalTypeSummaries = 0;
+
+            // Iterate through each account type and calculate type summaries
+            foreach ($accountCategory->types as $typeName => $type) {
+                $typeSummary = [];
+                $typeEndingBalance = 0;
+
+                foreach ($columns as $column) {
+                    $typeSummary[] = match ($column) {
+                        'account_name' => 'Total ' . $typeName,
+                        'ending_balance' => $type->summary->endingBalance ?? '',
+                        default => '',
+                    };
+
+                    if ($column === 'ending_balance') {
+                        $typeEndingBalance = $type->summary->endingBalance ?? 0;
+                    }
+                }
+
+                $typeEndingBalance = money($typeEndingBalance, CurrencyAccessor::getDefaultCurrency())->getAmount();
+
+                $totalTypeSummaries += $typeEndingBalance;
+
+                $types[$typeName] = new ReportTypeDTO(
+                    header: [],
+                    data: [],
+                    summary: $typeSummary,
+                );
+            }
+
+            // Only for the "Equity" category, calculate and add "Total Other Equity"
+            if ($accountCategoryName === 'Equity') {
+                $totalEquitySummary = $accountCategory->summary->endingBalance ?? 0;
+                $totalEquitySummary = money($totalEquitySummary, CurrencyAccessor::getDefaultCurrency())->getAmount();
+                $totalOtherEquity = $totalEquitySummary - $totalTypeSummaries;
+                $totalOtherEquity = money($totalOtherEquity, CurrencyAccessor::getDefaultCurrency(), true)->format();
+
+                // Add "Total Other Equity" as a new "type"
+                $otherEquitySummary = [];
+                foreach ($columns as $column) {
+                    $otherEquitySummary[] = match ($column) {
+                        'account_name' => 'Total Other Equity',
+                        'ending_balance' => $totalOtherEquity,
+                        default => '',
+                    };
+                }
+
+                $types['Total Other Equity'] = new ReportTypeDTO(
+                    header: [],
+                    data: [],
+                    summary: $otherEquitySummary,
+                );
+            }
+
+            // Add the category with its types and summary to the final array
+            $summaryCategories[$accountCategoryName] = new ReportCategoryDTO(
+                header: $categoryHeader,
                 data: [],
                 summary: $categorySummary,
                 types: $types,
             );
         }
 
-        return $categories;
+        return $summaryCategories;
     }
 
     public function getOverallTotals(): array

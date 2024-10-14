@@ -11,6 +11,7 @@ use App\Support\Column;
 use App\Transformers\BalanceSheetReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BalanceSheet extends BaseReportPage
@@ -22,6 +23,9 @@ class BalanceSheet extends BaseReportPage
     protected ReportService $reportService;
 
     protected ExportService $exportService;
+
+    #[Url]
+    public ?string $activeTab = 'summary';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {

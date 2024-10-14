@@ -60,6 +60,22 @@
         @endif
     </x-filament::section>
 
+    <x-filament::tabs>
+        <x-filament::tabs.item
+            :active="$activeTab === 'summary'"
+            wire:click="$set('activeTab', 'summary')"
+        >
+            Summary
+        </x-filament::tabs.item>
+
+        <x-filament::tabs.item
+            :active="$activeTab === 'details'"
+            wire:click="$set('activeTab', 'details')"
+        >
+            Details
+        </x-filament::tabs.item>
+    </x-filament::tabs>
+
     <x-filament-tables::container>
         <div class="es-table__header-ctn"></div>
         <div
@@ -73,7 +89,11 @@
             @if($this->reportLoaded)
                 <div wire:loading.remove wire:target="applyFilters">
                     @if($this->report)
-                        <x-company.tables.reports.balance-sheet :report="$this->report"/>
+                        @if($activeTab === 'summary')
+                            <x-company.tables.reports.balance-sheet-summary :report="$this->report"/>
+                        @elseif($activeTab === 'details')
+                            <x-company.tables.reports.balance-sheet :report="$this->report"/>
+                        @endif
                     @endif
                 </div>
             @endif
