@@ -20,24 +20,9 @@
         </div>
     </x-filament::section>
 
-    <x-filament-tables::container>
-        <div class="es-table__header-ctn"></div>
-        <div
-            class="relative divide-y divide-gray-200 overflow-x-auto dark:divide-white/10 dark:border-t-white/10 min-h-64">
-            <div wire:init="applyFilters" class="flex items-center justify-center w-full h-full absolute">
-                <div wire:loading wire:target="applyFilters">
-                    <x-filament::loading-indicator class="p-6 text-primary-700 dark:text-primary-300"/>
-                </div>
-            </div>
-
-            @if($this->reportLoaded)
-                <div wire:loading.remove wire:target="applyFilters">
-                    @if($this->report)
-                        <x-company.tables.reports.detailed-report :report="$this->report"/>
-                    @endif
-                </div>
-            @endif
-        </div>
-        <div class="es-table__footer-ctn border-t border-gray-200"></div>
-    </x-filament-tables::container>
+    <x-company.tables.container :report-loaded="$this->reportLoaded">
+        @if($this->report)
+            <x-company.tables.reports.detailed-report :report="$this->report"/>
+        @endif
+    </x-company.tables.container>
 </x-filament-panels::page>

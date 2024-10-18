@@ -76,29 +76,14 @@
         </x-filament::tabs.item>
     </x-filament::tabs>
 
-    <x-filament-tables::container>
-        <div class="es-table__header-ctn"></div>
-        <div
-            class="relative divide-y divide-gray-200 overflow-x-auto dark:divide-white/10 dark:border-t-white/10 min-h-64">
-            <div wire:init="applyFilters" class="flex items-center justify-center w-full h-full absolute">
-                <div wire:loading wire:target="applyFilters">
-                    <x-filament::loading-indicator class="p-6 text-primary-700 dark:text-primary-300"/>
-                </div>
-            </div>
-
-            @if($this->reportLoaded)
-                <div wire:loading.remove wire:target="applyFilters">
-                    @if($this->report)
-                        @if($activeTab === 'summary')
-                            <x-company.tables.reports.balance-sheet-summary :report="$this->report"/>
-                        @elseif($activeTab === 'details')
-                            <x-company.tables.reports.balance-sheet :report="$this->report"/>
-                        @endif
-                    @endif
-                </div>
+    <x-company.tables.container :report-loaded="$this->reportLoaded">
+        @if($this->report)
+            @if($activeTab === 'summary')
+                <x-company.tables.reports.balance-sheet-summary :report="$this->report"/>
+            @elseif($activeTab === 'details')
+                <x-company.tables.reports.balance-sheet :report="$this->report"/>
             @endif
-        </div>
-        <div class="es-table__footer-ctn border-t border-gray-200"></div>
-    </x-filament-tables::container>
+        @endif
+    </x-company.tables.container>
 </x-filament-panels::page>
 

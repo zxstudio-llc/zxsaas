@@ -458,13 +458,6 @@ class ReportService
             $categoryAccounts = [];
             $subCategoryTotals = [];
 
-            foreach (AccountType::cases() as $accountType) {
-                if ($accountType->getCategory() === $category && $accountType !== AccountType::Equity) {
-                    $categoryAccountsByType[$accountType->getPluralLabel()] = [];
-                    $subCategoryTotals[$accountType->getPluralLabel()] = 0;
-                }
-            }
-
             /** @var Account $account */
             foreach ($accounts as $account) {
                 if ($account->type->getCategory() === $category) {
@@ -489,7 +482,7 @@ class ReportService
                     } else {
                         $accountType = $account->type->getPluralLabel();
                         $categoryAccountsByType[$accountType][] = $accountDTO;
-                        $subCategoryTotals[$accountType] += $endingBalance;
+                        $subCategoryTotals[$accountType] = ($subCategoryTotals[$accountType] ?? 0) + $endingBalance;
                     }
                 }
             }

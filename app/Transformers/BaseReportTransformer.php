@@ -25,6 +25,21 @@ abstract class BaseReportTransformer implements ExportableReport
         return 'components.company.reports.report-pdf';
     }
 
+    public function getAlignment(int $index): string
+    {
+        $column = $this->getColumns()[$index];
+
+        if ($column->getAlignment() === Alignment::Right) {
+            return 'right';
+        }
+
+        if ($column->getAlignment() === Alignment::Center) {
+            return 'center';
+        }
+
+        return 'left';
+    }
+
     public function getAlignmentClass(int $index): string
     {
         $column = $this->getColumns()[$index];
