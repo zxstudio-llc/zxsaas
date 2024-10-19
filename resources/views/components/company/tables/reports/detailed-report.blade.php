@@ -15,7 +15,7 @@
         <tr class="bg-gray-50 dark:bg-white/5">
             @foreach($category->header as $headerIndex => $header)
                 <x-filament-tables::cell class="{{ $report->getAlignmentClass($headerIndex) }}">
-                    <div class="px-3 py-2 text-sm font-semibold text-gray-950 dark:text-white">
+                    <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
                         {{ $header }}
                     </div>
                 </x-filament-tables::cell>

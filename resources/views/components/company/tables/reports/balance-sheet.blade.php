@@ -5,7 +5,7 @@
         <tr class="bg-gray-50 dark:bg-white/5">
             @foreach($accountCategory->header as $accountCategoryHeaderIndex => $accountCategoryHeaderCell)
                 <x-filament-tables::cell class="{{ $report->getAlignmentClass($accountCategoryHeaderIndex) }}">
-                    <div class="px-3 py-3 leading-6 text-sm font-semibold text-gray-950 dark:text-white">
+                    <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
                         {{ $accountCategoryHeaderCell }}
                     </div>
                 </x-filament-tables::cell>
@@ -63,7 +63,7 @@
                 @foreach($accountType->header as $accountTypeHeaderIndex => $accountTypeHeaderCell)
                     <x-filament-tables::cell class="{{ $report->getAlignmentClass($accountTypeHeaderIndex) }}"
                                              style="padding-left: 1.5rem;">
-                        <div class="px-3 py-3 leading-6 text-sm font-semibold text-gray-950 dark:text-white">
+                        <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
                             {{ $accountTypeHeaderCell }}
                         </div>
                     </x-filament-tables::cell>

@@ -58,9 +58,29 @@
         @endif
     </x-filament::section>
 
+    <x-filament::tabs>
+        <x-filament::tabs.item
+            :active="$activeTab === 'summary'"
+            wire:click="$set('activeTab', 'summary')"
+        >
+            Summary
+        </x-filament::tabs.item>
+
+        <x-filament::tabs.item
+            :active="$activeTab === 'details'"
+            wire:click="$set('activeTab', 'details')"
+        >
+            Details
+        </x-filament::tabs.item>
+    </x-filament::tabs>
+
     <x-company.tables.container :report-loaded="$this->reportLoaded">
         @if($this->report)
-            <x-company.tables.reports.detailed-report :report="$this->report"/>
+            @if($activeTab === 'summary')
+                <x-company.tables.reports.income-statement-summary :report="$this->report"/>
+            @elseif($activeTab === 'details')
+                <x-company.tables.reports.detailed-report :report="$this->report"/>
+            @endif
         @endif
     </x-company.tables.container>
 </x-filament-panels::page>

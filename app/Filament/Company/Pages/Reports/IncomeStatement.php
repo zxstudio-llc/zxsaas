@@ -11,6 +11,7 @@ use App\Transformers\IncomeStatementReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
 use Guava\FilamentClusters\Forms\Cluster;
+use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IncomeStatement extends BaseReportPage
@@ -24,6 +25,9 @@ class IncomeStatement extends BaseReportPage
     protected ReportService $reportService;
 
     protected ExportService $exportService;
+
+    #[Url]
+    public ?string $activeTab = 'summary';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {

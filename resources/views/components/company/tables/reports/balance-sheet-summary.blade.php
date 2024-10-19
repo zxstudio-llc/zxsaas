@@ -18,7 +18,7 @@
         <tr class="bg-gray-50 dark:bg-white/5">
             @foreach($accountCategory->header as $accountCategoryHeaderIndex => $accountCategoryHeaderCell)
                 <x-filament-tables::cell class="{{ $accountCategoryHeaderIndex === 0 ? 'text-left' : 'text-right' }}">
-                    <div class="px-3 py-2 text-sm font-semibold text-gray-950 dark:text-white">
+                    <div class="px-3 py-2 text-sm leading-6 font-semibold text-gray-950 dark:text-white">
                         {{ $accountCategoryHeaderCell }}
                     </div>
                 </x-filament-tables::cell>
