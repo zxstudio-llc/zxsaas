@@ -4,11 +4,11 @@
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <!-- Category Header -->
         <tr class="bg-gray-50 dark:bg-white/5">
-            <x-filament-tables::cell colspan="{{ count($report->getHeaders()) }}" class="text-left">
+            <x-filament-tables::cell tag="th" colspan="{{ count($report->getHeaders()) }}" class="text-left">
                 <div class="px-3 py-3.5">
                     @foreach ($category->header as $headerRow)
                         <div
-                            class="text-sm {{ $loop->first ? 'font-semibold text-gray-950 dark:text-white' : 'text-gray-500 dark:text-white/50' }}">
+                            class="text-sm {{ $loop->first ? 'font-semibold text-gray-950 dark:text-white' : 'font-normal text-gray-500 dark:text-white/50' }}">
                             @foreach ($headerRow as $headerValue)
                                 @if (!empty($headerValue))
                                     {{ $headerValue }}

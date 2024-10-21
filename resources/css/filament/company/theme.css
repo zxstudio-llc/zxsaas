@@ -107,11 +107,7 @@
 }
 
 .es-table__header-ctn, .es-table__footer-ctn {
-    @apply divide-y divide-gray-200 dark:divide-white/10 h-12;
-}
-
-.es-table__row {
-    @apply [@media(hover:hover)]:transition [@media(hover:hover)]:duration-75 hover:bg-gray-50 dark:hover:bg-white/5;
+    @apply divide-y divide-gray-200 dark:divide-white/10 min-h-12;
 }
 
 .es-table .es-table__rowgroup td:first-child {

@@ -4,7 +4,6 @@ namespace App\Transformers;
 
 use App\DTO\AccountTransactionDTO;
 use App\DTO\ReportCategoryDTO;
-use App\Support\Column;
 
 class AccountTransactionReportTransformer extends BaseReportTransformer
 {
@@ -18,11 +17,6 @@ class AccountTransactionReportTransformer extends BaseReportTransformer
         return 'Account Transactions';
     }
 
-    public function getHeaders(): array
-    {
-        return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
-    }
-
     /**
      * @return ReportCategoryDTO[]
      */
@@ -31,17 +25,12 @@ class AccountTransactionReportTransformer extends BaseReportTransformer
         $categories = [];
 
         foreach ($this->report->categories as $categoryData) {
-            // Initialize header with account and category information
+            $header = [];
 
-            $header = [
-                array_fill(0, count($this->getColumns()), ''),
-                array_fill(0, count($this->getColumns()), ''),
-            ];
-
-            foreach ($this->getColumns() as $index => $column) {
+            foreach ($this->getColumns() as $column) {
                 if ($column->getName() === 'date') {
-                    $header[0][$index] = $categoryData['category'];
-                    $header[1][$index] = $categoryData['under'];
+                    $header[0][$column->getName()] = $categoryData['category'];
+                    $header[1][$column->getName()] = $categoryData['under'];
                 }
             }
 
@@ -50,7 +39,7 @@ class AccountTransactionReportTransformer extends BaseReportTransformer
                 $row = [];
 
                 foreach ($this->getColumns() as $column) {
-                    $row[] = match ($column->getName()) {
+                    $row[$column->getName()] = match ($column->getName()) {
                         'date' => $transaction->date,
                         'description' => [
                             'id' => $transaction->id,

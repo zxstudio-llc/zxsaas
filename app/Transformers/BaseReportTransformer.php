@@ -4,6 +4,7 @@ namespace App\Transformers;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Support\Column;
 use Filament\Support\Enums\Alignment;
 
 abstract class BaseReportTransformer implements ExportableReport
@@ -15,9 +16,27 @@ abstract class BaseReportTransformer implements ExportableReport
         $this->report = $report;
     }
 
+    /**
+     * @return Column[]
+     */
     public function getColumns(): array
     {
-        return $this->report->fields;
+        return once(function (): array {
+            return $this->report->fields;
+        });
+    }
+
+    public function getHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = $column->getLabel();
+            }
+
+            return $headers;
+        });
     }
 
     public function getPdfView(): string
@@ -40,18 +59,21 @@ abstract class BaseReportTransformer implements ExportableReport
         return 'left';
     }
 
-    public function getAlignmentClass(int $index): string
+    public function getAlignmentClass(string $columnName): string
     {
-        $column = $this->getColumns()[$index];
+        return once(function () use ($columnName): string {
+            /** @var Column|null $column */
+            $column = collect($this->getColumns())->first(fn (Column $column) => $column->getName() === $columnName);
 
-        if ($column->getAlignment() === Alignment::Right) {
-            return 'text-right';
-        }
+            if ($column?->getAlignment() === Alignment::Right) {
+                return 'text-right';
+            }
 
-        if ($column->getAlignment() === Alignment::Center) {
-            return 'text-center';
-        }
+            if ($column?->getAlignment() === Alignment::Center) {
+                return 'text-center';
+            }
 
-        return 'text-left';
+            return 'text-left';
+        });
     }
 }

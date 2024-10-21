@@ -4,10 +4,13 @@ namespace App\Services;
 
 use App\Contracts\ExportableReport;
 use App\Models\Company;
-use App\Support\Column;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Carbon;
+use League\Csv\Bom;
+use League\Csv\CannotInsertRecord;
+use League\Csv\Exception;
+use League\Csv\Writer;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportService
@@ -33,7 +36,8 @@ class ExportService
         ];
 
         $callback = function () use ($startDate, $endDate, $report, $company) {
-            $file = fopen('php://output', 'wb');
+            $csv = Writer::createFromStream(fopen('php://output', 'wb'));
+            $csv->setOutputBOM(Bom::Utf8);
 
             if ($startDate && $endDate) {
                 $defaultStartDateFormat = Carbon::parse($startDate)->toDefaultDateFormat();
@@ -43,61 +47,34 @@ class ExportService
                 $dateLabel = 'As of ' . Carbon::parse($endDate)->toDefaultDateFormat();
             }
 
-            fputcsv($file, [$report->getTitle()]);
-            fputcsv($file, [$company->name]);
-            fputcsv($file, [$dateLabel]);
-            fputcsv($file, []);
+            $csv->insertOne([$report->getTitle()]);
+            $csv->insertOne([$company->name]);
+            $csv->insertOne([$dateLabel]);
+            $csv->insertOne([]);
 
-            fputcsv($file, $report->getHeaders());
+            $csv->insertOne($report->getHeaders());
 
             foreach ($report->getCategories() as $category) {
-                if (isset($category->header[0]) && is_array($category->header[0])) {
-                    foreach ($category->header as $headerRow) {
-                        fputcsv($file, $headerRow);
+                $this->writeDataRowsToCsv($csv, $category->header, $category->data, $report->getColumns());
+
+                foreach ($category->types ?? [] as $type) {
+                    $this->writeDataRowsToCsv($csv, $type->header, $type->data, $report->getColumns());
+
+                    if (filled($type->summary)) {
+                        $csv->insertOne($type->summary);
                     }
-                } else {
-                    fputcsv($file, $category->header);
-                }
-
-                foreach ($category->data as $accountRow) {
-                    $row = [];
-                    $columns = $report->getColumns();
-
-                    /**
-                     * @var Column $column
-                     */
-                    foreach ($columns as $index => $column) {
-                        $cell = $accountRow[$index] ?? '';
-
-                        if ($column->isDate()) {
-                            try {
-                                $row[] = Carbon::parse($cell)->toDateString();
-                            } catch (InvalidFormatException) {
-                                $row[] = $cell;
-                            }
-                        } elseif (is_array($cell)) {
-                            // Handle array cells by extracting 'name' or 'description'
-                            $row[] = $cell['name'] ?? $cell['description'] ?? '';
-                        } else {
-                            $row[] = $cell;
-                        }
-                    }
-
-                    fputcsv($file, $row);
                 }
 
                 if (filled($category->summary)) {
-                    fputcsv($file, $category->summary);
+                    $csv->insertOne($category->summary);
                 }
 
-                fputcsv($file, []); // Empty row for spacing
+                $csv->insertOne([]);
             }
 
             if (filled($report->getOverallTotals())) {
-                fputcsv($file, $report->getOverallTotals());
+                $csv->insertOne($report->getOverallTotals());
             }
-
-            fclose($file);
         };
 
         return response()->streamDownload($callback, $filename, $headers);
@@ -128,5 +105,44 @@ class ExportService
         return response()->streamDownload(function () use ($pdf) {
             echo $pdf->inline();
         }, $filename);
+    }
+
+    /**
+     * @throws CannotInsertRecord
+     * @throws Exception
+     */
+    protected function writeDataRowsToCsv(Writer $csv, array $header, array $data, array $columns): void
+    {
+        if (isset($header[0]) && is_array($header[0])) {
+            foreach ($header as $headerRow) {
+                $csv->insertOne($headerRow);
+            }
+        } else {
+            $csv->insertOne($header);
+        }
+
+        // Output data rows
+        foreach ($data as $rowData) {
+            $row = [];
+
+            foreach ($columns as $column) {
+                $columnName = $column->getName();
+                $cell = $rowData[$columnName] ?? '';
+
+                if ($column->isDate()) {
+                    try {
+                        $row[] = Carbon::parse($cell)->toDateString();
+                    } catch (InvalidFormatException) {
+                        $row[] = $cell;
+                    }
+                } elseif (is_array($cell)) {
+                    $row[] = $cell['name'] ?? $cell['description'] ?? '';
+                } else {
+                    $row[] = $cell;
+                }
+            }
+
+            $csv->insertOne($row);
+        }
     }
 }

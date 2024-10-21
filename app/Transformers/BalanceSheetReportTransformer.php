@@ -4,26 +4,28 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
+use App\DTO\ReportDTO;
 use App\DTO\ReportTypeDTO;
-use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 
-class BalanceSheetReportTransformer extends BaseReportTransformer
+class BalanceSheetReportTransformer extends SummaryReportTransformer
 {
-    protected string $totalAssets = '$0.00';
+    protected string $totalAssets;
 
-    protected string $totalLiabilities = '$0.00';
+    protected string $totalLiabilities;
 
-    protected string $totalEquity = '$0.00';
+    protected string $totalEquity;
+
+    public function __construct(ReportDTO $report)
+    {
+        parent::__construct($report);
+
+        $this->calculateTotals();
+    }
 
     public function getTitle(): string
     {
         return 'Balance Sheet';
-    }
-
-    public function getHeaders(): array
-    {
-        return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
     }
 
     public function calculateTotals(): void
@@ -44,18 +46,15 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
             // Header for the main category
             $header = [];
-            foreach ($this->getColumns() as $index => $column) {
-                if ($column->getName() === 'account_name') {
-                    $header[$index] = $accountCategoryName;
-                } else {
-                    $header[$index] = '';
-                }
+
+            foreach ($this->getColumns() as $column) {
+                $header[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
             }
 
             // Category-level summary
             $categorySummary = [];
             foreach ($this->getColumns() as $column) {
-                $categorySummary[] = match ($column->getName()) {
+                $categorySummary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
                     'ending_balance' => $accountCategory->summary->endingBalance ?? '',
                     default => '',
@@ -65,8 +64,9 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
             // Accounts directly under the main category
             $data = array_map(function (AccountDTO $account) {
                 $row = [];
+
                 foreach ($this->getColumns() as $column) {
-                    $row[] = match ($column->getName()) {
+                    $row[$column->getName()] = match ($column->getName()) {
                         'account_code' => $account->accountCode,
                         'account_name' => [
                             'name' => $account->accountName,
@@ -87,15 +87,16 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
             foreach ($accountCategory->types as $typeName => $type) {
                 // Header for subcategory (type)
                 $typeHeader = [];
-                foreach ($this->getColumns() as $index => $column) {
-                    $typeHeader[$index] = $column->getName() === 'account_name' ? $typeName : '';
+                foreach ($this->getColumns() as $column) {
+                    $typeHeader[$column->getName()] = $column->getName() === 'account_name' ? $typeName : '';
                 }
 
                 // Account data for the subcategory
                 $typeData = array_map(function (AccountDTO $account) {
                     $row = [];
+
                     foreach ($this->getColumns() as $column) {
-                        $row[] = match ($column->getName()) {
+                        $row[$column->getName()] = match ($column->getName()) {
                             'account_code' => $account->accountCode,
                             'account_name' => [
                                 'name' => $account->accountName,
@@ -114,7 +115,7 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 // Subcategory (type) summary
                 $typeSummary = [];
                 foreach ($this->getColumns() as $column) {
-                    $typeSummary[] = match ($column->getName()) {
+                    $typeSummary[$column->getName()] = match ($column->getName()) {
                         'account_name' => 'Total ' . $typeName,
                         'ending_balance' => $type->summary->endingBalance ?? '',
                         default => '',
@@ -145,21 +146,18 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
     {
         $summaryCategories = [];
 
-        $columns = [
-            'account_name',
-            'ending_balance',
-        ];
+        $columns = $this->getSummaryColumns();
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
             $categoryHeader = [];
 
-            foreach ($columns as $index => $column) {
-                $categoryHeader[$index] = $column === 'account_name' ? $accountCategoryName : '';
+            foreach ($columns as $column) {
+                $categoryHeader[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
             }
 
             $categorySummary = [];
             foreach ($columns as $column) {
-                $categorySummary[] = match ($column) {
+                $categorySummary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
                     'ending_balance' => $accountCategory->summary->endingBalance ?? '',
                     default => '',
@@ -175,13 +173,13 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 $typeEndingBalance = 0;
 
                 foreach ($columns as $column) {
-                    $typeSummary[] = match ($column) {
+                    $typeSummary[$column->getName()] = match ($column->getName()) {
                         'account_name' => 'Total ' . $typeName,
                         'ending_balance' => $type->summary->endingBalance ?? '',
                         default => '',
                     };
 
-                    if ($column === 'ending_balance') {
+                    if ($column->getName() === 'ending_balance') {
                         $typeEndingBalance = $type->summary->endingBalance ?? 0;
                     }
                 }
@@ -207,7 +205,7 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
                 // Add "Total Other Equity" as a new "type"
                 $otherEquitySummary = [];
                 foreach ($columns as $column) {
-                    $otherEquitySummary[] = match ($column) {
+                    $otherEquitySummary[$column->getName()] = match ($column->getName()) {
                         'account_name' => 'Total Other Equity',
                         'ending_balance' => $totalOtherEquity,
                         default => '',
@@ -238,10 +236,13 @@ class BalanceSheetReportTransformer extends BaseReportTransformer
         return [];
     }
 
+    public function getSummaryOverallTotals(): array
+    {
+        return [];
+    }
+
     public function getSummary(): array
     {
-        $this->calculateTotals();
-
         return [
             [
                 'label' => 'Total Assets',
