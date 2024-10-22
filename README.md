@@ -1,5 +1,7 @@
 # ERPSAAS
 
+<a href="https://trendshift.io/repositories/4749" target="_blank"><img src="https://trendshift.io/api/badge/repositories/4749" alt="andrewdwallo%2Ferpsaas | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 <img width="1920" alt="Create Company" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/5146c4db-dffc-4207-9095-2ebb80d452e1">
 <img width="1920" alt="Invoice" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/d7115830-6912-4267-ab54-17f7dbcc21cd">
 <img width="1920" alt="Plaid" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c85862ac-62ff-4c0d-9b2a-f7393ad977ef">
