@@ -4,7 +4,6 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
-use App\Support\Column;
 
 class TrialBalanceReportTransformer extends BaseReportTransformer
 {
@@ -14,11 +13,6 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
             'postClosing' => 'Post-Closing Trial Balance',
             default => 'Standard Trial Balance',
         };
-    }
-
-    public function getHeaders(): array
-    {
-        return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
     }
 
     /**
@@ -32,19 +26,15 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
             // Initialize header with empty strings
             $header = [];
 
-            foreach ($this->getColumns() as $index => $column) {
-                if ($column->getName() === 'account_name') {
-                    $header[$index] = $accountCategoryName;
-                } else {
-                    $header[$index] = '';
-                }
+            foreach ($this->getColumns() as $column) {
+                $header[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
             }
 
             $data = array_map(function (AccountDTO $account) {
                 $row = [];
 
                 foreach ($this->getColumns() as $column) {
-                    $row[] = match ($column->getName()) {
+                    $row[$column->getName()] = match ($column->getName()) {
                         'account_code' => $account->accountCode,
                         'account_name' => [
                             'name' => $account->accountName,
@@ -64,7 +54,7 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
             $summary = [];
 
             foreach ($this->getColumns() as $column) {
-                $summary[] = match ($column->getName()) {
+                $summary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
                     'debit_balance' => $accountCategory->summary->debitBalance,
                     'credit_balance' => $accountCategory->summary->creditBalance,
@@ -87,7 +77,7 @@ class TrialBalanceReportTransformer extends BaseReportTransformer
         $totals = [];
 
         foreach ($this->getColumns() as $column) {
-            $totals[] = match ($column->getName()) {
+            $totals[$column->getName()] = match ($column->getName()) {
                 'account_name' => 'Total for all accounts',
                 'debit_balance' => $this->report->overallTotal->debitBalance,
                 'credit_balance' => $this->report->overallTotal->creditBalance,

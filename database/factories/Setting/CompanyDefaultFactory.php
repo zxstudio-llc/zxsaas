@@ -72,6 +72,7 @@ class CompanyDefaultFactory extends Factory
     {
         return Currency::factory()->forCurrency($currencyCode)->createQuietly([
             'company_id' => $company->id,
+            'enabled' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
@@ -81,6 +82,7 @@ class CompanyDefaultFactory extends Factory
     {
         return Tax::factory()->salesTax()->createQuietly([
             'company_id' => $company->id,
+            'enabled' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
@@ -90,6 +92,7 @@ class CompanyDefaultFactory extends Factory
     {
         return Tax::factory()->purchaseTax()->createQuietly([
             'company_id' => $company->id,
+            'enabled' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
@@ -99,6 +102,7 @@ class CompanyDefaultFactory extends Factory
     {
         return Discount::factory()->salesDiscount()->createQuietly([
             'company_id' => $company->id,
+            'enabled' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
@@ -108,6 +112,7 @@ class CompanyDefaultFactory extends Factory
     {
         return Discount::factory()->purchaseDiscount()->createQuietly([
             'company_id' => $company->id,
+            'enabled' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);

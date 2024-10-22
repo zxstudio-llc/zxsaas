@@ -4,21 +4,19 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Forms\Components\DateRangeSelect;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
-use App\Transformers\IncomeStatementReportTransformer;
+use App\Transformers\BalanceSheetReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
-use Guava\FilamentClusters\Forms\Cluster;
 use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class IncomeStatement extends BaseReportPage
+class BalanceSheet extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.income-statement';
-
-    protected static ?string $slug = 'reports/income-statement';
+    protected static string $view = 'filament.company.pages.reports.balance-sheet';
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -45,7 +43,7 @@ class IncomeStatement extends BaseReportPage
             Column::make('account_name')
                 ->label('Account')
                 ->alignment(Alignment::Left),
-            Column::make('net_movement')
+            Column::make('ending_balance')
                 ->label('Amount')
                 ->alignment(Alignment::Right),
         ];
@@ -55,33 +53,35 @@ class IncomeStatement extends BaseReportPage
     {
         return $form
             ->inlineLabel()
-            ->columns()
+            ->columns(3)
             ->schema([
-                $this->getDateRangeFormComponent(),
-                Cluster::make([
-                    $this->getStartDateFormComponent(),
-                    $this->getEndDateFormComponent(),
-                ])->hiddenLabel(),
+                DateRangeSelect::make('dateRange')
+                    ->label('As of')
+                    ->selectablePlaceholder(false)
+                    ->endDateField('asOfDate'),
+                $this->getAsOfDateFormComponent()
+                    ->hiddenLabel()
+                    ->extraFieldWrapperAttributes([]),
             ]);
     }
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildIncomeStatementReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
+        return $this->reportService->buildBalanceSheetReport($this->getFormattedAsOfDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
     {
-        return new IncomeStatementReportTransformer($reportDTO);
+        return new BalanceSheetReportTransformer($reportDTO);
     }
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
+        return $this->exportService->exportToCsv($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
+        return $this->exportService->exportToPdf($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 }

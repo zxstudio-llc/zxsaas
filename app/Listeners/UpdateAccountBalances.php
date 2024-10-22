@@ -58,7 +58,7 @@ class UpdateAccountBalances
                         'type' => $transactionType,
                         'amount' => $formattedSimpleDifference,
                         'payment_channel' => 'other',
-                        'posted_at' => now(),
+                        'posted_at' => today(),
                         'description' => $description,
                         'pending' => false,
                         'reviewed' => false,

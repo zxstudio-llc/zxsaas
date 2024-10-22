@@ -459,7 +459,7 @@ class Transactions extends Page implements HasTable
     protected function getFormDefaultsForType(TransactionType $type): array
     {
         $commonDefaults = [
-            'posted_at' => now()->format('Y-m-d'),
+            'posted_at' => today(),
         ];
 
         return match ($type) {

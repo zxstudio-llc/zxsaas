@@ -1,26 +1,14 @@
 <table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
-    <thead class="divide-y divide-gray-200 dark:divide-white/5">
-    <tr class="bg-gray-50 dark:bg-white/5">
-        @foreach($report->getHeaders() as $index => $header)
-            <th wire:key="header-{{ $index }}"
-                class="px-3 py-3.5 sm:first-of-type:ps-6 sm:last-of-type:pe-6 {{ $report->getAlignmentClass($index) }}">
-                    <span class="text-sm font-semibold text-gray-950 dark:text-white">
-                        {{ $header }}
-                    </span>
-            </th>
-        @endforeach
-    </tr>
-    </thead>
+    <x-company.tables.header :headers="$report->getHeaders()" :alignmentClass="[$report, 'getAlignmentClass']"/>
     @foreach($report->getCategories() as $categoryIndex => $category)
-        <tbody wire:key="category-{{ $categoryIndex }}"
-               class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
+        <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <!-- Category Header -->
         <tr class="bg-gray-50 dark:bg-white/5">
-            <x-filament-tables::cell colspan="{{ count($report->getHeaders()) }}" class="text-left">
-                <div class="px-3 py-2">
+            <x-filament-tables::cell tag="th" colspan="{{ count($report->getHeaders()) }}" class="text-left">
+                <div class="px-3 py-3.5">
                     @foreach ($category->header as $headerRow)
                         <div
-                            class="text-sm {{ $loop->first ? 'font-semibold text-gray-950 dark:text-white' : 'text-gray-500 dark:text-white/50' }}">
+                            class="text-sm {{ $loop->first ? 'font-semibold text-gray-950 dark:text-white' : 'font-normal text-gray-500 dark:text-white/50' }}">
                             @foreach ($headerRow as $headerValue)
                                 @if (!empty($headerValue))
                                     {{ $headerValue }}
@@ -33,14 +21,13 @@
         </tr>
         <!-- Transactions Data -->
         @foreach($category->data as $dataIndex => $transaction)
-            <tr wire:key="category-{{ $categoryIndex }}-data-{{ $dataIndex }}"
+            <tr
                 @class([
                     'bg-gray-50 dark:bg-white/5' => $loop->first || $loop->last || $loop->remaining === 1,
                 ])
             >
                 @foreach($transaction as $cellIndex => $cell)
                     <x-filament-tables::cell
-                        wire:key="category-{{ $categoryIndex }}-data-{{ $dataIndex }}-cell-{{ $cellIndex }}"
                         @class([
                            $report->getAlignmentClass($cellIndex),
                            'whitespace-normal' => $cellIndex === 1,
@@ -80,10 +67,10 @@
         @endforeach
         <!-- Spacer Row -->
         @unless($loop->last)
-            <tr wire:key="category-{{ $categoryIndex }}-spacer">
-                <x-filament-tables::cell colspan="{{ count($report->getHeaders()) }}">
-                    <div class="px-3 py-2 leading-6 invisible">Hidden Text</div>
-                </x-filament-tables::cell>
+            <tr>
+                <td colspan="{{ count($report->getHeaders()) }}">
+                    <div class="min-h-12"></div>
+                </td>
             </tr>
         @endunless
         </tbody>

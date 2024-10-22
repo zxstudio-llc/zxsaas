@@ -6,8 +6,10 @@ use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountCategoryDTO;
 use App\DTO\AccountDTO;
 use App\DTO\AccountTransactionDTO;
+use App\DTO\AccountTypeDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
+use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
@@ -86,8 +88,8 @@ class ReportService
             $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
 
             $accountCategories[$category->getPluralLabel()] = new AccountCategoryDTO(
-                $categoryAccounts,
-                $formattedCategorySummaryBalances,
+                accounts: $categoryAccounts,
+                summary: $formattedCategorySummaryBalances,
             );
         }
 
@@ -305,8 +307,8 @@ class ReportService
             $formattedCategorySummaryBalances = $this->formatBalances($categorySummaryBalances);
 
             $accountCategories[$category->getPluralLabel()] = new AccountCategoryDTO(
-                $categoryAccounts,
-                $formattedCategorySummaryBalances,
+                accounts: $categoryAccounts,
+                summary: $formattedCategorySummaryBalances,
             );
         }
 
@@ -417,8 +419,8 @@ class ReportService
             }
 
             $accountCategories[$label] = new AccountCategoryDTO(
-                $categoryAccounts,
-                $this->formatBalances(['net_movement' => $netMovement])
+                accounts: $categoryAccounts,
+                summary: $this->formatBalances(['net_movement' => $netMovement])
             );
         }
 
@@ -426,6 +428,110 @@ class ReportService
         $grossProfit = $totalRevenue - $totalCogs;
         $netProfit = $grossProfit - $totalExpenses;
         $formattedReportTotalBalances = $this->formatBalances(['net_movement' => $netProfit]);
+
+        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+    }
+
+    public function buildBalanceSheetReport(string $asOfDate, array $columns = []): ReportDTO
+    {
+        $asOfDateCarbon = Carbon::parse($asOfDate);
+        $startDateCarbon = Carbon::parse($this->accountService->getEarliestTransactionDate());
+
+        $orderedCategories = array_filter(AccountCategory::getOrderedCategories(), fn (AccountCategory $category) => $category->isReal());
+
+        $accounts = $this->accountService->getAccountBalances($startDateCarbon->toDateTimeString(), $asOfDateCarbon->toDateTimeString())
+            ->whereIn('category', $orderedCategories)
+            ->orderByRaw('LENGTH(code), code')
+            ->get();
+
+        $accountCategories = [];
+        $reportTotalBalances = [
+            'assets' => 0,
+            'liabilities' => 0,
+            'equity' => 0,
+        ];
+
+        foreach ($orderedCategories as $category) {
+            $categorySummaryBalances = ['ending_balance' => 0];
+
+            $categoryAccountsByType = [];
+            $categoryAccounts = [];
+            $subCategoryTotals = [];
+
+            /** @var Account $account */
+            foreach ($accounts as $account) {
+                if ($account->type->getCategory() === $category) {
+                    $accountBalances = $this->calculateAccountBalances($account, $category);
+                    $endingBalance = $accountBalances['ending_balance'] ?? $accountBalances['net_movement'];
+
+                    $categorySummaryBalances['ending_balance'] += $endingBalance;
+
+                    $formattedAccountBalances = $this->formatBalances($accountBalances);
+
+                    $accountDTO = new AccountDTO(
+                        $account->name,
+                        $account->code,
+                        $account->id,
+                        $formattedAccountBalances,
+                        startDate: $startDateCarbon->toDateString(),
+                        endDate: $asOfDateCarbon->toDateString(),
+                    );
+
+                    if ($category === AccountCategory::Equity && $account->type === AccountType::Equity) {
+                        $categoryAccounts[] = $accountDTO;
+                    } else {
+                        $accountType = $account->type->getPluralLabel();
+                        $categoryAccountsByType[$accountType][] = $accountDTO;
+                        $subCategoryTotals[$accountType] = ($subCategoryTotals[$accountType] ?? 0) + $endingBalance;
+                    }
+                }
+            }
+
+            if ($category === AccountCategory::Equity) {
+                $retainedEarningsAmount = $this->calculateRetainedEarnings($startDateCarbon->toDateTimeString(), $asOfDateCarbon->toDateTimeString())->getAmount();
+
+                $categorySummaryBalances['ending_balance'] += $retainedEarningsAmount;
+
+                $retainedEarningsDTO = new AccountDTO(
+                    'Retained Earnings',
+                    'RE',
+                    null,
+                    $this->formatBalances(['ending_balance' => $retainedEarningsAmount]),
+                    startDate: $startDateCarbon->toDateString(),
+                    endDate: $asOfDateCarbon->toDateString(),
+                );
+
+                $categoryAccounts[] = $retainedEarningsDTO;
+            }
+
+            $subCategories = [];
+            foreach ($categoryAccountsByType as $accountType => $accountsInType) {
+                $subCategorySummary = $this->formatBalances([
+                    'ending_balance' => $subCategoryTotals[$accountType] ?? 0,
+                ]);
+
+                $subCategories[$accountType] = new AccountTypeDTO(
+                    accounts: $accountsInType,
+                    summary: $subCategorySummary
+                );
+            }
+
+            $reportTotalBalances[match ($category) {
+                AccountCategory::Asset => 'assets',
+                AccountCategory::Liability => 'liabilities',
+                AccountCategory::Equity => 'equity',
+            }] += $categorySummaryBalances['ending_balance'];
+
+            $accountCategories[$category->getPluralLabel()] = new AccountCategoryDTO(
+                accounts: $categoryAccounts,
+                types: $subCategories,
+                summary: $this->formatBalances($categorySummaryBalances),
+            );
+        }
+
+        $netAssets = $reportTotalBalances['assets'] - $reportTotalBalances['liabilities'];
+
+        $formattedReportTotalBalances = $this->formatBalances(['ending_balance' => $netAssets]);
 
         return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }

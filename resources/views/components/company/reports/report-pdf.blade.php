@@ -49,7 +49,7 @@
 
         .company-name {
             font-size: 1.125rem;
-            font-weight: 600;
+            font-weight: bold;
         }
 
         .date-range {
@@ -69,9 +69,16 @@
             border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
         }
 
-        .category-header-row > td {
+        .category-header-row > td,
+        .type-header-row > td {
             background-color: #f3f4f6; /* Gray background for category names */
-            font-weight: 600;
+            font-weight: bold;
+        }
+
+        .type-header-row > td,
+        .type-data-row > td,
+        .type-summary-row > td {
+            padding-left: 1.5rem; /* Indentation for type rows */
         }
 
         .table-body tr {
@@ -83,6 +90,7 @@
         }
 
         .category-summary-row > td,
+        .type-summary-row > td,
         .table-footer-row > td {
             font-weight: bold;
             background-color: #ffffff; /* White background for footer */
@@ -131,6 +139,43 @@
                 @endforeach
             </tr>
         @endforeach
+
+        <!-- Category Types -->
+        @foreach($category->types ?? [] as $type)
+            <!-- Type Header -->
+            <tr class="type-header-row">
+                @foreach($type->header as $index => $header)
+                    <td class="{{ $report->getAlignmentClass($index) }}">
+                        {{ $header }}
+                    </td>
+                @endforeach
+            </tr>
+
+            <!-- Type Data -->
+            @foreach($type->data as $typeRow)
+                <tr class="type-data-row">
+                    @foreach($typeRow as $index => $cell)
+                        <td class="{{ $report->getAlignmentClass($index) }} {{ $index === 'account_name' ? 'whitespace-normal' : 'whitespace-nowrap' }}">
+                            @if(is_array($cell) && isset($cell['name']))
+                                {{ $cell['name'] }}
+                            @else
+                                {{ $cell }}
+                            @endif
+                        </td>
+                    @endforeach
+                </tr>
+            @endforeach
+
+            <!-- Type Summary -->
+            <tr class="type-summary-row">
+                @foreach($type->summary as $index => $cell)
+                    <td class="{{ $report->getAlignmentClass($index) }}">
+                        {{ $cell }}
+                    </td>
+                @endforeach
+            </tr>
+        @endforeach
+
         <tr class="category-summary-row">
             @foreach($category->summary as $index => $cell)
                 <td class="{{ $report->getAlignmentClass($index) }}">

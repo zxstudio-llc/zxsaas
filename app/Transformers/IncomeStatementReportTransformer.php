@@ -4,24 +4,27 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
-use App\Support\Column;
+use App\DTO\ReportDTO;
+use App\Utilities\Currency\CurrencyAccessor;
 
-class IncomeStatementReportTransformer extends BaseReportTransformer
+class IncomeStatementReportTransformer extends SummaryReportTransformer
 {
-    protected string $totalRevenue = '$0.00';
+    protected string $totalRevenue;
 
-    protected string $totalCogs = '$0.00';
+    protected string $totalCogs;
 
-    protected string $totalExpenses = '$0.00';
+    protected string $totalExpenses;
+
+    public function __construct(ReportDTO $report)
+    {
+        parent::__construct($report);
+
+        $this->calculateTotals();
+    }
 
     public function getTitle(): string
     {
         return 'Income Statement';
-    }
-
-    public function getHeaders(): array
-    {
-        return array_map(fn (Column $column) => $column->getLabel(), $this->getColumns());
     }
 
     public function calculateTotals(): void
@@ -40,22 +43,17 @@ class IncomeStatementReportTransformer extends BaseReportTransformer
         $categories = [];
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            // Initialize header with empty strings
             $header = [];
 
-            foreach ($this->getColumns() as $index => $column) {
-                if ($column->getName() === 'account_name') {
-                    $header[$index] = $accountCategoryName;
-                } else {
-                    $header[$index] = '';
-                }
+            foreach ($this->getColumns() as $column) {
+                $header[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
             }
 
             $data = array_map(function (AccountDTO $account) {
                 $row = [];
 
                 foreach ($this->getColumns() as $column) {
-                    $row[] = match ($column->getName()) {
+                    $row[$column->getName()] = match ($column->getName()) {
                         'account_code' => $account->accountCode,
                         'account_name' => [
                             'name' => $account->accountName,
@@ -74,7 +72,7 @@ class IncomeStatementReportTransformer extends BaseReportTransformer
             $summary = [];
 
             foreach ($this->getColumns() as $column) {
-                $summary[] = match ($column->getName()) {
+                $summary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
                     'net_movement' => $accountCategory->summary->netMovement ?? '',
                     default => '',
@@ -91,12 +89,87 @@ class IncomeStatementReportTransformer extends BaseReportTransformer
         return $categories;
     }
 
+    public function getSummaryCategories(): array
+    {
+        $summaryCategories = [];
+
+        $columns = $this->getSummaryColumns();
+
+        foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
+            // Header for the main category
+            $categoryHeader = [];
+
+            foreach ($columns as $column) {
+                $categoryHeader[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
+            }
+
+            // Category-level summary
+            $categorySummary = [];
+            foreach ($columns as $column) {
+                $categorySummary[$column->getName()] = match ($column->getName()) {
+                    'account_name' => $accountCategoryName,
+                    'net_movement' => $accountCategory->summary->netMovement ?? '',
+                    default => '',
+                };
+            }
+
+            // Add the category summary to the final array
+            $summaryCategories[$accountCategoryName] = new ReportCategoryDTO(
+                header: $categoryHeader,
+                data: [], // No direct accounts are needed here, only summaries
+                summary: $categorySummary,
+                types: [] // No types for the income statement
+            );
+        }
+
+        return $summaryCategories;
+    }
+
+    public function getGrossProfit(): array
+    {
+        $grossProfit = [];
+
+        $columns = $this->getSummaryColumns();
+
+        $revenue = money($this->totalRevenue, CurrencyAccessor::getDefaultCurrency())->getAmount();
+        $cogs = money($this->totalCogs, CurrencyAccessor::getDefaultCurrency())->getAmount();
+
+        $grossProfitAmount = $revenue - $cogs;
+        $grossProfitFormatted = money($grossProfitAmount, CurrencyAccessor::getDefaultCurrency(), true)->format();
+
+        foreach ($columns as $column) {
+            $grossProfit[$column->getName()] = match ($column->getName()) {
+                'account_name' => 'Gross Profit',
+                'net_movement' => $grossProfitFormatted,
+                default => '',
+            };
+        }
+
+        return $grossProfit;
+    }
+
     public function getOverallTotals(): array
     {
         $totals = [];
 
         foreach ($this->getColumns() as $column) {
-            $totals[] = match ($column->getName()) {
+            $totals[$column->getName()] = match ($column->getName()) {
+                'account_name' => 'Net Earnings',
+                'net_movement' => $this->report->overallTotal->netMovement ?? '',
+                default => '',
+            };
+        }
+
+        return $totals;
+    }
+
+    public function getSummaryOverallTotals(): array
+    {
+        $totals = [];
+        $columns = $this->getSummaryColumns();
+
+        foreach ($columns as $column) {
+            $totals[$column->getName()] = match ($column->getName()) {
                 'account_name' => 'Net Earnings',
                 'net_movement' => $this->report->overallTotal->netMovement ?? '',
                 default => '',
@@ -108,8 +181,6 @@ class IncomeStatementReportTransformer extends BaseReportTransformer
 
     public function getSummary(): array
     {
-        $this->calculateTotals();
-
         return [
             [
                 'label' => 'Revenue',

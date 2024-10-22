@@ -138,6 +138,7 @@ class AccountService
                 'accounts.id',
                 'accounts.name',
                 'accounts.category',
+                'accounts.type',
                 'accounts.subtype_id',
                 'accounts.currency_code',
                 'accounts.code',
@@ -227,6 +228,6 @@ class AccountService
     {
         $earliestDate = Transaction::min('posted_at');
 
-        return $earliestDate ?? now()->toDateTimeString();
+        return $earliestDate ?? today()->toDateTimeString();
     }
 }

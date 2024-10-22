@@ -185,6 +185,9 @@ class CurrencyResource extends Resource
                                     $action->cancel();
                                 }
                             }
+                        })
+                        ->hidden(function (Table $table) {
+                            return $table->getAllSelectableRecordsCount() === 0;
                         }),
                 ]),
             ])

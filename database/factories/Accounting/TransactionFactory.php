@@ -57,16 +57,15 @@ class TransactionFactory extends Factory
 
             $account = Account::where('category', $this->faker->randomElement($associatedAccountTypes))
                 ->where('company_id', $company->id)
-                ->where('id', '<>', $accountIdForBankAccount)
+                ->whereKeyNot($accountIdForBankAccount)
                 ->inRandomOrder()
                 ->first();
 
-            // If no matching account is found, use a fallback
             if (! $account) {
                 $account = Account::where('company_id', $company->id)
-                    ->where('id', '<>', $accountIdForBankAccount)
+                    ->whereKeyNot($accountIdForBankAccount)
                     ->inRandomOrder()
-                    ->firstOrFail(); // Ensure there is at least some account
+                    ->firstOrFail();
             }
 
             return [

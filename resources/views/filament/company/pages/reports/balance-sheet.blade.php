@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     <x-filament::section>
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex flex-col lg:flex-row items-start lg:items-end justify-between gap-4">
             <!-- Form Container -->
             @if(method_exists($this, 'filtersForm'))
                 {{ $this->filtersForm }}
@@ -8,13 +8,15 @@
 
             <!-- Grouping Button and Column Toggle -->
             @if($this->hasToggleableColumns())
-                <x-filament-tables::column-toggle.dropdown
-                    :form="$this->getTableColumnToggleForm()"
-                    :trigger-action="$this->getToggleColumnsTriggerAction()"
-                />
+                <div class="lg:mb-1">
+                    <x-filament-tables::column-toggle.dropdown
+                        :form="$this->getTableColumnToggleForm()"
+                        :trigger-action="$this->getToggleColumnsTriggerAction()"
+                    />
+                </div>
             @endif
 
-            <div class="inline-flex items-center min-w-0 md:min-w-[9.5rem] justify-end">
+            <div class="inline-flex items-center min-w-0 lg:min-w-[9.5rem] justify-end">
                 {{ $this->applyFiltersAction }}
             </div>
         </div>
@@ -31,15 +33,15 @@
                         <div class="text-gray-600 font-medium mb-2">{{ $summary['label'] }}</div>
 
                         @php
-                            $isNetEarnings = $summary['label'] === 'Net Earnings';
+                            $isNetAssets = $summary['label'] === 'Net Assets';
                             $isPositive = money($summary['value'], \App\Utilities\Currency\CurrencyAccessor::getDefaultCurrency())->isPositive();
                         @endphp
 
                         <strong
                             @class([
                                 'text-lg',
-                                'text-green-700' => $isNetEarnings && $isPositive,
-                                'text-danger-700' => $isNetEarnings && ! $isPositive,
+                                'text-green-700' => $isNetAssets && $isPositive,
+                                'text-danger-700' => $isNetAssets && ! $isPositive,
                             ])
                         >
                             {{ $summary['value'] }}
@@ -77,10 +79,11 @@
     <x-company.tables.container :report-loaded="$this->reportLoaded">
         @if($this->report)
             @if($activeTab === 'summary')
-                <x-company.tables.reports.income-statement-summary :report="$this->report"/>
+                <x-company.tables.reports.balance-sheet-summary :report="$this->report"/>
             @elseif($activeTab === 'details')
-                <x-company.tables.reports.detailed-report :report="$this->report"/>
+                <x-company.tables.reports.balance-sheet :report="$this->report"/>
             @endif
         @endif
     </x-company.tables.container>
 </x-filament-panels::page>
+

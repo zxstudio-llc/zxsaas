@@ -3,6 +3,7 @@
 namespace App\Filament\Company\Resources\Banking\AccountResource\Pages;
 
 use App\Filament\Company\Resources\Banking\AccountResource;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditAccount extends EditRecord
@@ -12,7 +13,7 @@ class EditAccount extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            //
+            Actions\DeleteAction::make(),
         ];
     }
 

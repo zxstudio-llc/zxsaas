@@ -33,12 +33,7 @@ class AccountChart extends Page
     protected static string $view = 'filament.company.pages.accounting.chart';
 
     #[Url]
-    public ?string $activeTab = null;
-
-    public function mount(): void
-    {
-        $this->activeTab = $this->activeTab ?? AccountCategory::Asset->value;
-    }
+    public ?string $activeTab = AccountCategory::Asset->value;
 
     protected function configureAction(Action $action): void
     {

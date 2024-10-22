@@ -71,7 +71,7 @@ class AccountTransactions extends BaseReportPage
                 ->label('Credit')
                 ->alignment(Alignment::Right),
             Column::make('balance')
-                ->label('Balance')
+                ->label('Running Balance')
                 ->alignment(Alignment::Right),
         ];
     }
