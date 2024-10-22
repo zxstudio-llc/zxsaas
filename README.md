@@ -5,7 +5,11 @@
 <img width="1920" alt="Screenshot 2024-05-07 at 10 23 31 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c85862ac-62ff-4c0d-9b2a-f7393ad977ef">
 <img width="1920" alt="Screenshot 2024-05-07 at 10 24 11 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/3a4deebc-528c-4b84-91db-9f0515de883d">
 <img width="1920" alt="Screenshot 2024-05-07 at 10 24 46 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/c50a899d-ee6f-4300-92a9-4a41c5433972">
-<img width="1920" alt="Screenshot 2024-05-07 at 10 55 56 PM" src="https://github.com/andrewdwallo/erpsaas/assets/104294090/6395030a-6688-4b08-bf6c-b12b5e591b31">
+<img width="1906" alt="Screenshot 2024-10-21 at 9 25 48 PM" src="https://github.com/user-attachments/assets/01b112d0-f9d6-4835-aca1-245c1a17830f">
+<img width="1906" alt="Screenshot 2024-10-21 at 9 25 20 PM" src="https://github.com/user-attachments/assets/b43beb9d-7e2c-413c-a7c5-8ab987885cae">
+<img width="1906" alt="Screenshot 2024-10-21 at 9 25 02 PM" src="https://github.com/user-attachments/assets/527bb3c9-4918-49c4-9be3-769e07e57a82">
+<img width="1906" alt="Screenshot 2024-10-21 at 9 24 27 PM" src="https://github.com/user-attachments/assets/d8b28fcd-a9e2-4805-937c-dfd4d3848ce4">
+
 
 
 This repo is currently a work in progress — PRs and issues welcome!
