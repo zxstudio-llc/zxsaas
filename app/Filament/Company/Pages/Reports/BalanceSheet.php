@@ -77,11 +77,11 @@ class BalanceSheet extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('asOfDate'));
+        return $this->exportService->exportToCsv($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('asOfDate'));
+        return $this->exportService->exportToPdf($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 }

@@ -49,7 +49,7 @@
 
         .company-name {
             font-size: 1.125rem;
-            font-weight: 600;
+            font-weight: bold;
         }
 
         .date-range {
@@ -71,7 +71,7 @@
 
         .category-header-row > td {
             background-color: #f3f4f6; /* Gray background for category names */
-            font-weight: 600;
+            font-weight: bold;
         }
 
         .table-body tr {
@@ -84,7 +84,7 @@
 
         .category-summary-row > td,
         .table-footer-row > td {
-            font-weight: 600;
+            font-weight: bold;
             background-color: #ffffff; /* White background for footer */
         }
     </style>
