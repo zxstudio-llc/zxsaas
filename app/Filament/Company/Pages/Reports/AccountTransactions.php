@@ -6,6 +6,7 @@ use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
@@ -18,6 +19,7 @@ use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -162,12 +164,26 @@ class AccountTransactions extends BaseReportPage
         ];
     }
 
+    public function hasNoTransactionsForSelectedAccount(): bool
+    {
+        $query = JournalEntry::query();
+        $selectedAccountId = $this->getFilterState('selectedAccount');
+
+        if ($selectedAccountId !== 'all') {
+            $query->where('account_id', $selectedAccountId);
+        }
+
+        if ($this->getFilterState('startDate') && $this->getFilterState('endDate')) {
+            $query->whereHas('transaction', function (Builder $query) {
+                $query->whereBetween('posted_at', [$this->getFormattedStartDate(), $this->getFormattedEndDate()]);
+            });
+        }
+
+        return $query->doesntExist();
+    }
+
     public function tableHasEmptyState(): bool
     {
-        if ($this->report) {
-            return empty($this->report->getCategories());
-        } else {
-            return true;
-        }
+        return $this->hasNoTransactionsForSelectedAccount();
     }
 }

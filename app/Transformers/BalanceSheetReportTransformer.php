@@ -200,23 +200,26 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
                 $totalEquitySummary = $accountCategory->summary->endingBalance ?? 0;
                 $totalEquitySummary = money($totalEquitySummary, CurrencyAccessor::getDefaultCurrency())->getAmount();
                 $totalOtherEquity = $totalEquitySummary - $totalTypeSummaries;
-                $totalOtherEquity = money($totalOtherEquity, CurrencyAccessor::getDefaultCurrency(), true)->format();
 
-                // Add "Total Other Equity" as a new "type"
-                $otherEquitySummary = [];
-                foreach ($columns as $column) {
-                    $otherEquitySummary[$column->getName()] = match ($column->getName()) {
-                        'account_name' => 'Total Other Equity',
-                        'ending_balance' => $totalOtherEquity,
-                        default => '',
-                    };
+                if ($totalOtherEquity != 0) {
+                    $totalOtherEquityFormatted = money($totalOtherEquity, CurrencyAccessor::getDefaultCurrency(), true)->format();
+
+                    // Add "Total Other Equity" as a new "type"
+                    $otherEquitySummary = [];
+                    foreach ($columns as $column) {
+                        $otherEquitySummary[$column->getName()] = match ($column->getName()) {
+                            'account_name' => 'Total Other Equity',
+                            'ending_balance' => $totalOtherEquityFormatted,
+                            default => '',
+                        };
+                    }
+
+                    $types['Total Other Equity'] = new ReportTypeDTO(
+                        header: [],
+                        data: [],
+                        summary: $otherEquitySummary,
+                    );
                 }
-
-                $types['Total Other Equity'] = new ReportTypeDTO(
-                    header: [],
-                    data: [],
-                    summary: $otherEquitySummary,
-                );
             }
 
             // Add the category with its types and summary to the final array
