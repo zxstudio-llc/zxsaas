@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
                     ->state([
                         'name' => 'ERPSAAS',
                     ])
-                    ->withTransactions();
+                    ->withTransactions(10000);
             })
             ->create([
                 'name' => 'Admin',

@@ -410,4 +410,49 @@ return [
             ],
         ],
     ],
+
+    'cash_flow' => [
+        'operating_activities' => [
+            'directly_listed' => [
+                'operating_revenue',
+                'uncategorized_revenue',
+                'operating_expense',
+                'non_operating_expense', // e.g., interest expense
+                'uncategorized_expense',
+                'current_asset', // All current assets except for 'Cash and Cash Equivalents'
+            ],
+            'adjustments' => [
+                'types' => [
+                    'contra_asset', // Adjustments like accumulated depreciation
+                    'current_liability', // Changes in accounts like Accounts Payable, Accrued Expenses
+                ],
+            ],
+        ],
+        'investing_activities' => [
+            'directly_listed' => [
+                'non_current_asset', // Purchases or sales of long-term assets
+            ],
+            'adjustments' => [
+                'types' => [
+                    'non_operating_revenue', // Gains or losses on asset sales
+                ],
+            ],
+        ],
+        'financing_activities' => [
+            'directly_listed' => [
+                'equity', // Cash flows from issuing stock, dividends paid
+                'non_current_liability', // Cash flows related to long-term debt
+                'short_term_borrowings', // Proceeds or repayments of short-term loans
+            ],
+        ],
+        'missing_activities' => [
+            'types' => [
+                'contra_liability', // Adjustments, not direct cash flows
+                'contra_equity', // E.g., treasury stock adjustments
+                'contra_revenue', // Sales returns or allowances
+                'contra_expense', // Purchase discounts
+                'Cash and Cash Equivalents', // Only appears in beginning/ending balances
+            ],
+        ],
+    ],
 ];

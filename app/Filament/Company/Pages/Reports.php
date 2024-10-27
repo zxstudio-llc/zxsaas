@@ -5,6 +5,7 @@ namespace App\Filament\Company\Pages;
 use App\Filament\Company\Pages\Reports\AccountBalances;
 use App\Filament\Company\Pages\Reports\AccountTransactions;
 use App\Filament\Company\Pages\Reports\BalanceSheet;
+use App\Filament\Company\Pages\Reports\CashFlowStatement;
 use App\Filament\Company\Pages\Reports\IncomeStatement;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
@@ -49,7 +50,7 @@ class Reports extends Page
                             ->description('Shows cash inflows and outflows over a specific period of time.')
                             ->icon('heroicon-o-document-currency-dollar')
                             ->iconColor(Color::Cyan)
-                            ->url('#'),
+                            ->url(CashFlowStatement::getUrl()),
                     ]),
                 Section::make('Detailed Reports')
                     ->aside()
