@@ -21,6 +21,7 @@ class ChartOfAccountsService
                 $subtype = $company->accountSubtypes()
                     ->createQuietly([
                         'multi_currency' => $subtypeConfig['multi_currency'] ?? false,
+                        'inverse_cash_flow' => $subtypeConfig['inverse_cash_flow'] ?? false,
                         'category' => AccountType::from($type)->getCategory()->value,
                         'type' => $type,
                         'name' => $subtypeName,

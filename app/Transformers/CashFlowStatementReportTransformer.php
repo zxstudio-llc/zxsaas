@@ -6,7 +6,7 @@ use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
 use App\DTO\ReportDTO;
 use App\DTO\ReportTypeDTO;
-use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 
 class CashFlowStatementReportTransformer extends SummaryReportTransformer
 {
@@ -38,7 +38,7 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         $cashOutflow = 0;
 
         foreach ($this->report->categories as $categoryName => $category) {
-            $netMovement = (float) money($category->summary->netMovement, CurrencyAccessor::getDefaultCurrency())->getAmount();
+            $netMovement = CurrencyConverter::convertToCents($category->summary->netMovement);
 
             match ($categoryName) {
                 'Operating Activities' => $this->totalOperatingActivities = $netMovement,
@@ -55,8 +55,8 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         }
 
         // Store gross totals
-        $this->grossCashInflow = money($cashInflow, CurrencyAccessor::getDefaultCurrency())->format();
-        $this->grossCashOutflow = money($cashOutflow, CurrencyAccessor::getDefaultCurrency())->format();
+        $this->grossCashInflow = CurrencyConverter::formatCentsToMoney($cashInflow);
+        $this->grossCashOutflow = CurrencyConverter::formatCentsToMoney(abs($cashOutflow));
     }
 
     public function getCategories(): array
@@ -104,15 +104,12 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
 
             // Subcategories (types) under the main category
             $types = [];
-            ray($accountCategory->types);
             foreach ($accountCategory->types as $typeName => $type) {
                 // Header for subcategory (type)
                 $typeHeader = [];
                 foreach ($this->getColumns() as $column) {
                     $typeHeader[$column->getName()] = $column->getName() === 'account_name' ? $typeName : '';
                 }
-
-                ray($typeHeader);
 
                 // Account data for the subcategory
                 $typeData = array_map(function (AccountDTO $account) {
@@ -134,8 +131,6 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
 
                     return $row;
                 }, $type->accounts ?? []);
-
-                ray($typeData);
 
                 // Subcategory (type) summary
                 $typeSummary = [];

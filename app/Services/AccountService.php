@@ -171,7 +171,7 @@ class AccountService
                     ->where('transactions.posted_at', '<=', $endDate);
             })
             ->groupBy('accounts.id')
-            ->with(['subtype:id,name']);
+            ->with(['subtype:id,name,inverse_cash_flow']);
 
         if (! empty($accountIds)) {
             $query->whereIn('accounts.id', $accountIds);

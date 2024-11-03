@@ -85,4 +85,48 @@ enum AccountType: string implements HasLabel
             default => false,
         };
     }
+
+    public function isNormalDebitBalance(): bool
+    {
+        return in_array($this, [
+            self::CurrentAsset,
+            self::NonCurrentAsset,
+            self::ContraLiability,
+            self::ContraEquity,
+            self::ContraRevenue,
+            self::OperatingExpense,
+            self::NonOperatingExpense,
+            self::UncategorizedExpense,
+        ], true);
+    }
+
+    public function isNormalCreditBalance(): bool
+    {
+        return ! $this->isNormalDebitBalance();
+    }
+
+    /**
+     * Determines if the account is a nominal account.
+     *
+     * In accounting, nominal accounts are temporary accounts that are closed at the end of each accounting period,
+     * with their net balances transferred to Retained Earnings (a real account).
+     */
+    public function isNominal(): bool
+    {
+        return in_array($this->getCategory(), [
+            AccountCategory::Revenue,
+            AccountCategory::Expense,
+        ], true);
+    }
+
+    /**
+     * Determines if the account is a real account.
+     *
+     * In accounting, assets, liabilities, and equity are real accounts which are permanent accounts that retain their balances across accounting periods.
+     * They are not closed at the end of each accounting period.
+     */
+    public function isReal(): bool
+    {
+        return ! $this->isNominal();
+    }
 }
