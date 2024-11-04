@@ -184,7 +184,7 @@ class Localization extends Page
                                 ->softRequired()
                                 ->columnSpan(1)
                                 ->options(function (Get $get) {
-                                    $month = $get('fiscal_year_end_month');
+                                    $month = (int) $get('fiscal_year_end_month');
 
                                     $daysInMonth = now()->month($month)->daysInMonth;
 
