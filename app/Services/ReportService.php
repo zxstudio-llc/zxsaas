@@ -63,7 +63,7 @@ class ReportService
 
             /** @var Account $account */
             foreach ($accountsInCategory as $account) {
-                $accountBalances = $this->calculateAccountBalances($account, $category);
+                $accountBalances = $this->calculateAccountBalances($account);
 
                 foreach ($relevantFields as $field) {
                     $categorySummaryBalances[$field] += $accountBalances[$field];
@@ -98,8 +98,9 @@ class ReportService
         return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
     }
 
-    public function calculateAccountBalances(Account $account, AccountCategory $category): array
+    public function calculateAccountBalances(Account $account): array
     {
+        $category = $account->category;
         $balances = [
             'debit_balance' => $account->total_debit ?? 0,
             'credit_balance' => $account->total_credit ?? 0,
@@ -130,12 +131,12 @@ class ReportService
         $expenseTotal = 0;
 
         foreach ($revenueAccounts as $account) {
-            $revenueBalances = $this->calculateAccountBalances($account, AccountCategory::Revenue);
+            $revenueBalances = $this->calculateAccountBalances($account);
             $revenueTotal += $revenueBalances['net_movement'];
         }
 
         foreach ($expenseAccounts as $account) {
-            $expenseBalances = $this->calculateAccountBalances($account, AccountCategory::Expense);
+            $expenseBalances = $this->calculateAccountBalances($account);
             $expenseTotal += $expenseBalances['net_movement'];
         }
 
@@ -259,7 +260,7 @@ class ReportService
 
             /** @var Account $account */
             foreach ($accountsInCategory as $account) {
-                $accountBalances = $this->calculateAccountBalances($account, $category);
+                $accountBalances = $this->calculateAccountBalances($account);
 
                 $endingBalance = $accountBalances['ending_balance'] ?? $accountBalances['net_movement'];
 
@@ -402,7 +403,7 @@ class ReportService
                 };
 
                 if ($category !== null) {
-                    $accountBalances = $this->calculateAccountBalances($account, $category);
+                    $accountBalances = $this->calculateAccountBalances($account);
                     $movement = $accountBalances['net_movement'];
                     $netMovement += $movement;
                     $group['total'] += $movement;
@@ -517,7 +518,7 @@ class ReportService
         foreach ([$accounts, $adjustments] as $entries) {
             foreach ($entries as $entry) {
                 $accountCategory = $entry->type->getCategory();
-                $accountBalances = $this->calculateAccountBalances($entry, $accountCategory);
+                $accountBalances = $this->calculateAccountBalances($entry);
                 $netCashFlow = $accountBalances['net_movement'] ?? 0;
 
                 if ($entry->subtype->inverse_cash_flow) {
@@ -608,7 +609,7 @@ class ReportService
             /** @var Account $account */
             foreach ($accounts as $account) {
                 if ($account->type->getCategory() === $category) {
-                    $accountBalances = $this->calculateAccountBalances($account, $category);
+                    $accountBalances = $this->calculateAccountBalances($account);
                     $endingBalance = $accountBalances['ending_balance'] ?? $accountBalances['net_movement'];
 
                     $categorySummaryBalances['ending_balance'] += $endingBalance;

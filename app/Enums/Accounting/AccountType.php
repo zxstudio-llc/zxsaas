@@ -129,4 +129,15 @@ enum AccountType: string implements HasLabel
     {
         return ! $this->isNominal();
     }
+
+    public function isContra(): bool
+    {
+        return in_array($this, [
+            self::ContraAsset,
+            self::ContraLiability,
+            self::ContraEquity,
+            self::ContraRevenue,
+            self::ContraExpense,
+        ], true);
+    }
 }
