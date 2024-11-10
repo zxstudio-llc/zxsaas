@@ -170,17 +170,17 @@
         </tr>
         @if($overviewCategory->header['account_name'] === 'Starting Balance')
             <!-- Insert Gross Cash Inflow, Gross Cash Outflow, and Net Cash Change here -->
-            @foreach($report->getSummary() as $summaryItem)
+            @foreach($report->getSummaryAlignedWithColumns() as $summaryRow)
                 <tr>
-                    <x-company.tables.cell :alignment-class="$report->getAlignmentClass('account_name')"
-                                           :bold="$loop->last">
-                        {{ $summaryItem['label'] }}
-                    </x-company.tables.cell>
-                    <x-company.tables.cell :alignment-class="$report->getAlignmentClass('net_movement')"
-                                           :bold="$loop->last" :underline-bold="$loop->last"
-                                           :underline-thin="$loop->remaining === 1">
-                        {{ $summaryItem['value'] }}
-                    </x-company.tables.cell>
+                    @foreach($summaryRow as $summaryIndex => $summaryCell)
+                        <x-company.tables.cell :alignment-class="$report->getAlignmentClass($summaryIndex)"
+                                               :bold="$loop->parent->last"
+                                               :underline-bold="$loop->parent->last && $summaryIndex === 'net_movement'"
+                                               :underline-thin="$loop->parent->remaining === 1 && $summaryIndex === 'net_movement'"
+                        >
+                            {{ $summaryCell }}
+                        </x-company.tables.cell>
+                    @endforeach
                 </tr>
             @endforeach
         @endif

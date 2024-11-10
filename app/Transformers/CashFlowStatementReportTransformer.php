@@ -199,6 +199,27 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         ];
     }
 
+    public function getSummaryAlignedWithColumns(): array
+    {
+        $summary = [];
+
+        foreach ($this->getSummary() as $summaryItem) {
+            $row = [];
+
+            foreach ($this->getColumns() as $column) {
+                $row[$column->getName()] = match ($column->getName()) {
+                    'account_name' => $summaryItem['label'] ?? '',
+                    'net_movement' => $summaryItem['value'] ?? '',
+                    default => '',
+                };
+            }
+
+            $summary[] = $row;
+        }
+
+        return $summary;
+    }
+
     public function getOverview(): array
     {
         $categories = [];

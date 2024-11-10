@@ -38,6 +38,10 @@ class CashFlowStatement extends BaseReportPage
     public function getTable(): array
     {
         return [
+            Column::make('account_code')
+                ->label('Account Code')
+                ->toggleable()
+                ->alignment(Alignment::Center),
             Column::make('account_name')
                 ->label('Account')
                 ->alignment(Alignment::Left),
