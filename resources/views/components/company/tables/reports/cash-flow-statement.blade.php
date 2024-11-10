@@ -115,7 +115,7 @@
         <tr>
             @foreach($accountCategory->summary as $accountCategorySummaryIndex => $accountCategorySummaryCell)
                 <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountCategorySummaryIndex)"
-                                       bold="true">
+                                       bold="true" :underline-bold="$loop->last">
                     {{ $accountCategorySummaryCell }}
                 </x-company.tables.cell>
             @endforeach
