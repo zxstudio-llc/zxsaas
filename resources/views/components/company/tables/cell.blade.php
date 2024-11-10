@@ -2,6 +2,8 @@
     'alignmentClass',
     'indent' => false,
     'bold' => false,
+    'underlineThin' => false,
+    'underlineBold' => false,
 ])
 
 <td
@@ -16,6 +18,8 @@
         @class([
             'px-3 py-4 text-sm leading-6 text-gray-950 dark:text-white',
             'font-semibold' => $bold,
+            'border-b border-gray-700 dark:border-white/10' => $underlineThin,
+            'border-b-[1.5px] border-gray-800 dark:border-white/5' => $underlineBold,
         ])
     >
         {{ $slot }}

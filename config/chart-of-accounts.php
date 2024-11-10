@@ -266,7 +266,7 @@ return [
                 'description' => 'Revenue that is deducted from gross revenue to arrive at net revenue. This includes sales discounts, returns, and allowances.',
                 'multi_currency' => false,
                 'base_code' => '4900',
-                'inverse_cash_flow' => true,
+                'inverse_cash_flow' => false,
                 'accounts' => [
                     'Sales Returns and Allowances' => [
                         'description' => 'The amount of money returned to customers or deducted from sales due to returned goods or allowances granted.',
@@ -429,7 +429,7 @@ return [
                 'description' => 'Expenses that are deducted from gross expenses to arrive at net expenses. This includes purchase discounts, returns, and allowances.',
                 'multi_currency' => false,
                 'base_code' => '5900',
-                'inverse_cash_flow' => false,
+                'inverse_cash_flow' => true,
                 'accounts' => [
                     'Purchase Returns and Allowances' => [
                         'description' => 'The amount of money returned to suppliers or deducted from purchases due to returned goods or allowances granted.',

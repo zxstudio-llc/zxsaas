@@ -12,5 +12,6 @@ class ReportDTO
         public ?AccountBalanceDTO $overallTotal = null,
         public array $fields = [],
         public ?string $reportType = null,
+        public ?CashFlowOverviewDTO $overview = null,
     ) {}
 }

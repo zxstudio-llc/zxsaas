@@ -4,59 +4,13 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
-use App\DTO\ReportDTO;
 use App\DTO\ReportTypeDTO;
-use App\Utilities\Currency\CurrencyConverter;
 
 class CashFlowStatementReportTransformer extends SummaryReportTransformer
 {
-    protected string $totalOperatingActivities;
-
-    protected string $totalInvestingActivities;
-
-    protected string $totalFinancingActivities;
-
-    protected string $grossCashInflow;
-
-    protected string $grossCashOutflow;
-
-    public function __construct(ReportDTO $report)
-    {
-        parent::__construct($report);
-
-        $this->calculateTotals();
-    }
-
     public function getTitle(): string
     {
         return 'Cash Flow Statement';
-    }
-
-    public function calculateTotals(): void
-    {
-        $cashInflow = 0;
-        $cashOutflow = 0;
-
-        foreach ($this->report->categories as $categoryName => $category) {
-            $netMovement = CurrencyConverter::convertToCents($category->summary->netMovement);
-
-            match ($categoryName) {
-                'Operating Activities' => $this->totalOperatingActivities = $netMovement,
-                'Investing Activities' => $this->totalInvestingActivities = $netMovement,
-                'Financing Activities' => $this->totalFinancingActivities = $netMovement,
-            };
-
-            // Sum inflows and outflows separately
-            if ($netMovement > 0) {
-                $cashInflow += $netMovement;
-            } else {
-                $cashOutflow += $netMovement;
-            }
-        }
-
-        // Store gross totals
-        $this->grossCashInflow = CurrencyConverter::formatCentsToMoney($cashInflow);
-        $this->grossCashOutflow = CurrencyConverter::formatCentsToMoney(abs($cashOutflow));
     }
 
     public function getCategories(): array
@@ -232,16 +186,67 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         return [
             [
                 'label' => 'Gross Cash Inflow',
-                'value' => $this->grossCashInflow,
+                'value' => $this->report->overallTotal->debitBalance ?? '',
             ],
             [
                 'label' => 'Gross Cash Outflow',
-                'value' => $this->grossCashOutflow,
+                'value' => $this->report->overallTotal->creditBalance ?? '',
             ],
             [
-                'label' => 'Net Cash Flow',
+                'label' => 'Net Cash Change',
                 'value' => $this->report->overallTotal->netMovement ?? '',
             ],
         ];
+    }
+
+    public function getOverview(): array
+    {
+        $categories = [];
+
+        foreach ($this->report->overview->categories as $categoryName => $category) {
+            $header = [];
+
+            foreach ($this->getColumns() as $column) {
+                $header[$column->getName()] = $column->getName() === 'account_name' ? $categoryName : '';
+            }
+
+            $data = array_map(function (AccountDTO $account) {
+                $row = [];
+
+                foreach ($this->getColumns() as $column) {
+                    $row[$column->getName()] = match ($column->getName()) {
+                        'account_code' => $account->accountCode,
+                        'account_name' => [
+                            'name' => $account->accountName,
+                            'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
+                        ],
+                        'net_movement' => $account->balance->startingBalance ?? $account->balance->endingBalance ?? '',
+                        default => '',
+                    };
+                }
+
+                return $row;
+            }, $category->accounts);
+
+            $summary = [];
+
+            foreach ($this->getColumns() as $column) {
+                $summary[$column->getName()] = match ($column->getName()) {
+                    'account_name' => 'Total ' . $categoryName,
+                    'net_movement' => $category->summary->startingBalance ?? $category->summary->endingBalance ?? '',
+                    default => '',
+                };
+            }
+
+            $categories[] = new ReportCategoryDTO(
+                header: $header,
+                data: $data,
+                summary: $summary,
+            );
+        }
+
+        return $categories;
     }
 }

@@ -7,12 +7,14 @@ use App\DTO\AccountCategoryDTO;
 use App\DTO\AccountDTO;
 use App\DTO\AccountTransactionDTO;
 use App\DTO\AccountTypeDTO;
+use App\DTO\CashFlowOverviewDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use App\ValueObjects\Money;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -441,27 +443,118 @@ class ReportService
             'Financing Activities' => $this->buildFinancingActivities($startDate, $endDate),
         ];
 
-        $totalCashFlows = $this->calculateTotalCashFlows($sections);
+        $totalCashFlows = $this->calculateTotalCashFlows($sections, $startDate);
 
-        return new ReportDTO($sections, $totalCashFlows, $columns);
+        $overview = $this->buildCashFlowOverview($startDate, $endDate);
+
+        return new ReportDTO(
+            categories: $sections,
+            overallTotal: $totalCashFlows,
+            fields: $columns,
+            overview: $overview
+        );
+    }
+
+    private function calculateTotalCashFlows(array $sections, string $startDate): AccountBalanceDTO
+    {
+        $totalInflow = 0;
+        $totalOutflow = 0;
+        $startingBalance = $this->accountService->getStartingBalanceForAllBankAccounts($startDate)->getAmount();
+
+        foreach ($sections as $section) {
+            $netMovement = $section->summary->netMovement ?? 0;
+
+            $numericNetMovement = CurrencyConverter::convertToCents($netMovement);
+
+            if ($numericNetMovement > 0) {
+                $totalInflow += $numericNetMovement;
+            } else {
+                $totalOutflow += $numericNetMovement;
+            }
+        }
+
+        $netCashChange = $totalInflow + $totalOutflow;
+        $endingBalance = $startingBalance + $netCashChange;
+
+        return $this->formatBalances([
+            'starting_balance' => $startingBalance,
+            'debit_balance' => $totalInflow,
+            'credit_balance' => abs($totalOutflow),
+            'net_movement' => $netCashChange,
+            'ending_balance' => $endingBalance,
+        ]);
+    }
+
+    private function buildCashFlowOverview(string $startDate, string $endDate): CashFlowOverviewDTO
+    {
+        $accounts = $this->accountService->getBankAccountBalances($startDate, $endDate)->get();
+
+        $startingBalanceAccounts = [];
+        $endingBalanceAccounts = [];
+
+        $startingBalanceTotal = 0;
+        $endingBalanceTotal = 0;
+
+        foreach ($accounts as $account) {
+            $accountBalances = $this->calculateAccountBalances($account);
+
+            $startingBalanceTotal += $accountBalances['starting_balance'];
+            $endingBalanceTotal += $accountBalances['ending_balance'];
+
+            $startingBalanceAccounts[] = new AccountDTO(
+                accountName: $account->name,
+                accountCode: $account->code,
+                accountId: $account->id,
+                balance: $this->formatBalances(['starting_balance' => $accountBalances['starting_balance']]),
+                startDate: $startDate,
+                endDate: $endDate,
+            );
+
+            $endingBalanceAccounts[] = new AccountDTO(
+                accountName: $account->name,
+                accountCode: $account->code,
+                accountId: $account->id,
+                balance: $this->formatBalances(['ending_balance' => $accountBalances['ending_balance']]),
+                startDate: $startDate,
+                endDate: $endDate,
+            );
+        }
+
+        $startingBalanceSummary = $this->formatBalances(['starting_balance' => $startingBalanceTotal]);
+        $endingBalanceSummary = $this->formatBalances(['ending_balance' => $endingBalanceTotal]);
+
+        $overviewCategories = [
+            'Starting Balance' => new AccountCategoryDTO(
+                accounts: $startingBalanceAccounts,
+                summary: $startingBalanceSummary,
+            ),
+            'Ending Balance' => new AccountCategoryDTO(
+                accounts: $endingBalanceAccounts,
+                summary: $endingBalanceSummary,
+            ),
+        ];
+
+        return new CashFlowOverviewDTO($overviewCategories);
     }
 
     private function buildOperatingActivities(string $startDate, string $endDate): AccountCategoryDTO
     {
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)
+        $accounts = $this->accountService->getCashFlowAccountBalances($startDate, $endDate)
             ->whereIn('accounts.type', [
                 AccountType::OperatingRevenue,
                 AccountType::UncategorizedRevenue,
+                AccountType::ContraRevenue,
                 AccountType::OperatingExpense,
                 AccountType::NonOperatingExpense,
                 AccountType::UncategorizedExpense,
+                AccountType::ContraExpense,
                 AccountType::CurrentAsset,
             ])
             ->whereRelation('subtype', 'name', '!=', 'Cash and Cash Equivalents')
             ->orderByRaw('LENGTH(code), code')
             ->get();
 
-        $adjustments = $this->accountService->getAccountBalances($startDate, $endDate)
+        $adjustments = $this->accountService->getCashFlowAccountBalances($startDate, $endDate)
             ->whereIn('accounts.type', [
                 AccountType::ContraAsset,
                 AccountType::CurrentLiability,
@@ -475,12 +568,12 @@ class ReportService
 
     private function buildInvestingActivities(string $startDate, string $endDate): AccountCategoryDTO
     {
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)
+        $accounts = $this->accountService->getCashFlowAccountBalances($startDate, $endDate)
             ->whereIn('accounts.type', [AccountType::NonCurrentAsset])
             ->orderByRaw('LENGTH(code), code')
             ->get();
 
-        $adjustments = $this->accountService->getAccountBalances($startDate, $endDate)
+        $adjustments = $this->accountService->getCashFlowAccountBalances($startDate, $endDate)
             ->whereIn('accounts.type', [AccountType::NonOperatingRevenue])
             ->orderByRaw('LENGTH(code), code')
             ->get();
@@ -490,7 +583,7 @@ class ReportService
 
     private function buildFinancingActivities(string $startDate, string $endDate): AccountCategoryDTO
     {
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)
+        $accounts = $this->accountService->getCashFlowAccountBalances($startDate, $endDate)
             ->where(function (Builder $query) {
                 $query->whereIn('accounts.type', [
                     AccountType::Equity,
@@ -563,21 +656,6 @@ class ReportService
             types: $subCategories, // Grouped by AccountTypeDTO
             summary: $formattedSectionTotal,
         );
-    }
-
-    private function calculateTotalCashFlows(array $sections): AccountBalanceDTO
-    {
-        $totalCashFlow = 0;
-
-        foreach ($sections as $section) {
-            $netMovement = $section->summary->netMovement ?? 0;
-
-            $numericNetMovement = money($netMovement, CurrencyAccessor::getDefaultCurrency(), true)->getAmount();
-
-            $totalCashFlow += $numericNetMovement;
-        }
-
-        return $this->formatBalances(['net_movement' => $totalCashFlow]);
     }
 
     public function buildBalanceSheetReport(string $asOfDate, array $columns = []): ReportDTO
