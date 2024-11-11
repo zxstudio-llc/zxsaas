@@ -116,7 +116,7 @@
             <tr>
                 @foreach($accountType->summary as $accountTypeSummaryIndex => $accountTypeSummaryCell)
                     <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountTypeSummaryIndex)"
-                                           :indent="$accountIndex === 'account_name'" bold="true">
+                                           :indent="$accountTypeSummaryIndex === 'account_name'" bold="true">
                         {{ $accountTypeSummaryCell }}
                     </x-company.tables.cell>
                 @endforeach
