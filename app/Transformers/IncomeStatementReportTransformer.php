@@ -179,6 +179,38 @@ class IncomeStatementReportTransformer extends SummaryReportTransformer
         return $totals;
     }
 
+    public function getTitleHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            $dateRange = $this->getStartDate() && $this->getEndDate()
+                ? "{$this->getStartDate()} - {$this->getEndDate()}"
+                : '';
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = match ($column->getName()) {
+                    'account_name' => 'ACCOUNTS',
+                    'net_movement' => $dateRange,
+                    default => '',
+                };
+            }
+
+            return $headers;
+        });
+    }
+
+    public function getSummaryTitleHeaders(): array
+    {
+        return once(function (): array {
+            $headers = $this->getTitleHeaders();
+
+            unset($headers['account_code']);
+
+            return $headers;
+        });
+    }
+
     public function getSummary(): array
     {
         return [

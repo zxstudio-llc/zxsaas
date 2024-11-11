@@ -244,6 +244,37 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
         return [];
     }
 
+    public function getTitleHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            $dateRange = $this->getEndDate() ? $this->getEndDate() : '';
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = match ($column->getName()) {
+                    'account_name' => 'ACCOUNTS',
+                    'ending_balance' => $dateRange,
+                    default => '',
+                };
+            }
+
+            return $headers;
+        });
+    }
+
+    public function getSummaryTitleHeaders(): array
+    {
+        return once(function (): array {
+            $headers = $this->getTitleHeaders();
+
+            // Remove the account_code key if it exists
+            unset($headers['account_code']);
+
+            return $headers;
+        });
+    }
+
     public function getSummary(): array
     {
         return [

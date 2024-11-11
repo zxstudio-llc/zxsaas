@@ -31,15 +31,15 @@
                         <div class="text-gray-600 font-medium mb-2">{{ $summary['label'] }}</div>
 
                         @php
-                            $isNetEarnings = $summary['label'] === 'Net Earnings';
+                            $isNetCashFlow = $summary['label'] === 'Net Cash Flow';
                             $isPositive = money($summary['value'], \App\Utilities\Currency\CurrencyAccessor::getDefaultCurrency())->isPositive();
                         @endphp
 
                         <strong
                             @class([
                                 'text-lg',
-                                'text-green-700' => $isNetEarnings && $isPositive,
-                                'text-danger-700' => $isNetEarnings && ! $isPositive,
+                                'text-green-700' => $isNetCashFlow && $isPositive,
+                                'text-danger-700' => $isNetCashFlow && ! $isPositive,
                             ])
                         >
                             {{ $summary['value'] }}
@@ -77,7 +77,7 @@
     <x-company.tables.container :report-loaded="$this->reportLoaded">
         @if($this->report)
             @if($activeTab === 'summary')
-                <x-company.tables.reports.income-statement-summary :report="$this->report"/>
+                <x-company.tables.reports.cash-flow-statement-summary :report="$this->report"/>
             @elseif($activeTab === 'details')
                 <x-company.tables.reports.cash-flow-statement :report="$this->report"/>
             @endif

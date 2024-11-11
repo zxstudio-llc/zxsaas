@@ -1,5 +1,16 @@
-<table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
-    <x-company.tables.header :headers="$report->getHeaders()" :alignment-class="[$report, 'getAlignmentClass']"/>
+<table class="w-full table-fixed divide-y divide-gray-200 dark:divide-white/5">
+    <colgroup>
+        @if(array_key_exists('account_code', $report->getHeaders()))
+            <col span="1" style="width: 20%;">
+            <col span="1" style="width: 55%;">
+            <col span="1" style="width: 25%;">
+        @else
+            <col span="1" style="width: 65%;">
+            <col span="1" style="width: 35%;">
+        @endif
+    </colgroup>
+    <x-company.tables.header :headers="$report->getCashInflowAndOutflowHeaders()"
+                             :alignment-class="[$report, 'getAlignmentClass']"/>
     @foreach($report->getCategories() as $accountCategory)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <x-company.tables.category-header :category-headers="$accountCategory->header"
@@ -7,8 +18,7 @@
         @foreach($accountCategory->data as $categoryAccount)
             <tr>
                 @foreach($categoryAccount as $accountIndex => $categoryAccountCell)
-                    <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountIndex)"
-                                           indent="true">
+                    <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountIndex)">
                         @if(is_array($categoryAccountCell) && isset($categoryAccountCell['name']))
                             @if($categoryAccountCell['name'] === 'Retained Earnings' && isset($categoryAccountCell['start_date']) && isset($categoryAccountCell['end_date']))
                                 <x-filament::link
@@ -53,7 +63,7 @@
             <tr class="bg-gray-50 dark:bg-white/5">
                 @foreach($accountType->header as $accountTypeHeaderIndex => $accountTypeHeaderCell)
                     <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountTypeHeaderIndex)"
-                                           indent="true" bold="true">
+                                           :indent="$accountTypeHeaderIndex === 'account_name'" bold="true">
                         {{ $accountTypeHeaderCell }}
                     </x-company.tables.cell>
                 @endforeach
@@ -62,7 +72,7 @@
                 <tr>
                     @foreach($typeAccount as $accountIndex => $typeAccountCell)
                         <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountIndex)"
-                                               indent="true">
+                                               :indent="$accountIndex === 'account_name'">
                             @if(is_array($typeAccountCell) && isset($typeAccountCell['name']))
                                 @if($typeAccountCell['name'] === 'Retained Earnings' && isset($typeAccountCell['start_date']) && isset($typeAccountCell['end_date']))
                                     <x-filament::link
@@ -106,7 +116,7 @@
             <tr>
                 @foreach($accountType->summary as $accountTypeSummaryIndex => $accountTypeSummaryCell)
                     <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountTypeSummaryIndex)"
-                                           indent="true" bold="true">
+                                           :indent="$accountIndex === 'account_name'" bold="true">
                         {{ $accountTypeSummaryCell }}
                     </x-company.tables.cell>
                 @endforeach
@@ -127,6 +137,22 @@
         </tr>
         </tbody>
     @endforeach
+    <x-company.tables.footer :totals="$report->getOverallTotals()" :alignment-class="[$report, 'getAlignmentClass']"/>
+</table>
+
+<table class="w-full table-fixed divide-y border-t divide-gray-200 dark:divide-white/5">
+    <colgroup>
+        @if(array_key_exists('account_code', $report->getHeaders()))
+            <col span="1" style="width: 20%;">
+            <col span="1" style="width: 55%;">
+            <col span="1" style="width: 25%;">
+        @else
+            <col span="1" style="width: 65%;">
+            <col span="1" style="width: 35%;">
+        @endif
+    </colgroup>
+    <x-company.tables.header :headers="$report->getOverviewHeaders()"
+                             :alignment-class="[$report, 'getAlignmentClass']"/>
     @foreach($report->getOverview() as $overviewCategory)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <x-company.tables.category-header :category-headers="$overviewCategory->header"
@@ -169,8 +195,7 @@
             @endforeach
         </tr>
         @if($overviewCategory->header['account_name'] === 'Starting Balance')
-            <!-- Insert Gross Cash Inflow, Gross Cash Outflow, and Net Cash Change here -->
-            @foreach($report->getSummaryAlignedWithColumns() as $summaryRow)
+            @foreach($report->getOverviewAlignedWithColumns() as $summaryRow)
                 <tr>
                     @foreach($summaryRow as $summaryIndex => $summaryCell)
                         <x-company.tables.cell :alignment-class="$report->getAlignmentClass($summaryIndex)"
@@ -186,5 +211,4 @@
         @endif
         </tbody>
     @endforeach
-    <x-company.tables.footer :totals="$report->getOverallTotals()" :alignment-class="[$report, 'getAlignmentClass']"/>
 </table>

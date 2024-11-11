@@ -46,7 +46,9 @@ class ReportService
     {
         $orderedCategories = AccountCategory::getOrderedCategories();
 
-        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)->get();
+        $accounts = $this->accountService->getAccountBalances($startDate, $endDate)
+            ->orderByRaw('LENGTH(code), code')
+            ->get();
 
         $columnNameKeys = array_map(fn (Column $column) => $column->getName(), $columns);
 
@@ -54,8 +56,7 @@ class ReportService
         $reportTotalBalances = [];
 
         foreach ($orderedCategories as $category) {
-            $accountsInCategory = $accounts->where('category', $category)
-                ->sortBy('code', SORT_NATURAL);
+            $accountsInCategory = $accounts->where('category', $category);
 
             $relevantFields = array_intersect($category->getRelevantBalanceFields(), $columnNameKeys);
 
@@ -97,7 +98,11 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+        return new ReportDTO(
+            categories: $accountCategories,
+            overallTotal: $formattedReportTotalBalances,
+            fields: $columns,
+        );
     }
 
     public function calculateAccountBalances(Account $account): array
@@ -154,7 +159,8 @@ class ReportService
 
         $accountIds = $accountId !== 'all' ? [$accountId] : [];
 
-        $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds);
+        $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds)
+            ->orderByRaw('LENGTH(code), code');
 
         $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)])->get();
 
@@ -245,6 +251,7 @@ class ReportService
 
         $accounts = $this->accountService->getAccountBalances($startDateCarbon->toDateTimeString(), $asOfDateCarbon->toDateTimeString())
             ->when($isPostClosingTrialBalance, fn (Builder $query) => $query->whereNotIn('category', [AccountCategory::Revenue, AccountCategory::Expense]))
+            ->orderByRaw('LENGTH(code), code')
             ->get();
 
         $balanceFields = ['debit_balance', 'credit_balance'];
@@ -253,8 +260,7 @@ class ReportService
         $reportTotalBalances = array_fill_keys($balanceFields, 0);
 
         foreach ($orderedCategories as $category) {
-            $accountsInCategory = $accounts->where('category', $category)
-                ->sortBy('code', SORT_NATURAL);
+            $accountsInCategory = $accounts->where('category', $category);
 
             $categorySummaryBalances = array_fill_keys($balanceFields, 0);
 
@@ -432,7 +438,13 @@ class ReportService
         $netProfit = $grossProfit - $totalExpenses;
         $formattedReportTotalBalances = $this->formatBalances(['net_movement' => $netProfit]);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+        return new ReportDTO(
+            categories: $accountCategories,
+            overallTotal: $formattedReportTotalBalances,
+            fields: $columns,
+            startDate: Carbon::parse($startDate),
+            endDate: Carbon::parse($endDate),
+        );
     }
 
     public function buildCashFlowStatementReport(string $startDate, string $endDate, array $columns = []): ReportDTO
@@ -451,7 +463,9 @@ class ReportService
             categories: $sections,
             overallTotal: $totalCashFlows,
             fields: $columns,
-            overview: $overview
+            overview: $overview,
+            startDate: Carbon::parse($startDate),
+            endDate: Carbon::parse($endDate),
         );
     }
 
@@ -759,6 +773,12 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances(['ending_balance' => $netAssets]);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns);
+        return new ReportDTO(
+            categories: $accountCategories,
+            overallTotal: $formattedReportTotalBalances,
+            fields: $columns,
+            startDate: $startDateCarbon,
+            endDate: $asOfDateCarbon,
+        );
     }
 }

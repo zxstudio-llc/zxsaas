@@ -76,4 +76,14 @@ abstract class BaseReportTransformer implements ExportableReport
             return 'text-left';
         });
     }
+
+    public function getStartDate(): ?string
+    {
+        return $this->report->startDate?->toDefaultDateFormat();
+    }
+
+    public function getEndDate(): ?string
+    {
+        return $this->report->endDate?->toDefaultDateFormat();
+    }
 }

@@ -146,7 +146,7 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
 
                 foreach ($columns as $column) {
                     $typeSummary[$column->getName()] = match ($column->getName()) {
-                        'account_name' => 'Total ' . $typeName,
+                        'account_name' => $typeName,
                         'net_movement' => $type->summary->netMovement ?? '',
                         default => '',
                     };
@@ -185,21 +185,21 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
     {
         return [
             [
-                'label' => 'Gross Cash Inflow',
+                'label' => 'Total Cash Inflows',
                 'value' => $this->report->overallTotal->debitBalance ?? '',
             ],
             [
-                'label' => 'Gross Cash Outflow',
+                'label' => 'Total Cash Outflows',
                 'value' => $this->report->overallTotal->creditBalance ?? '',
             ],
             [
-                'label' => 'Net Cash Change',
+                'label' => 'Net Cash Flow',
                 'value' => $this->report->overallTotal->netMovement ?? '',
             ],
         ];
     }
 
-    public function getSummaryAlignedWithColumns(): array
+    public function getOverviewAlignedWithColumns(): array
     {
         $summary = [];
 
@@ -218,6 +218,72 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         }
 
         return $summary;
+    }
+
+    public function getSummaryOverviewAlignedWithColumns(): array
+    {
+        return array_map(static function ($row) {
+            unset($row['account_code']);
+
+            return $row;
+        }, $this->getOverviewAlignedWithColumns());
+    }
+
+    public function getCashInflowAndOutflowHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            $dateRange = $this->getStartDate() && $this->getEndDate()
+                ? "{$this->getStartDate()} - {$this->getEndDate()}"
+                : '';
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = match ($column->getName()) {
+                    'account_name' => 'CASH INFLOWS AND OUTFLOWS',
+                    'net_movement' => $dateRange,
+                    default => '',
+                };
+            }
+
+            return $headers;
+        });
+    }
+
+    public function getSummaryCashInflowAndOutflowHeaders(): array
+    {
+        return once(function (): array {
+            $headers = $this->getCashInflowAndOutflowHeaders();
+
+            // Remove the account_code key if it exists
+            unset($headers['account_code']);
+
+            return $headers;
+        });
+    }
+
+    public function getOverviewHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = $column->getName() === 'account_name' ? 'OVERVIEW' : '';
+            }
+
+            return $headers;
+        });
+    }
+
+    public function getSummaryOverviewHeaders(): array
+    {
+        return once(function (): array {
+            $headers = $this->getOverviewHeaders();
+
+            unset($headers['account_code']);
+
+            return $headers;
+        });
     }
 
     public function getOverview(): array
@@ -269,5 +335,32 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         }
 
         return $categories;
+    }
+
+    public function getSummaryOverview(): array
+    {
+        $summaryCategories = [];
+
+        $columns = $this->getSummaryColumns();
+
+        foreach ($this->report->overview->categories as $categoryName => $category) {
+            $categorySummary = [];
+
+            foreach ($columns as $column) {
+                $categorySummary[$column->getName()] = match ($column->getName()) {
+                    'account_name' => $categoryName,
+                    'net_movement' => $category->summary->startingBalance ?? $category->summary->endingBalance ?? '',
+                    default => '',
+                };
+            }
+
+            $summaryCategories[] = new ReportCategoryDTO(
+                header: [],
+                data: [],
+                summary: $categorySummary,
+            );
+        }
+
+        return $summaryCategories;
     }
 }

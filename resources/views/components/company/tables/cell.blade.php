@@ -10,7 +10,7 @@
     @class([
         $alignmentClass,
         'last-of-type:pe-1 sm:last-of-type:pe-3',
-        'ps-3 sm:ps-6' => $indent,
+        'ps-4 sm:first-of-type:ps-7' => $indent,
         'p-0 first-of-type:ps-1 sm:first-of-type:ps-3' => ! $indent,
     ])
 >

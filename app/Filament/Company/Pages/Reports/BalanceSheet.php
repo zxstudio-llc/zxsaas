@@ -38,8 +38,8 @@ class BalanceSheet extends BaseReportPage
         return [
             Column::make('account_code')
                 ->label('Account Code')
-                ->toggleable()
-                ->alignment(Alignment::Center),
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->alignment(Alignment::Left),
             Column::make('account_name')
                 ->label('Account')
                 ->alignment(Alignment::Left),

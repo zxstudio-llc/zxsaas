@@ -79,7 +79,7 @@
             @if($activeTab === 'summary')
                 <x-company.tables.reports.income-statement-summary :report="$this->report"/>
             @elseif($activeTab === 'details')
-                <x-company.tables.reports.detailed-report :report="$this->report"/>
+                <x-company.tables.reports.income-statement :report="$this->report"/>
             @endif
         @endif
     </x-company.tables.container>
