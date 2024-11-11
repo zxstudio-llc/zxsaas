@@ -8,6 +8,11 @@ use App\DTO\ReportTypeDTO;
 
 class CashFlowStatementReportTransformer extends SummaryReportTransformer
 {
+    public function getPdfView(): string
+    {
+        return 'components.company.reports.cash-flow-statement-pdf';
+    }
+
     public function getTitle(): string
     {
         return 'Cash Flow Statement';
