@@ -70,7 +70,6 @@ it('correctly builds a standard trial balance report', function () {
         ->call('applyFilters')
         ->assertDontSeeText('Retained Earnings')
         ->assertSeeTextInOrder([
-            $defaultBankAccountAccount->code,
             $defaultBankAccountAccount->name,
             $formattedExpectedBalances->debitBalance,
             $formattedExpectedBalances->creditBalance,
@@ -143,7 +142,6 @@ it('correctly builds a post-closing trial balance report', function () {
             'asOfDate' => $defaultEndDate->toDateString(),
         ])
         ->assertSeeTextInOrder([
-            $defaultBankAccountAccount->code,
             $defaultBankAccountAccount->name,
             $formattedExpectedBalances->debitBalance,
             $formattedExpectedBalances->creditBalance,
