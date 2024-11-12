@@ -7,18 +7,18 @@ use App\DTO\ReportDTO;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
-use App\Transformers\IncomeStatementReportTransformer;
+use App\Transformers\CashFlowStatementReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
 use Guava\FilamentClusters\Forms\Cluster;
 use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class IncomeStatement extends BaseReportPage
+class CashFlowStatement extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.income-statement';
+    protected static string $view = 'filament.company.pages.reports.cash-flow-statement';
 
-    protected static ?string $slug = 'reports/income-statement';
+    protected static ?string $slug = 'reports/cash-flow-statement';
 
     protected static bool $shouldRegisterNavigation = false;
 
@@ -43,7 +43,7 @@ class IncomeStatement extends BaseReportPage
                 ->toggleable(isToggledHiddenByDefault: true)
                 ->alignment(Alignment::Left),
             Column::make('account_name')
-                ->label('ACCOUNTS')
+                ->label('CASH INFLOWS AND OUTFLOWS')
                 ->alignment(Alignment::Left),
             Column::make('net_movement')
                 ->label($this->getDisplayDateRange())
@@ -67,12 +67,12 @@ class IncomeStatement extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildIncomeStatementReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
+        return $this->reportService->buildCashFlowStatementReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
     {
-        return new IncomeStatementReportTransformer($reportDTO);
+        return new CashFlowStatementReportTransformer($reportDTO);
     }
 
     public function exportCSV(): StreamedResponse

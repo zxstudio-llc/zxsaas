@@ -169,6 +169,29 @@ abstract class BaseReportPage extends Page
         return Carbon::parse($this->getFilterState('asOfDate'))->endOfDay()->toDateTimeString();
     }
 
+    public function getDisplayAsOfDate(): string
+    {
+        return Carbon::parse($this->getFilterState('asOfDate'))->toDefaultDateFormat();
+    }
+
+    public function getDisplayStartDate(): string
+    {
+        return Carbon::parse($this->getFilterState('startDate'))->toDefaultDateFormat();
+    }
+
+    public function getDisplayEndDate(): string
+    {
+        return Carbon::parse($this->getFilterState('endDate'))->toDefaultDateFormat();
+    }
+
+    public function getDisplayDateRange(): string
+    {
+        $startDate = Carbon::parse($this->getFilterState('startDate'));
+        $endDate = Carbon::parse($this->getFilterState('endDate'));
+
+        return $startDate->toDefaultDateFormat() . ' - ' . $endDate->toDefaultDateFormat();
+    }
+
     protected function getHeaderActions(): array
     {
         return [

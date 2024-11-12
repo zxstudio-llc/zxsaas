@@ -26,4 +26,8 @@ interface ExportableReport
     public function getPdfView(): string;
 
     public function getAlignmentClass(string $columnName): string;
+
+    public function getStartDate(): ?string;
+
+    public function getEndDate(): ?string;
 }

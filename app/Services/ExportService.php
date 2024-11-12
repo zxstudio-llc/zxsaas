@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\ExportableReport;
 use App\Models\Company;
+use App\Transformers\CashFlowStatementReportTransformer;
 use Barryvdh\Snappy\Facades\SnappyPdf;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Carbon;
@@ -72,12 +73,55 @@ class ExportService
                 $csv->insertOne([]);
             }
 
+            if ($report->getTitle() === 'Cash Flow Statement') {
+                $this->writeOverviewTableToCsv($csv, $report);
+            }
+
             if (filled($report->getOverallTotals())) {
                 $csv->insertOne($report->getOverallTotals());
             }
         };
 
         return response()->streamDownload($callback, $filename, $headers);
+    }
+
+    /**
+     * @throws CannotInsertRecord
+     * @throws Exception
+     */
+    protected function writeOverviewTableToCsv(Writer $csv, ExportableReport $report): void
+    {
+        /** @var CashFlowStatementReportTransformer $report */
+        $headers = $report->getOverviewHeaders();
+
+        if (filled($headers)) {
+            $csv->insertOne($headers);
+        }
+
+        foreach ($report->getOverview() as $overviewCategory) {
+            if (filled($overviewCategory->header)) {
+                $this->writeDataRowsToCsv($csv, $overviewCategory->header, $overviewCategory->data, $report->getColumns());
+            }
+
+            if (filled($overviewCategory->summary)) {
+                $csv->insertOne($overviewCategory->summary);
+            }
+
+            if ($overviewCategory->header['account_name'] === 'Starting Balance') {
+                foreach ($report->getOverviewAlignedWithColumns() as $summaryRow) {
+                    $row = [];
+
+                    foreach ($report->getColumns() as $column) {
+                        $columnName = $column->getName();
+                        $row[] = $summaryRow[$columnName] ?? '';
+                    }
+
+                    if (array_filter($row)) {
+                        $csv->insertOne($row);
+                    }
+                }
+            }
+        }
     }
 
     public function exportToPdf(Company $company, ExportableReport $report, ?string $startDate = null, ?string $endDate = null): StreamedResponse

@@ -171,7 +171,67 @@ class AccountService
                     ->where('transactions.posted_at', '<=', $endDate);
             })
             ->groupBy('accounts.id')
-            ->with(['subtype:id,name']);
+            ->with(['subtype:id,name,inverse_cash_flow']);
+
+        if (! empty($accountIds)) {
+            $query->whereIn('accounts.id', $accountIds);
+        }
+
+        $query->addBinding([$startDate, $startDate, $startDate, $startDate, $startDate, $endDate, $startDate, $endDate], 'select');
+
+        return $query;
+    }
+
+    public function getCashFlowAccountBalances(string $startDate, string $endDate, array $accountIds = []): Builder
+    {
+        $accountIds = array_map('intval', $accountIds);
+
+        $query = Account::query()
+            ->select([
+                'accounts.id',
+                'accounts.name',
+                'accounts.category',
+                'accounts.type',
+                'accounts.subtype_id',
+                'accounts.currency_code',
+                'accounts.code',
+            ])
+            ->addSelect([
+                DB::raw("
+                    COALESCE(
+                        IF(accounts.category IN ('asset', 'expense'),
+                            SUM(IF(journal_entries.type = 'debit' AND transactions.posted_at < ?, journal_entries.amount, 0)) -
+                            SUM(IF(journal_entries.type = 'credit' AND transactions.posted_at < ?, journal_entries.amount, 0)),
+                            SUM(IF(journal_entries.type = 'credit' AND transactions.posted_at < ?, journal_entries.amount, 0)) -
+                            SUM(IF(journal_entries.type = 'debit' AND transactions.posted_at < ?, journal_entries.amount, 0))
+                        ), 0
+                    ) AS starting_balance
+                "),
+                DB::raw("
+                    COALESCE(SUM(
+                        IF(journal_entries.type = 'debit' AND transactions.posted_at BETWEEN ? AND ?, journal_entries.amount, 0)
+                    ), 0) AS total_debit
+                "),
+                DB::raw("
+                    COALESCE(SUM(
+                        IF(journal_entries.type = 'credit' AND transactions.posted_at BETWEEN ? AND ?, journal_entries.amount, 0)
+                    ), 0) AS total_credit
+                "),
+            ])
+            ->join('journal_entries', 'journal_entries.account_id', '=', 'accounts.id')
+            ->join('transactions', function (JoinClause $join) use ($endDate) {
+                $join->on('transactions.id', '=', 'journal_entries.transaction_id')
+                    ->where('transactions.posted_at', '<=', $endDate);
+            })
+            ->whereExists(function (\Illuminate\Database\Query\Builder $subQuery) {
+                $subQuery->select(DB::raw(1))
+                    ->from('journal_entries as je')
+                    ->join('accounts as bank_accounts', 'bank_accounts.id', '=', 'je.account_id')
+                    ->whereNotNull('bank_accounts.bank_account_id')
+                    ->whereColumn('je.transaction_id', 'journal_entries.transaction_id');
+            })
+            ->groupBy('accounts.id')
+            ->with(['subtype:id,name,inverse_cash_flow']);
 
         if (! empty($accountIds)) {
             $query->whereIn('accounts.id', $accountIds);
@@ -222,6 +282,50 @@ class AccountService
         $totalBalance = $result->totalStartingBalance + $result->totalNetMovement;
 
         return new Money($totalBalance, CurrencyAccessor::getDefaultCurrency());
+    }
+
+    public function getStartingBalanceForAllBankAccounts(string $startDate): Money
+    {
+        $accountIds = Account::whereHas('bankAccount')
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($accountIds)) {
+            return new Money(0, CurrencyAccessor::getDefaultCurrency());
+        }
+
+        $result = DB::table('journal_entries')
+            ->join('transactions', function (JoinClause $join) use ($startDate) {
+                $join->on('transactions.id', '=', 'journal_entries.transaction_id')
+                    ->where('transactions.posted_at', '<', $startDate);
+            })
+            ->whereIn('journal_entries.account_id', $accountIds)
+            ->selectRaw('
+            SUM(CASE
+                WHEN transactions.posted_at < ? AND journal_entries.type = "debit" THEN journal_entries.amount
+                WHEN transactions.posted_at < ? AND journal_entries.type = "credit" THEN -journal_entries.amount
+                ELSE 0
+            END) AS totalStartingBalance
+        ', [
+                $startDate,
+                $startDate,
+            ])
+            ->first();
+
+        return new Money($result->totalStartingBalance ?? 0, CurrencyAccessor::getDefaultCurrency());
+    }
+
+    public function getBankAccountBalances(string $startDate, string $endDate): Builder | array
+    {
+        $accountIds = Account::whereHas('bankAccount')
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($accountIds)) {
+            return [];
+        }
+
+        return $this->getAccountBalances($startDate, $endDate, $accountIds);
     }
 
     public function getEarliestTransactionDate(): string

@@ -49,13 +49,27 @@ class TransactionFactory extends Factory
             $type = $this->faker->randomElement([TransactionType::Deposit, TransactionType::Withdrawal]);
 
             $associatedAccountTypes = match ($type) {
-                TransactionType::Deposit => ['asset', 'liability', 'equity', 'revenue'],
-                TransactionType::Withdrawal => ['asset', 'liability', 'equity', 'expense'],
+                TransactionType::Deposit => [
+                    AccountType::CurrentLiability,
+                    AccountType::NonCurrentLiability,
+                    AccountType::Equity,
+                    AccountType::OperatingRevenue,
+                    AccountType::NonOperatingRevenue,
+                    AccountType::ContraExpense,
+                ],
+                TransactionType::Withdrawal => [
+                    AccountType::OperatingExpense,
+                    AccountType::NonOperatingExpense,
+                    AccountType::CurrentLiability,
+                    AccountType::NonCurrentLiability,
+                    AccountType::Equity,
+                    AccountType::ContraRevenue,
+                ],
             };
 
             $accountIdForBankAccount = $bankAccount->account->id;
 
-            $account = Account::where('category', $this->faker->randomElement($associatedAccountTypes))
+            $account = Account::whereIn('type', $associatedAccountTypes)
                 ->where('company_id', $company->id)
                 ->whereKeyNot($accountIdForBankAccount)
                 ->inRandomOrder()

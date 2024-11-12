@@ -4,39 +4,18 @@ namespace App\Transformers;
 
 use App\DTO\AccountDTO;
 use App\DTO\ReportCategoryDTO;
-use App\DTO\ReportDTO;
 use App\DTO\ReportTypeDTO;
-use App\Utilities\Currency\CurrencyAccessor;
 
-class BalanceSheetReportTransformer extends SummaryReportTransformer
+class CashFlowStatementReportTransformer extends SummaryReportTransformer
 {
-    protected string $totalAssets;
-
-    protected string $totalLiabilities;
-
-    protected string $totalEquity;
-
-    public function __construct(ReportDTO $report)
+    public function getPdfView(): string
     {
-        parent::__construct($report);
-
-        $this->calculateTotals();
+        return 'components.company.reports.cash-flow-statement-pdf';
     }
 
     public function getTitle(): string
     {
-        return 'Balance Sheet';
-    }
-
-    public function calculateTotals(): void
-    {
-        foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            match ($accountCategoryName) {
-                'Assets' => $this->totalAssets = $accountCategory->summary->endingBalance ?? '',
-                'Liabilities' => $this->totalLiabilities = $accountCategory->summary->endingBalance ?? '',
-                'Equity' => $this->totalEquity = $accountCategory->summary->endingBalance ?? '',
-            };
-        }
+        return 'Cash Flow Statement';
     }
 
     public function getCategories(): array
@@ -56,7 +35,7 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
             foreach ($this->getColumns() as $column) {
                 $categorySummary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
-                    'ending_balance' => $accountCategory->summary->endingBalance ?? '',
+                    'net_movement' => $accountCategory->summary->netMovement ?? '',
                     default => '',
                 };
             }
@@ -74,7 +53,7 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
                             'start_date' => $account->startDate,
                             'end_date' => $account->endDate,
                         ],
-                        'ending_balance' => $account->balance->endingBalance ?? '',
+                        'net_movement' => $account->balance->netMovement ?? '',
                         default => '',
                     };
                 }
@@ -104,20 +83,20 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
                                 'start_date' => $account->startDate,
                                 'end_date' => $account->endDate,
                             ],
-                            'ending_balance' => $account->balance->endingBalance ?? '',
+                            'net_movement' => $account->balance->netMovement ?? '',
                             default => '',
                         };
                     }
 
                     return $row;
-                }, $type->accounts);
+                }, $type->accounts ?? []);
 
                 // Subcategory (type) summary
                 $typeSummary = [];
                 foreach ($this->getColumns() as $column) {
                     $typeSummary[$column->getName()] = match ($column->getName()) {
                         'account_name' => 'Total ' . $typeName,
-                        'ending_balance' => $type->summary->endingBalance ?? '',
+                        'net_movement' => $type->summary->netMovement ?? '',
                         default => '',
                     };
                 }
@@ -159,67 +138,30 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
             foreach ($columns as $column) {
                 $categorySummary[$column->getName()] = match ($column->getName()) {
                     'account_name' => 'Total ' . $accountCategoryName,
-                    'ending_balance' => $accountCategory->summary->endingBalance ?? '',
+                    'net_movement' => $accountCategory->summary->netMovement ?? '',
                     default => '',
                 };
             }
 
             $types = [];
-            $totalTypeSummaries = 0;
 
             // Iterate through each account type and calculate type summaries
             foreach ($accountCategory->types as $typeName => $type) {
                 $typeSummary = [];
-                $typeEndingBalance = 0;
 
                 foreach ($columns as $column) {
                     $typeSummary[$column->getName()] = match ($column->getName()) {
-                        'account_name' => 'Total ' . $typeName,
-                        'ending_balance' => $type->summary->endingBalance ?? '',
+                        'account_name' => $typeName,
+                        'net_movement' => $type->summary->netMovement ?? '',
                         default => '',
                     };
-
-                    if ($column->getName() === 'ending_balance') {
-                        $typeEndingBalance = $type->summary->endingBalance ?? 0;
-                    }
                 }
-
-                $typeEndingBalance = money($typeEndingBalance, CurrencyAccessor::getDefaultCurrency())->getAmount();
-
-                $totalTypeSummaries += $typeEndingBalance;
 
                 $types[$typeName] = new ReportTypeDTO(
                     header: [],
                     data: [],
                     summary: $typeSummary,
                 );
-            }
-
-            // Only for the "Equity" category, calculate and add "Total Other Equity"
-            if ($accountCategoryName === 'Equity') {
-                $totalEquitySummary = $accountCategory->summary->endingBalance ?? 0;
-                $totalEquitySummary = money($totalEquitySummary, CurrencyAccessor::getDefaultCurrency())->getAmount();
-                $totalOtherEquity = $totalEquitySummary - $totalTypeSummaries;
-
-                if ($totalOtherEquity != 0) {
-                    $totalOtherEquityFormatted = money($totalOtherEquity, CurrencyAccessor::getDefaultCurrency(), true)->format();
-
-                    // Add "Total Other Equity" as a new "type"
-                    $otherEquitySummary = [];
-                    foreach ($columns as $column) {
-                        $otherEquitySummary[$column->getName()] = match ($column->getName()) {
-                            'account_name' => 'Total Other Equity',
-                            'ending_balance' => $totalOtherEquityFormatted,
-                            default => '',
-                        };
-                    }
-
-                    $types['Total Other Equity'] = new ReportTypeDTO(
-                        header: [],
-                        data: [],
-                        summary: $otherEquitySummary,
-                    );
-                }
             }
 
             // Add the category with its types and summary to the final array
@@ -248,17 +190,149 @@ class BalanceSheetReportTransformer extends SummaryReportTransformer
     {
         return [
             [
-                'label' => 'Total Assets',
-                'value' => $this->totalAssets,
+                'label' => 'Total Cash Inflows',
+                'value' => $this->report->overallTotal->debitBalance ?? '',
             ],
             [
-                'label' => 'Total Liabilities',
-                'value' => $this->totalLiabilities,
+                'label' => 'Total Cash Outflows',
+                'value' => $this->report->overallTotal->creditBalance ?? '',
             ],
             [
-                'label' => 'Net Assets',
-                'value' => $this->report->overallTotal->endingBalance ?? '',
+                'label' => 'Net Cash Flow',
+                'value' => $this->report->overallTotal->netMovement ?? '',
             ],
         ];
+    }
+
+    public function getOverviewAlignedWithColumns(): array
+    {
+        $summary = [];
+
+        foreach ($this->getSummary() as $summaryItem) {
+            $row = [];
+
+            foreach ($this->getColumns() as $column) {
+                $row[$column->getName()] = match ($column->getName()) {
+                    'account_name' => $summaryItem['label'] ?? '',
+                    'net_movement' => $summaryItem['value'] ?? '',
+                    default => '',
+                };
+            }
+
+            $summary[] = $row;
+        }
+
+        return $summary;
+    }
+
+    public function getSummaryOverviewAlignedWithColumns(): array
+    {
+        return array_map(static function ($row) {
+            unset($row['account_code']);
+
+            return $row;
+        }, $this->getOverviewAlignedWithColumns());
+    }
+
+    public function getOverviewHeaders(): array
+    {
+        return once(function (): array {
+            $headers = [];
+
+            foreach ($this->getColumns() as $column) {
+                $headers[$column->getName()] = $column->getName() === 'account_name' ? 'OVERVIEW' : '';
+            }
+
+            return $headers;
+        });
+    }
+
+    public function getSummaryOverviewHeaders(): array
+    {
+        return once(function (): array {
+            $headers = $this->getOverviewHeaders();
+
+            unset($headers['account_code']);
+
+            return $headers;
+        });
+    }
+
+    public function getOverview(): array
+    {
+        $categories = [];
+
+        foreach ($this->report->overview->categories as $categoryName => $category) {
+            $header = [];
+
+            foreach ($this->getColumns() as $column) {
+                $header[$column->getName()] = $column->getName() === 'account_name' ? $categoryName : '';
+            }
+
+            $data = array_map(function (AccountDTO $account) {
+                $row = [];
+
+                foreach ($this->getColumns() as $column) {
+                    $row[$column->getName()] = match ($column->getName()) {
+                        'account_code' => $account->accountCode,
+                        'account_name' => [
+                            'name' => $account->accountName,
+                            'id' => $account->accountId ?? null,
+                            'start_date' => $account->startDate,
+                            'end_date' => $account->endDate,
+                        ],
+                        'net_movement' => $account->balance->startingBalance ?? $account->balance->endingBalance ?? '',
+                        default => '',
+                    };
+                }
+
+                return $row;
+            }, $category->accounts);
+
+            $summary = [];
+
+            foreach ($this->getColumns() as $column) {
+                $summary[$column->getName()] = match ($column->getName()) {
+                    'account_name' => 'Total ' . $categoryName,
+                    'net_movement' => $category->summary->startingBalance ?? $category->summary->endingBalance ?? '',
+                    default => '',
+                };
+            }
+
+            $categories[] = new ReportCategoryDTO(
+                header: $header,
+                data: $data,
+                summary: $summary,
+            );
+        }
+
+        return $categories;
+    }
+
+    public function getSummaryOverview(): array
+    {
+        $summaryCategories = [];
+
+        $columns = $this->getSummaryColumns();
+
+        foreach ($this->report->overview->categories as $categoryName => $category) {
+            $categorySummary = [];
+
+            foreach ($columns as $column) {
+                $categorySummary[$column->getName()] = match ($column->getName()) {
+                    'account_name' => $categoryName,
+                    'net_movement' => $category->summary->startingBalance ?? $category->summary->endingBalance ?? '',
+                    default => '',
+                };
+            }
+
+            $summaryCategories[] = new ReportCategoryDTO(
+                header: [],
+                data: [],
+                summary: $categorySummary,
+            );
+        }
+
+        return $summaryCategories;
     }
 }

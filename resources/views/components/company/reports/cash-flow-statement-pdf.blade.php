@@ -22,6 +22,11 @@
             font-weight: bold;
         }
 
+        .cell {
+            padding-bottom: 5px;
+            position: relative;
+        }
+
         .company-name {
             font-size: 1.125rem;
             font-weight: bold;
@@ -50,6 +55,7 @@
 
         .table-class {
             border-collapse: collapse;
+            table-layout: fixed;
             width: 100%;
         }
 
@@ -118,6 +124,16 @@
     @endif
 </div>
 <table class="table-class">
+    <colgroup>
+        @if(array_key_exists('account_code', $report->getHeaders()))
+            <col span="1" style="width: 20%;">
+            <col span="1" style="width: 55%;">
+            <col span="1" style="width: 25%;">
+        @else
+            <col span="1" style="width: 65%;">
+            <col span="1" style="width: 35%;">
+        @endif
+    </colgroup>
     <thead class="table-head">
     <tr>
         @foreach($report->getHeaders() as $index => $header)
@@ -206,7 +222,12 @@
 
         <tr class="category-summary-row">
             @foreach($category->summary as $index => $cell)
-                <td class="{{ $report->getAlignmentClass($index) }}">
+                <td @class([
+                        'cell',
+                        $report->getAlignmentClass($index),
+                        'underline-bold' => $loop->last,
+                    ])
+                >
                     {{ $cell }}
                 </td>
             @endforeach
@@ -228,6 +249,86 @@
         @endforeach
     </tr>
     </tfoot>
+</table>
+
+<!-- Second Overview Table -->
+<table class="table-class">
+    <colgroup>
+        @if(array_key_exists('account_code', $report->getHeaders()))
+            <col span="1" style="width: 20%;">
+            <col span="1" style="width: 55%;">
+            <col span="1" style="width: 25%;">
+        @else
+            <col span="1" style="width: 65%;">
+            <col span="1" style="width: 35%;">
+        @endif
+    </colgroup>
+    <thead class="table-head">
+    <tr>
+        @foreach($report->getOverviewHeaders() as $index => $header)
+            <th class="{{ $report->getAlignmentClass($index) }}">
+                {{ $header }}
+            </th>
+        @endforeach
+    </tr>
+    </thead>
+    <!-- Overview Content -->
+    @foreach($report->getOverview() as $overviewCategory)
+        <tbody>
+        <tr class="category-header-row">
+            @foreach($overviewCategory->header as $index => $header)
+                <td class="{{ $report->getAlignmentClass($index) }}">
+                    {{ $header }}
+                </td>
+            @endforeach
+        </tr>
+        @foreach($overviewCategory->data as $overviewAccount)
+            <tr>
+                @foreach($overviewAccount as $index => $cell)
+                    <td @class([
+                            $report->getAlignmentClass($index),
+                            'whitespace-normal' => $index === 'account_name',
+                            'whitespace-nowrap' => $index !== 'account_name',
+                        ])
+                    >
+                        @if(is_array($cell) && isset($cell['name']))
+                            {{ $cell['name'] }}
+                        @else
+                            {{ $cell }}
+                        @endif
+                    </td>
+                @endforeach
+            </tr>
+        @endforeach
+        <!-- Summary Row -->
+        <tr class="category-summary-row">
+            @foreach($overviewCategory->summary as $index => $summaryCell)
+                <td class="{{ $report->getAlignmentClass($index) }}">
+                    {{ $summaryCell }}
+                </td>
+            @endforeach
+        </tr>
+
+        @if($overviewCategory->header['account_name'] === 'Starting Balance')
+            @foreach($report->getOverviewAlignedWithColumns() as $summaryRow)
+                <tr>
+                    @foreach($summaryRow as $index => $summaryCell)
+                        <td @class([
+                                'cell',
+                                $report->getAlignmentClass($index),
+                                'font-bold' => $loop->parent->last,
+                                'underline-thin' => $loop->parent->remaining === 1 && $index === 'net_movement',
+                                'underline-bold' => $loop->parent->last && $index === 'net_movement',
+                            ])
+                        >
+                            {{ $summaryCell }}
+                        </td>
+                    @endforeach
+                </tr>
+            @endforeach
+        @endif
+        </tbody>
+    @endforeach
 </table>
 </body>
 </html>

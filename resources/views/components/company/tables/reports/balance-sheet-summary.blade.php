@@ -1,5 +1,10 @@
-<table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
-    <x-company.tables.header :headers="$report->getSummaryHeaders()" :alignment-class="[$report, 'getAlignmentClass']"/>
+<table class="w-full table-fixed divide-y divide-gray-200 dark:divide-white/5">
+    <colgroup>
+        <col span="1" style="width: 65%;">
+        <col span="1" style="width: 35%;">
+    </colgroup>
+    <x-company.tables.header :headers="$report->getSummaryHeaders()"
+                             :alignment-class="[$report, 'getAlignmentClass']"/>
     @foreach($report->getSummaryCategories() as $accountCategory)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <x-company.tables.category-header :category-headers="$accountCategory->header"
