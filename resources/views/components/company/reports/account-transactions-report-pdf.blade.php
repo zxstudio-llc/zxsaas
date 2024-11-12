@@ -5,46 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $report->getTitle() }}</title>
     <style>
-        .header {
-            color: #374151;
-            margin-bottom: 1rem;
+        .category-header-row > td {
+            background-color: #f3f4f6;
+            font-weight: bold;
         }
 
-        .header > * + * {
-            margin-top: 0.5rem;
-        }
-
-        .table-head {
-            display: table-row-group;
-        }
-
-        .text-left {
-            text-align: left;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .table-class th,
-        .table-class td {
-            color: #374151;
-        }
-
-        .whitespace-normal {
-            white-space: normal;
-        }
-
-        .whitespace-nowrap {
-            white-space: nowrap;
-        }
-
-        .title {
-            font-size: 1.5rem;
+        .category-summary-row > td,
+        .table-footer-row > td {
+            background-color: #ffffff;
+            font-weight: bold;
         }
 
         .company-name {
@@ -56,36 +25,67 @@
             font-size: 0.875rem;
         }
 
-        .table-class {
-            width: 100%;
-            border-collapse: collapse;
+        .header {
+            color: #374151;
+            margin-bottom: 1rem;
         }
 
-        .table-class th,
-        .table-class td {
-            padding: 0.75rem;
-            font-size: 0.75rem;
-            line-height: 1rem;
-            border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
-        }
-
-        .category-header-row > td {
-            background-color: #f3f4f6; /* Gray background for category names */
-            font-weight: bold;
-        }
-
-        .table-body tr {
-            background-color: #ffffff; /* White background for other rows */
+        .header div + div {
+            margin-top: 0.5rem;
         }
 
         .spacer-row > td {
             height: 0.75rem;
         }
 
-        .category-summary-row > td,
-        .table-footer-row > td {
-            font-weight: bold;
-            background-color: #ffffff; /* White background for footer */
+        .table-body tr {
+            background-color: #ffffff;
+        }
+
+        .table-class {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .table-class td,
+        .table-class th {
+            border-bottom: 1px solid #d1d5db;
+            color: #374151;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            padding: 0.75rem;
+        }
+
+        .table-head {
+            display: table-row-group;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .title {
+            font-size: 1.5rem;
+        }
+
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
+        table tfoot {
+            display: table-row-group;
         }
     </style>
 </head>
@@ -128,7 +128,12 @@
                     'category-header-row' => $loop->first || $loop->last || $loop->remaining === 1,
                 ])>
                 @foreach($transaction as $cellIndex => $cell)
-                    <td class="{{ $report->getAlignmentClass($cellIndex) }} {{ $cellIndex === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
+                    <td @class([
+                            $report->getAlignmentClass($cellIndex),
+                            'whitespace-normal' => $cellIndex === 'description',
+                            'whitespace-nowrap' => $cellIndex !== 'description',
+                        ])
+                    >
                         @if(is_array($cell) && isset($cell['description']))
                             {{ $cell['description'] }}
                         @else

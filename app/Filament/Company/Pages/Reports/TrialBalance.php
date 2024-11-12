@@ -43,17 +43,17 @@ class TrialBalance extends BaseReportPage
     {
         return [
             Column::make('account_code')
-                ->label('Account Code')
-                ->toggleable()
-                ->alignment(Alignment::Center),
+                ->label('ACCOUNT CODE')
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->alignment(Alignment::Left),
             Column::make('account_name')
-                ->label('Account')
+                ->label('ACCOUNTS')
                 ->alignment(Alignment::Left),
             Column::make('debit_balance')
-                ->label('Debit')
+                ->label('DEBIT')
                 ->alignment(Alignment::Right),
             Column::make('credit_balance')
-                ->label('Credit')
+                ->label('CREDIT')
                 ->alignment(Alignment::Right),
         ];
     }

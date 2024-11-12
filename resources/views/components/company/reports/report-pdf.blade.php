@@ -5,46 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $report->getTitle() }}</title>
     <style>
-        .header {
-            color: #374151;
-            margin-bottom: 1rem;
+        .font-bold {
+            font-weight: bold;
         }
 
-        .header > * + * {
-            margin-top: 0.5rem;
+        .category-header-row > td,
+        .type-header-row > td {
+            background-color: #f3f4f6;
+            font-weight: bold;
         }
 
-        .table-head {
-            display: table-row-group;
-        }
-
-        .text-left {
-            text-align: left;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .table-class th,
-        .table-class td {
-            color: #374151;
-        }
-
-        .whitespace-normal {
-            white-space: normal;
-        }
-
-        .whitespace-nowrap {
-            white-space: nowrap;
-        }
-
-        .title {
-            font-size: 1.5rem;
+        .category-summary-row > td,
+        .table-footer-row > td,
+        .type-summary-row > td {
+            background-color: #ffffff;
+            font-weight: bold;
         }
 
         .company-name {
@@ -56,44 +31,79 @@
             font-size: 0.875rem;
         }
 
-        .table-class {
-            width: 100%;
-            border-collapse: collapse;
+        .header {
+            color: #374151;
+            margin-bottom: 1rem;
         }
 
-        .table-class th,
-        .table-class td {
-            padding: 0.75rem;
-            font-size: 0.75rem;
-            line-height: 1rem;
-            border-bottom: 1px solid #d1d5db; /* Gray border for all rows */
-        }
-
-        .category-header-row > td,
-        .type-header-row > td {
-            background-color: #f3f4f6; /* Gray background for category names */
-            font-weight: bold;
-        }
-
-        .type-header-row > td,
-        .type-data-row > td,
-        .type-summary-row > td {
-            padding-left: 1.5rem; /* Indentation for type rows */
-        }
-
-        .table-body tr {
-            background-color: #ffffff; /* White background for other rows */
+        .header div + div {
+            margin-top: 0.5rem;
         }
 
         .spacer-row > td {
             height: 0.75rem;
         }
 
-        .category-summary-row > td,
-        .type-summary-row > td,
-        .table-footer-row > td {
-            font-weight: bold;
-            background-color: #ffffff; /* White background for footer */
+        .table-body tr {
+            background-color: #ffffff;
+        }
+
+        .table-class {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .table-class .type-row-indent {
+            padding-left: 1.5rem;
+        }
+
+        .table-class td,
+        .table-class th {
+            border-bottom: 1px solid #d1d5db;
+            color: #374151;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            padding: 0.75rem;
+        }
+
+        .table-head {
+            display: table-row-group;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .title {
+            font-size: 1.5rem;
+        }
+
+        .table-class .underline-bold {
+            border-bottom: 2px solid #374151;
+        }
+
+        .table-class .underline-thin {
+            border-bottom: 1px solid #374151;
+        }
+
+        .whitespace-normal {
+            white-space: normal;
+        }
+
+        .whitespace-nowrap {
+            white-space: nowrap;
+        }
+
+        table tfoot {
+            display: table-row-group;
         }
     </style>
 </head>
@@ -129,7 +139,12 @@
         @foreach($category->data as $account)
             <tr>
                 @foreach($account as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }} {{ $index === 1 ? 'whitespace-normal' : 'whitespace-nowrap' }}">
+                    <td @class([
+                            $report->getAlignmentClass($index),
+                            'whitespace-normal' => $index === 'account_name',
+                            'whitespace-nowrap' => $index !== 'account_name',
+                        ])
+                    >
                         @if(is_array($cell) && isset($cell['name']))
                             {{ $cell['name'] }}
                         @else
@@ -145,7 +160,11 @@
             <!-- Type Header -->
             <tr class="type-header-row">
                 @foreach($type->header as $index => $header)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
+                    <td @class([
+                            $report->getAlignmentClass($index),
+                            'type-row-indent' => $index === 'account_name',
+                        ])
+                    >
                         {{ $header }}
                     </td>
                 @endforeach
@@ -155,7 +174,12 @@
             @foreach($type->data as $typeRow)
                 <tr class="type-data-row">
                     @foreach($typeRow as $index => $cell)
-                        <td class="{{ $report->getAlignmentClass($index) }} {{ $index === 'account_name' ? 'whitespace-normal' : 'whitespace-nowrap' }}">
+                        <td @class([
+                                $report->getAlignmentClass($index),
+                                'whitespace-normal type-row-indent' => $index === 'account_name',
+                                'whitespace-nowrap' => $index !== 'account_name',
+                            ])
+                        >
                             @if(is_array($cell) && isset($cell['name']))
                                 {{ $cell['name'] }}
                             @else
@@ -169,7 +193,11 @@
             <!-- Type Summary -->
             <tr class="type-summary-row">
                 @foreach($type->summary as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
+                    <td @class([
+                            $report->getAlignmentClass($index),
+                            'type-row-indent' => $index === 'account_name',
+                        ])
+                    >
                         {{ $cell }}
                     </td>
                 @endforeach
@@ -183,12 +211,15 @@
                 </td>
             @endforeach
         </tr>
-        <tr class="spacer-row">
-            <td colspan="{{ count($report->getHeaders()) }}"></td>
-        </tr>
+
+        @unless($loop->last && empty($report->getOverallTotals()))
+            <tr class="spacer-row">
+                <td colspan="{{ count($report->getHeaders()) }}"></td>
+            </tr>
+        @endunless
         </tbody>
     @endforeach
-    <tbody>
+    <tfoot>
     <tr class="table-footer-row">
         @foreach ($report->getOverallTotals() as $index => $total)
             <td class="{{ $report->getAlignmentClass($index) }}">
@@ -196,7 +227,7 @@
             </td>
         @endforeach
     </tr>
-    </tbody>
+    </tfoot>
 </table>
 </body>
 </html>

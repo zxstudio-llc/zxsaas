@@ -39,14 +39,14 @@ class IncomeStatement extends BaseReportPage
     {
         return [
             Column::make('account_code')
-                ->label('Account Code')
+                ->label('ACCOUNT CODE')
                 ->toggleable(isToggledHiddenByDefault: true)
                 ->alignment(Alignment::Left),
             Column::make('account_name')
-                ->label('Account')
+                ->label('ACCOUNTS')
                 ->alignment(Alignment::Left),
             Column::make('net_movement')
-                ->label('Amount')
+                ->label($this->getDisplayDateRange())
                 ->alignment(Alignment::Right),
         ];
     }

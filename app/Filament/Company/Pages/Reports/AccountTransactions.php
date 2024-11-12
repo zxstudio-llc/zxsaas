@@ -60,20 +60,20 @@ class AccountTransactions extends BaseReportPage
     {
         return [
             Column::make('date')
-                ->label('Date')
+                ->label('DATE')
                 ->markAsDate()
                 ->alignment(Alignment::Left),
             Column::make('description')
-                ->label('Description')
+                ->label('DESCRIPTION')
                 ->alignment(Alignment::Left),
             Column::make('debit')
-                ->label('Debit')
+                ->label('DEBIT')
                 ->alignment(Alignment::Right),
             Column::make('credit')
-                ->label('Credit')
+                ->label('CREDIT')
                 ->alignment(Alignment::Right),
             Column::make('balance')
-                ->label('Running Balance')
+                ->label('RUNNING BALANCE')
                 ->alignment(Alignment::Right),
         ];
     }

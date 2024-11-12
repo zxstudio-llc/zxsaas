@@ -234,39 +234,6 @@ class CashFlowStatementReportTransformer extends SummaryReportTransformer
         }, $this->getOverviewAlignedWithColumns());
     }
 
-    public function getCashInflowAndOutflowHeaders(): array
-    {
-        return once(function (): array {
-            $headers = [];
-
-            $dateRange = $this->getStartDate() && $this->getEndDate()
-                ? "{$this->getStartDate()} - {$this->getEndDate()}"
-                : '';
-
-            foreach ($this->getColumns() as $column) {
-                $headers[$column->getName()] = match ($column->getName()) {
-                    'account_name' => 'CASH INFLOWS AND OUTFLOWS',
-                    'net_movement' => $dateRange,
-                    default => '',
-                };
-            }
-
-            return $headers;
-        });
-    }
-
-    public function getSummaryCashInflowAndOutflowHeaders(): array
-    {
-        return once(function (): array {
-            $headers = $this->getCashInflowAndOutflowHeaders();
-
-            // Remove the account_code key if it exists
-            unset($headers['account_code']);
-
-            return $headers;
-        });
-    }
-
     public function getOverviewHeaders(): array
     {
         return once(function (): array {

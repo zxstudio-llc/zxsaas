@@ -9,7 +9,7 @@
             <col span="1" style="width: 35%;">
         @endif
     </colgroup>
-    <x-company.tables.header :headers="$report->getTitleHeaders()" :alignment-class="[$report, 'getAlignmentClass']"/>
+    <x-company.tables.header :headers="$report->getHeaders()" :alignment-class="[$report, 'getAlignmentClass']"/>
     @foreach($report->getCategories() as $accountCategory)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
         <x-company.tables.category-header :category-headers="$accountCategory->header"
