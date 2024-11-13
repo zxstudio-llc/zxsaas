@@ -4,6 +4,7 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Company\Pages\Concerns\HasReportTabs;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Services\ExportService;
 use App\Services\ReportService;
@@ -11,21 +12,17 @@ use App\Support\Column;
 use App\Transformers\BalanceSheetReportTransformer;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
-use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BalanceSheet extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.balance-sheet';
+    use HasReportTabs;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static string $view = 'filament.company.pages.reports.balance-sheet';
 
     protected ReportService $reportService;
 
     protected ExportService $exportService;
-
-    #[Url]
-    public ?string $activeTab = 'summary';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
@@ -77,11 +74,11 @@ class BalanceSheet extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
+        return $this->exportService->exportToCsv($this->company, $this->report, endDate: $this->getFilterState('asOfDate'), activeTab: $this->getActiveTab());
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
+        return $this->exportService->exportToPdf($this->company, $this->report, endDate: $this->getFilterState('asOfDate'), activeTab: $this->getActiveTab());
     }
 }

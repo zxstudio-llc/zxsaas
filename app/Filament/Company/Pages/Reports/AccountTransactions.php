@@ -27,10 +27,6 @@ class AccountTransactions extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.account-transactions';
 
-    protected static ?string $slug = 'reports/account-transactions';
-
-    protected static bool $shouldRegisterNavigation = false;
-
     protected ReportService $reportService;
 
     protected ExportService $exportService;

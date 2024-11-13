@@ -28,7 +28,7 @@
         target-label="Net Assets"
     />
 
-    <x-report-tabs :activeTab="$activeTab"/>
+    <x-report-tabs :active-tab="$activeTab" :tabs="$this->getTabs()"/>
 
     <x-company.tables.container :report-loaded="$this->reportLoaded">
         @if($this->report)

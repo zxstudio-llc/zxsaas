@@ -22,6 +22,11 @@ class IncomeStatementReportTransformer extends SummaryReportTransformer
         $this->calculateTotals();
     }
 
+    public function getSummaryPdfView(): string
+    {
+        return 'components.company.reports.income-statement-summary-pdf';
+    }
+
     public function getTitle(): string
     {
         return 'Income Statement';
@@ -96,13 +101,6 @@ class IncomeStatementReportTransformer extends SummaryReportTransformer
         $columns = $this->getSummaryColumns();
 
         foreach ($this->report->categories as $accountCategoryName => $accountCategory) {
-            // Header for the main category
-            $categoryHeader = [];
-
-            foreach ($columns as $column) {
-                $categoryHeader[$column->getName()] = $column->getName() === 'account_name' ? $accountCategoryName : '';
-            }
-
             // Category-level summary
             $categorySummary = [];
             foreach ($columns as $column) {
@@ -115,7 +113,7 @@ class IncomeStatementReportTransformer extends SummaryReportTransformer
 
             // Add the category summary to the final array
             $summaryCategories[$accountCategoryName] = new ReportCategoryDTO(
-                header: $categoryHeader,
+                header: [],
                 data: [], // No direct accounts are needed here, only summaries
                 summary: $categorySummary,
                 types: [] // No types for the income statement

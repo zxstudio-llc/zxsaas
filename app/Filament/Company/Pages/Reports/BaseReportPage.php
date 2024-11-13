@@ -6,6 +6,7 @@ use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Concerns\HasDeferredFiltersForm;
 use App\Filament\Company\Pages\Concerns\HasTableColumnToggleForm;
+use App\Filament\Company\Pages\Reports;
 use App\Filament\Forms\Components\DateRangeSelect;
 use App\Models\Company;
 use App\Services\DateRangeService;
@@ -60,6 +61,31 @@ abstract class BaseReportPage extends Page
         $this->company = auth()->user()->currentCompany;
         $this->fiscalYearStartDate = $this->company->locale->fiscalYearStartDate();
         $this->fiscalYearEndDate = $this->company->locale->fiscalYearEndDate();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    public static function getSlug(): string
+    {
+        $prefix = Reports::getSlug() . '/';
+
+        if (filled(static::$slug)) {
+            return $prefix . static::$slug;
+        }
+
+        return $prefix . str(class_basename(static::class))
+            ->kebab()
+            ->slug();
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [
+            Reports::getUrl() => Reports::getNavigationLabel(),
+        ];
     }
 
     protected function loadDefaultDateRange(): void

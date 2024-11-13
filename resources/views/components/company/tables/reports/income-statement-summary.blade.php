@@ -15,7 +15,7 @@
             @endforeach
         </tr>
 
-        @if($accountCategory->header['account_name'] === 'Cost of Goods Sold')
+        @if($accountCategory->summary['account_name'] === 'Cost of Goods Sold')
             <tr class="bg-gray-50 dark:bg-white/5">
                 @foreach($report->getGrossProfit() as $grossProfitIndex => $grossProfitCell)
                     <x-company.tables.cell :alignment-class="$report->getAlignmentClass($grossProfitIndex)" bold="true">
