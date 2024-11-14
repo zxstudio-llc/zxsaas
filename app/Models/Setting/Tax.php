@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Tax extends Model
 {
@@ -57,6 +58,11 @@ class Tax extends Model
     public function defaultPurchaseTax(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'purchase_tax_id');
+    }
+
+    public function adjustmentables(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     protected static function newFactory(): Factory

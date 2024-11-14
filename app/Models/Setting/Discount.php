@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Discount extends Model
 {
@@ -61,6 +62,11 @@ class Discount extends Model
     public function defaultPurchaseDiscount(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'purchase_discount_id');
+    }
+
+    public function adjustmentables(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     protected static function newFactory(): Factory
