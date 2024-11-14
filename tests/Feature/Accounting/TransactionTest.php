@@ -132,6 +132,8 @@ it('handles multi-currency transfers correctly', function () {
         ->withForeignBankAccount('CAD Bank Account', 'CAD', 1.36)
         ->create();
 
+    $foreignBankAccount->refresh();
+
     ConfigureCurrencies::syncCurrencies();
 
     // Create a transfer of 1500 CAD from the foreign bank account to USD bank account
@@ -164,6 +166,8 @@ it('handles multi-currency deposits correctly', function () {
         ->withForeignBankAccount('BHD Bank Account', 'BHD', 0.38)
         ->create();
 
+    $foreignBankAccount->refresh();
+
     ConfigureCurrencies::syncCurrencies();
 
     // Create a deposit of 1500 BHD to the foreign bank account
@@ -194,6 +198,8 @@ it('handles multi-currency withdrawals correctly', function () {
     $foreignBankAccount = Account::factory()
         ->withForeignBankAccount('Foreign Bank Account', 'GBP', 0.76) // GBP account
         ->create();
+
+    $foreignBankAccount->refresh();
 
     ConfigureCurrencies::syncCurrencies();
 

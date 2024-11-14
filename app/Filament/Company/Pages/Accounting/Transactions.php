@@ -770,19 +770,17 @@ class Transactions extends Page implements HasTable
 
     protected function getBankAccountOptions(?int $excludedAccountId = null, ?int $currentBankAccountId = null): array
     {
-        return BankAccount::join('accounts', 'accounts.bank_account_id', '=', 'bank_accounts.id')
-            ->where('accounts.archived', false)
-            ->select(['bank_accounts.id', 'accounts.name', 'accounts.subtype_id'])
-            ->with(['account.subtype' => static function ($query) {
+        return BankAccount::query()
+            ->whereHas('account', function (Builder $query) {
+                $query->where('archived', false);
+            })
+            ->with(['account' => function ($query) {
+                $query->where('archived', false);
+            }, 'account.subtype' => function ($query) {
                 $query->select(['id', 'name']);
             }])
-            ->when($excludedAccountId, function (Builder $query) use ($excludedAccountId) {
-                $query->whereNot('accounts.id', $excludedAccountId);
-            })
-            ->when($currentBankAccountId, function (Builder $query) use ($currentBankAccountId) {
-                // Ensure the current bank account is included even if archived
-                $query->orWhere('bank_accounts.id', $currentBankAccountId);
-            })
+            ->when($excludedAccountId, fn (Builder $query) => $query->where('account_id', '!=', $excludedAccountId))
+            ->when($currentBankAccountId, fn (Builder $query) => $query->orWhere('id', $currentBankAccountId))
             ->get()
             ->groupBy('account.subtype.name')
             ->map(fn (Collection $bankAccounts, string $subtype) => $bankAccounts->pluck('account.name', 'id'))

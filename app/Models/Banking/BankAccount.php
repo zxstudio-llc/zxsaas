@@ -33,6 +33,7 @@ class BankAccount extends Model
 
     protected $fillable = [
         'company_id',
+        'account_id',
         'institution_id',
         'type',
         'number',
@@ -55,9 +56,9 @@ class BankAccount extends Model
         return $this->hasOne(ConnectedBankAccount::class, 'bank_account_id');
     }
 
-    public function account(): HasOne
+    public function account(): BelongsTo
     {
-        return $this->hasOne(Account::class, 'bank_account_id');
+        return $this->belongsTo(Account::class, 'account_id');
     }
 
     public function institution(): BelongsTo

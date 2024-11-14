@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(AccountObserver::class)]
@@ -41,7 +42,6 @@ class Account extends Model
         'description',
         'archived',
         'default',
-        'bank_account_id',
         'created_by',
         'updated_by',
     ];
@@ -74,9 +74,9 @@ class Account extends Model
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
-    public function bankAccount(): BelongsTo
+    public function bankAccount(): HasOne
     {
-        return $this->belongsTo(BankAccount::class, 'bank_account_id');
+        return $this->hasOne(BankAccount::class, 'account_id');
     }
 
     public function getLastTransactionDate(): ?string

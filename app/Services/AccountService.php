@@ -226,8 +226,8 @@ class AccountService
             ->whereExists(function (\Illuminate\Database\Query\Builder $subQuery) {
                 $subQuery->select(DB::raw(1))
                     ->from('journal_entries as je')
-                    ->join('accounts as bank_accounts', 'bank_accounts.id', '=', 'je.account_id')
-                    ->whereNotNull('bank_accounts.bank_account_id')
+                    ->join('bank_accounts', 'bank_accounts.account_id', '=', 'je.account_id') // Join bank_accounts on account_id
+                    ->whereNotNull('bank_accounts.id') // Ensure there is a linked BankAccount
                     ->whereColumn('je.transaction_id', 'journal_entries.transaction_id');
             })
             ->groupBy('accounts.id')

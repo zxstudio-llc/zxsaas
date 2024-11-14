@@ -48,7 +48,6 @@ class ChartOfAccountsService
     {
         if (isset($subtypeConfig['accounts']) && is_array($subtypeConfig['accounts'])) {
             $baseCode = $subtypeConfig['base_code'];
-
             $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
 
             if (empty($defaultCurrencyCode)) {
@@ -56,14 +55,8 @@ class ChartOfAccountsService
             }
 
             foreach ($subtypeConfig['accounts'] as $accountName => $accountDetails) {
-                $bankAccount = null;
-
-                if ($subtypeConfig['multi_currency'] && isset($subtypeConfig['bank_account_type'])) {
-                    $bankAccount = $this->createBankAccountForMultiCurrency($company, $subtypeConfig['bank_account_type']);
-                }
-
-                $company->accounts()->createQuietly([
-                    'bank_account_id' => $bankAccount?->id,
+                // Create the Account without directly setting bank_account_id
+                $account = $company->accounts()->createQuietly([
                     'subtype_id' => $subtype->id,
                     'category' => $subtype->type->getCategory()->value,
                     'type' => $subtype->type->value,
@@ -75,6 +68,15 @@ class ChartOfAccountsService
                     'created_by' => $company->owner->id,
                     'updated_by' => $company->owner->id,
                 ]);
+
+                // Check if we need to create a BankAccount for this Account
+                if ($subtypeConfig['multi_currency'] && isset($subtypeConfig['bank_account_type'])) {
+                    $bankAccount = $this->createBankAccountForMultiCurrency($company, $subtypeConfig['bank_account_type']);
+
+                    // Associate the BankAccount with the Account
+                    $bankAccount->account()->associate($account);
+                    $bankAccount->saveQuietly();
+                }
             }
         }
     }

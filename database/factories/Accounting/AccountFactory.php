@@ -39,31 +39,39 @@ class AccountFactory extends Factory
 
     public function withBankAccount(string $name): static
     {
-        return $this->state(function (array $attributes) use ($name) {
-            $bankAccount = BankAccount::factory()->create();
+        return $this->afterCreating(function (Account $account) use ($name) {
             $accountSubtype = AccountSubtype::where('name', 'Cash and Cash Equivalents')->first();
 
-            return [
-                'bank_account_id' => $bankAccount->id,
+            // Create and associate a BankAccount with the Account
+            $bankAccount = BankAccount::factory()->create([
+                'account_id' => $account->id, // Associate with Account
+            ]);
+
+            // Update the Account with the subtype and name
+            $account->update([
                 'subtype_id' => $accountSubtype->id,
                 'name' => $name,
-            ];
+            ]);
         });
     }
 
     public function withForeignBankAccount(string $name, string $currencyCode, float $rate): static
     {
-        return $this->state(function (array $attributes) use ($currencyCode, $rate, $name) {
-            $currency = Currency::factory()->forCurrency($currencyCode, $rate)->create();
-            $bankAccount = BankAccount::factory()->create();
+        return $this->afterCreating(function (Account $account) use ($currencyCode, $rate, $name) {
             $accountSubtype = AccountSubtype::where('name', 'Cash and Cash Equivalents')->first();
 
-            return [
-                'bank_account_id' => $bankAccount->id,
+            // Create the Currency and BankAccount
+            $currency = Currency::factory()->forCurrency($currencyCode, $rate)->create();
+            $bankAccount = BankAccount::factory()->create([
+                'account_id' => $account->id, // Associate with Account
+            ]);
+
+            // Update the Account with the subtype, name, and currency code
+            $account->update([
                 'subtype_id' => $accountSubtype->id,
                 'name' => $name,
                 'currency_code' => $currency->code,
-            ];
+            ]);
         });
     }
 }

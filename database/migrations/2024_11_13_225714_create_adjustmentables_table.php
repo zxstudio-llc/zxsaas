@@ -13,10 +13,14 @@ return new class extends Migration
     {
         Schema::create('adjustmentables', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('adjustment_id')->constrained()->cascadeOnDelete();
-            $table->string('adjustment_type');
-            $table->morphs('adjustmentable');
+            $table->unsignedBigInteger('adjustment_id');   // No foreign key constraint due to polymorphism
+            $table->string('adjustment_type');             // Type of adjustment (e.g., "App\Models\Tax" or "App\Models\Discount")
+            $table->morphs('adjustmentable');              // Creates adjustmentable_id and adjustmentable_type
             $table->timestamps();
+
+            // Optional indexes for efficient querying
+            $table->index(['adjustment_id', 'adjustment_type']);
+            $table->index(['adjustmentable_id', 'adjustmentable_type']);
         });
     }
 
