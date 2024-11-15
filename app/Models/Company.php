@@ -12,10 +12,8 @@ use App\Models\Setting\Appearance;
 use App\Models\Setting\CompanyDefault;
 use App\Models\Setting\CompanyProfile;
 use App\Models\Setting\Currency;
-use App\Models\Setting\Discount;
 use App\Models\Setting\DocumentDefault;
 use App\Models\Setting\Localization;
-use App\Models\Setting\Tax;
 use Filament\Models\Contracts\HasAvatar;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -74,6 +72,11 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasMany(Accounting\Account::class, 'company_id');
     }
 
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(Accounting\Adjustment::class, 'company_id');
+    }
+
     public function bankAccounts(): HasMany
     {
         return $this->hasMany(BankAccount::class, 'company_id');
@@ -122,11 +125,6 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasMany(Department::class, 'company_id');
     }
 
-    public function discounts(): HasMany
-    {
-        return $this->hasMany(Discount::class, 'company_id');
-    }
-
     public function locale(): HasOne
     {
         return $this->hasOne(Localization::class, 'company_id');
@@ -135,11 +133,6 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
     public function profile(): HasOne
     {
         return $this->hasOne(CompanyProfile::class, 'company_id');
-    }
-
-    public function taxes(): HasMany
-    {
-        return $this->hasMany(Tax::class, 'company_id');
     }
 
     public function transactions(): HasMany

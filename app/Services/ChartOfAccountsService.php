@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\Accounting\AccountType;
 use App\Enums\Banking\BankAccountType;
 use App\Models\Accounting\AccountSubtype;
+use App\Models\Accounting\Adjustment;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
 use App\Utilities\Currency\CurrencyAccessor;
@@ -77,6 +78,14 @@ class ChartOfAccountsService
                     $bankAccount->account()->associate($account);
                     $bankAccount->saveQuietly();
                 }
+
+                if (isset($subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type'])) {
+                    $adjustment = $this->createAdjustmentForAccount($company, $subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type']);
+
+                    // Associate the Adjustment with the Account
+                    $adjustment->account()->associate($account);
+                    $adjustment->saveQuietly();
+                }
             }
         }
     }
@@ -88,6 +97,32 @@ class ChartOfAccountsService
         return $company->bankAccounts()->createQuietly([
             'type' => BankAccountType::from($bankAccountType) ?? BankAccountType::Other,
             'enabled' => $noDefaultBankAccount,
+            'created_by' => $company->owner->id,
+            'updated_by' => $company->owner->id,
+        ]);
+    }
+
+    private function createAdjustmentForAccount(Company $company, string $category, string $type): Adjustment
+    {
+        $noDefaultAdjustmentType = $company->adjustments()->where('category', $category)
+            ->where('type', $type)
+            ->where('enabled', true)
+            ->doesntExist();
+
+        $defaultRate = match ([$category, $type]) {
+            ['tax', 'sales'] => 8,          // Default 8% for Sales Tax
+            ['tax', 'purchase'] => 8,       // Default 8% for Purchase Tax
+            ['discount', 'sales'] => 5,     // Default 5% for Sales Discount
+            ['discount', 'purchase'] => 5,  // Default 5% for Purchase Discount
+            default => 0,                   // Default to 0 if unspecified
+        };
+
+        return $company->adjustments()->createQuietly([
+            'category' => $category,
+            'type' => $type,
+            'rate' => $defaultRate,
+            'computation' => 'percentage',
+            'enabled' => $noDefaultAdjustmentType,
             'created_by' => $company->owner->id,
             'updated_by' => $company->owner->id,
         ]);

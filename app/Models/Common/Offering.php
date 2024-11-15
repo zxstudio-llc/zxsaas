@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\Common;
 
 use App\Concerns\CompanyOwned;
 use App\Models\Accounting\Account;

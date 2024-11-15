@@ -1,10 +1,8 @@
 <?php
 
-namespace App\Enums\Setting;
+namespace App\Enums\Accounting;
 
-use Filament\Support\Contracts\HasLabel;
-
-enum TaxScope: string implements HasLabel
+enum AdjustmentScope: string
 {
     case Product = 'product';
     case Service = 'service';

@@ -5,6 +5,7 @@ namespace Database\Factories\Accounting;
 use App\Enums\Accounting\AccountType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\AccountSubtype;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
@@ -69,8 +70,13 @@ class TransactionFactory extends Factory
 
             $accountIdForBankAccount = $bankAccount->account->id;
 
+            $excludedSubtypes = AccountSubtype::where('company_id', $company->id)
+                ->whereIn('name', ['Sales Taxes', 'Purchase Taxes', 'Sales Discounts', 'Purchase Discounts'])
+                ->pluck('id');
+
             $account = Account::whereIn('type', $associatedAccountTypes)
                 ->where('company_id', $company->id)
+                ->whereNotIn('subtype_id', $excludedSubtypes)
                 ->whereKeyNot($accountIdForBankAccount)
                 ->inRandomOrder()
                 ->first();

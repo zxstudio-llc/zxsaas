@@ -6,6 +6,7 @@ use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
 use App\Models\Setting\Currency;
+use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -73,5 +74,61 @@ class AccountFactory extends Factory
                 'currency_code' => $currency->code,
             ]);
         });
+    }
+
+    public function forSalesTax(?string $name = null, ?string $description = null): static
+    {
+        $accountSubtype = AccountSubtype::where('name', 'Sales Taxes')->first();
+
+        return $this->state([
+            'name' => $name,
+            'description' => $description,
+            'category' => $accountSubtype->category,
+            'type' => $accountSubtype->type,
+            'subtype_id' => $accountSubtype->id,
+            'code' => AccountCode::generate($accountSubtype),
+        ]);
+    }
+
+    public function forPurchaseTax(?string $name = null, ?string $description = null): static
+    {
+        $accountSubtype = AccountSubtype::where('name', 'Purchase Taxes')->first();
+
+        return $this->state([
+            'name' => $name,
+            'description' => $description,
+            'category' => $accountSubtype->category,
+            'type' => $accountSubtype->type,
+            'subtype_id' => $accountSubtype->id,
+            'code' => AccountCode::generate($accountSubtype),
+        ]);
+    }
+
+    public function forSalesDiscount(?string $name = null, ?string $description = null): static
+    {
+        $accountSubtype = AccountSubtype::where('name', 'Sales Discounts')->first();
+
+        return $this->state([
+            'name' => $name,
+            'description' => $description,
+            'category' => $accountSubtype->category,
+            'type' => $accountSubtype->type,
+            'subtype_id' => $accountSubtype->id,
+            'code' => AccountCode::generate($accountSubtype),
+        ]);
+    }
+
+    public function forPurchaseDiscount(?string $name = null, ?string $description = null): static
+    {
+        $accountSubtype = AccountSubtype::where('name', 'Purchase Discounts')->first();
+
+        return $this->state([
+            'name' => $name,
+            'description' => $description,
+            'category' => $accountSubtype->category,
+            'type' => $accountSubtype->type,
+            'subtype_id' => $accountSubtype->id,
+            'code' => AccountCode::generate($accountSubtype),
+        ]);
     }
 }

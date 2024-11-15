@@ -1,69 +1,60 @@
 <?php
 
-namespace App\Models\Setting;
+namespace App\Models\Accounting;
 
 use App\Casts\RateCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Concerns\HasDefault;
-use App\Concerns\SyncsWithCompanyDefaults;
-use App\Enums\Setting\TaxComputation;
-use App\Enums\Setting\TaxScope;
-use App\Enums\Setting\TaxType;
-use App\Models\Accounting\Account;
-use Database\Factories\Setting\TaxFactory;
+use App\Enums\Accounting\AdjustmentCategory;
+use App\Enums\Accounting\AdjustmentComputation;
+use App\Enums\Accounting\AdjustmentScope;
+use App\Enums\Accounting\AdjustmentType;
+use Database\Factories\Accounting\AdjustmentFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
-class Tax extends Model
+class Adjustment extends Model
 {
     use Blamable;
     use CompanyOwned;
     use HasDefault;
     use HasFactory;
-    use SyncsWithCompanyDefaults;
 
-    protected $table = 'taxes';
+    protected $table = 'adjustments';
 
     protected $fillable = [
         'company_id',
         'account_id',
+        'category',
+        'type',
         'rate',
         'computation',
-        'type',
         'scope',
+        'start_date',
+        'end_date',
         'enabled',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
+        'category' => AdjustmentCategory::class,
+        'type' => AdjustmentType::class,
         'rate' => RateCast::class,
-        'computation' => TaxComputation::class,
-        'type' => TaxType::class,
-        'scope' => TaxScope::class,
+        'computation' => AdjustmentComputation::class,
+        'scope' => AdjustmentScope::class,
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
         'enabled' => 'boolean',
     ];
-
-    protected ?string $evaluatedDefault = 'type';
 
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
-    }
-
-    public function defaultSalesTax(): HasOne
-    {
-        return $this->hasOne(CompanyDefault::class, 'sales_tax_id');
-    }
-
-    public function defaultPurchaseTax(): HasOne
-    {
-        return $this->hasOne(CompanyDefault::class, 'purchase_tax_id');
     }
 
     public function adjustmentables(): MorphTo
@@ -73,6 +64,6 @@ class Tax extends Model
 
     protected static function newFactory(): Factory
     {
-        return TaxFactory::new();
+        return AdjustmentFactory::new();
     }
 }

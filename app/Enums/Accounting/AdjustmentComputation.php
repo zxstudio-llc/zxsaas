@@ -1,15 +1,13 @@
 <?php
 
-namespace App\Enums\Setting;
+namespace App\Enums\Accounting;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum DiscountComputation: string implements HasLabel
+enum AdjustmentComputation: string implements HasLabel
 {
     case Percentage = 'percentage';
     case Fixed = 'fixed';
-
-    public const DEFAULT = self::Percentage->value;
 
     public function getLabel(): ?string
     {

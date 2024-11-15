@@ -1,7 +1,5 @@
 <?php
 
-use App\Enums\Setting\DiscountComputation;
-use App\Enums\Setting\DiscountType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -13,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('discounts', function (Blueprint $table) {
+        Schema::create('adjustments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->string('name')->index();
-            $table->string('description')->nullable();
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+            $table->string('category')->default('tax');
+            $table->string('type')->default('sales');
             $table->integer('rate')->default(0);
-            $table->string('computation')->default(DiscountComputation::DEFAULT);
-            $table->string('type')->default(DiscountType::DEFAULT);
+            $table->string('computation')->default('percentage');
             $table->string('scope')->nullable();
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
@@ -29,7 +27,7 @@ return new class extends Migration
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            $table->unique(['company_id', 'name', 'type']);
+            $table->unique(['company_id', 'account_id']);
         });
     }
 
@@ -38,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('discounts');
+        Schema::dropIfExists('adjustments');
     }
 };

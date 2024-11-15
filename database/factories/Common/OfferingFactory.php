@@ -1,13 +1,13 @@
 <?php
 
-namespace Database\Factories;
+namespace Database\Factories\Common;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Vendor>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Common\Offering>
  */
-class VendorFactory extends Factory
+class OfferingFactory extends Factory
 {
     /**
      * Define the model's default state.

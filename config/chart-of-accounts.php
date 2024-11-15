@@ -118,9 +118,17 @@ return [
                 'multi_currency' => false,
                 'base_code' => '2100',
                 'inverse_cash_flow' => false,
+            ],
+            'Sales Taxes' => [
+                'description' => 'The amount of money owed to the government for sales tax collected from customers.',
+                'multi_currency' => false,
+                'base_code' => '2150',
+                'inverse_cash_flow' => false,
+                'adjustment_category' => 'tax',
+                'adjustment_type' => 'sales',
                 'accounts' => [
-                    'Sales Tax Payable' => [
-                        'description' => 'The amount of money owed to the government for sales tax collected from customers.',
+                    'Sales Tax' => [
+                        'description' => null,
                     ],
                 ],
             ],
@@ -271,8 +279,18 @@ return [
                     'Sales Returns and Allowances' => [
                         'description' => 'The amount of money returned to customers or deducted from sales due to returned goods or allowances granted.',
                     ],
-                    'Sales Discounts' => [
-                        'description' => 'The amount of money deducted from sales due to discounts offered to customers for early payment or other reasons.',
+                ],
+            ],
+            'Sales Discounts' => [
+                'description' => 'The amount of money deducted from sales due to discounts offered to customers for early payment or other reasons.',
+                'multi_currency' => false,
+                'base_code' => '4925',
+                'inverse_cash_flow' => false,
+                'adjustment_category' => 'discount',
+                'adjustment_type' => 'sales',
+                'accounts' => [
+                    'Sales Discount' => [
+                        'description' => null,
                     ],
                 ],
             ],
@@ -412,6 +430,19 @@ return [
                 'base_code' => '5600',
                 'inverse_cash_flow' => true,
             ],
+            'Purchase Taxes' => [
+                'description' => 'Taxes paid on purchases of goods or services, such as value-added tax (VAT), goods and services tax (GST), or customs duties.',
+                'multi_currency' => false,
+                'base_code' => '5650',
+                'inverse_cash_flow' => true,
+                'adjustment_category' => 'tax',
+                'adjustment_type' => 'purchase',
+                'accounts' => [
+                    'Purchase Tax' => [
+                        'description' => null,
+                    ],
+                ],
+            ],
             'Other Non-Operating Expense' => [
                 'description' => 'Expenses not related to primary business activities, like losses from asset disposals, legal settlements, restructuring costs, or foreign exchange losses.',
                 'multi_currency' => false,
@@ -434,8 +465,18 @@ return [
                     'Purchase Returns and Allowances' => [
                         'description' => 'The amount of money returned to suppliers or deducted from purchases due to returned goods or allowances granted.',
                     ],
-                    'Purchase Discounts' => [
-                        'description' => 'The amount of money deducted from purchases due to discounts offered by suppliers for early payment or other reasons.',
+                ],
+            ],
+            'Purchase Discounts' => [
+                'description' => 'The amount of money deducted from purchases due to discounts offered by suppliers for early payment or other reasons.',
+                'multi_currency' => false,
+                'base_code' => '5925',
+                'inverse_cash_flow' => true,
+                'adjustment_category' => 'discount',
+                'adjustment_type' => 'purchase',
+                'accounts' => [
+                    'Purchase Discount' => [
+                        'description' => null,
                     ],
                 ],
             ],
