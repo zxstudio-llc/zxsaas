@@ -46,6 +46,8 @@ class AccountChart extends Page
     public function categories(): Collection
     {
         return AccountSubtype::withCount('accounts')
+            ->with('accounts')
+            ->with('accounts.adjustment')
             ->get()
             ->groupBy('category');
     }

@@ -189,5 +189,13 @@
     "Edit": "Edit",
     "Notes": "Notes",
     "Terms": "Terms",
-    "Ending Balance": "Ending Balance"
+    "Ending Balance": "Ending Balance",
+    "Default :Type :Category": "Default :Type :Category",
+    "Category": "Category",
+    "Configuration": "Configuration",
+    "Dates": "Dates",
+    "Adjustment Details": "Adjustment Details",
+    "Adjustments": "Adjustments",
+    "Sellable Configuration": "Sellable Configuration",
+    "Purchasable Configuration": "Purchasable Configuration"
 }

@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Company\Clusters\Settings\Resources\TaxResource\Pages;
+namespace App\Filament\Company\Clusters\Settings\Resources\AdjustmentResource\Pages;
 
-use App\Filament\Company\Clusters\Settings\Resources\TaxResource;
+use App\Filament\Company\Clusters\Settings\Resources\AdjustmentResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\MaxWidth;
 
-class ListTaxes extends ListRecords
+class ListAdjustments extends ListRecords
 {
-    protected static string $resource = TaxResource::class;
+    protected static string $resource = AdjustmentResource::class;
 
     protected function getHeaderActions(): array
     {

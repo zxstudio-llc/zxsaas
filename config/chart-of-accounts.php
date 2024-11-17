@@ -26,6 +26,20 @@ return [
                     ],
                 ],
             ],
+            'Input Tax Recoverable' => [
+                'description' => 'The amount of sales tax paid on purchases that can be recovered from the government.',
+                'multi_currency' => false,
+                'base_code' => '1150',
+                'inverse_cash_flow' => true,
+                'adjustment_category' => 'tax',
+                'adjustment_type' => 'purchase',
+                'adjustment_recoverable' => true,
+                'accounts' => [
+                    'Input Tax' => [
+                        'description' => null,
+                    ],
+                ],
+            ],
             'Inventory' => [
                 'description' => 'The raw materials, work-in-progress goods and completely finished goods that are considered to be the portion of a business\'s assets that are ready or will be ready for sale.',
                 'multi_currency' => true,
@@ -126,6 +140,7 @@ return [
                 'inverse_cash_flow' => false,
                 'adjustment_category' => 'tax',
                 'adjustment_type' => 'sales',
+                'adjustment_recoverable' => false,
                 'accounts' => [
                     'Sales Tax' => [
                         'description' => null,
@@ -288,6 +303,7 @@ return [
                 'inverse_cash_flow' => false,
                 'adjustment_category' => 'discount',
                 'adjustment_type' => 'sales',
+                'adjustment_recoverable' => false,
                 'accounts' => [
                     'Sales Discount' => [
                         'description' => null,
@@ -430,19 +446,6 @@ return [
                 'base_code' => '5600',
                 'inverse_cash_flow' => true,
             ],
-            'Purchase Taxes' => [
-                'description' => 'Taxes paid on purchases of goods or services, such as value-added tax (VAT), goods and services tax (GST), or customs duties.',
-                'multi_currency' => false,
-                'base_code' => '5650',
-                'inverse_cash_flow' => true,
-                'adjustment_category' => 'tax',
-                'adjustment_type' => 'purchase',
-                'accounts' => [
-                    'Purchase Tax' => [
-                        'description' => null,
-                    ],
-                ],
-            ],
             'Other Non-Operating Expense' => [
                 'description' => 'Expenses not related to primary business activities, like losses from asset disposals, legal settlements, restructuring costs, or foreign exchange losses.',
                 'multi_currency' => false,
@@ -474,6 +477,7 @@ return [
                 'inverse_cash_flow' => true,
                 'adjustment_category' => 'discount',
                 'adjustment_type' => 'purchase',
+                'adjustment_recoverable' => false,
                 'accounts' => [
                     'Purchase Discount' => [
                         'description' => null,

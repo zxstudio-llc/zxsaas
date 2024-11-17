@@ -44,7 +44,6 @@ class AdjustmentFactory extends Factory
             'scope' => $this->faker->randomElement(AdjustmentScope::class),
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'enabled' => false,
         ];
     }
 

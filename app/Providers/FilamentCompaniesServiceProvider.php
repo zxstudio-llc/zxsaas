@@ -27,6 +27,8 @@ use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
 use App\Filament\Company\Resources\Banking\AccountResource;
 use App\Filament\Company\Resources\Core\DepartmentResource;
+use App\Filament\Company\Resources\Purchases\BuyableOfferingResource;
+use App\Filament\Company\Resources\Sales\SellableOfferingResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
 use App\Http\Middleware\ConfigureCurrentCompany;
@@ -121,6 +123,14 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         ...Settings::getNavigationItems(),
                     ])
                     ->groups([
+                        NavigationGroup::make('Sales & Payments')
+                            ->label('Sales & Payments')
+                            ->icon('heroicon-o-currency-dollar')
+                            ->items(SellableOfferingResource::getNavigationItems()),
+                        NavigationGroup::make('Purchases')
+                            ->label('Purchases')
+                            ->icon('heroicon-o-shopping-cart')
+                            ->items(BuyableOfferingResource::getNavigationItems()),
                         NavigationGroup::make('Accounting')
                             ->localizeLabel()
                             ->icon('heroicon-o-clipboard-document-list')

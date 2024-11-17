@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\Accounting\AccountType;
 use App\Enums\Banking\BankAccountType;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Accounting\Adjustment;
 use App\Models\Banking\BankAccount;
@@ -16,6 +17,9 @@ class ChartOfAccountsService
     public function createChartOfAccounts(Company $company): void
     {
         $chartOfAccounts = config('chart-of-accounts.default');
+
+        // Always create a non-recoverable "Purchase Tax" adjustment, even without an account
+        $this->createAdjustmentForAccount($company, 'tax', 'purchase', false);
 
         foreach ($chartOfAccounts as $type => $subtypes) {
             foreach ($subtypes as $subtypeName => $subtypeConfig) {
@@ -57,6 +61,7 @@ class ChartOfAccountsService
 
             foreach ($subtypeConfig['accounts'] as $accountName => $accountDetails) {
                 // Create the Account without directly setting bank_account_id
+                /** @var Account $account */
                 $account = $company->accounts()->createQuietly([
                     'subtype_id' => $subtype->id,
                     'category' => $subtype->type->getCategory()->value,
@@ -79,11 +84,16 @@ class ChartOfAccountsService
                     $bankAccount->saveQuietly();
                 }
 
-                if (isset($subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type'])) {
-                    $adjustment = $this->createAdjustmentForAccount($company, $subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type']);
+                if (isset($subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type'], $subtypeConfig['adjustment_recoverable'])) {
+                    $adjustment = $this->createAdjustmentForAccount($company, $subtypeConfig['adjustment_category'], $subtypeConfig['adjustment_type'], $subtypeConfig['adjustment_recoverable']);
 
                     // Associate the Adjustment with the Account
                     $adjustment->account()->associate($account);
+
+                    $adjustment->name = $account->name;
+
+                    $adjustment->description = $account->description;
+
                     $adjustment->saveQuietly();
                 }
             }
@@ -102,27 +112,27 @@ class ChartOfAccountsService
         ]);
     }
 
-    private function createAdjustmentForAccount(Company $company, string $category, string $type): Adjustment
+    private function createAdjustmentForAccount(Company $company, string $category, string $type, bool $recoverable): Adjustment
     {
-        $noDefaultAdjustmentType = $company->adjustments()->where('category', $category)
-            ->where('type', $type)
-            ->where('enabled', true)
-            ->doesntExist();
-
         $defaultRate = match ([$category, $type]) {
-            ['tax', 'sales'] => 8,          // Default 8% for Sales Tax
-            ['tax', 'purchase'] => 8,       // Default 8% for Purchase Tax
-            ['discount', 'sales'] => 5,     // Default 5% for Sales Discount
-            ['discount', 'purchase'] => 5,  // Default 5% for Purchase Discount
-            default => 0,                   // Default to 0 if unspecified
+            ['tax', 'sales'], ['tax', 'purchase'] => '8',
+            ['discount', 'sales'], ['discount', 'purchase'] => '5',
+            default => '0',
         };
 
+        if ($category === 'tax' && $type === 'purchase' && $recoverable === false) {
+            $name = 'Purchase Tax';
+            $description = 'This tax is non-recoverable and is included as part of the total cost of the purchase. The tax amount is embedded into the associated expense or asset account based on the type of purchase.';
+        }
+
         return $company->adjustments()->createQuietly([
+            'name' => $name ?? null,
+            'description' => $description ?? null,
             'category' => $category,
             'type' => $type,
+            'recoverable' => $recoverable,
             'rate' => $defaultRate,
             'computation' => 'percentage',
-            'enabled' => $noDefaultAdjustmentType,
             'created_by' => $company->owner->id,
             'updated_by' => $company->owner->id,
         ]);

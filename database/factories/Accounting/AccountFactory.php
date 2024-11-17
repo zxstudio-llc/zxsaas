@@ -92,7 +92,7 @@ class AccountFactory extends Factory
 
     public function forPurchaseTax(?string $name = null, ?string $description = null): static
     {
-        $accountSubtype = AccountSubtype::where('name', 'Purchase Taxes')->first();
+        $accountSubtype = AccountSubtype::where('name', 'Input Tax Recoverable')->first();
 
         return $this->state([
             'name' => $name,

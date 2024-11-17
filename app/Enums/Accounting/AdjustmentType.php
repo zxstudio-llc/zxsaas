@@ -2,12 +2,15 @@
 
 namespace App\Enums\Accounting;
 
+use App\Enums\Concerns\ParsesEnum;
 use Filament\Support\Contracts\HasColor;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
 enum AdjustmentType: string implements HasColor, HasIcon, HasLabel
 {
+    use ParsesEnum;
+
     case Sales = 'sales';
     case Purchase = 'purchase';
 
@@ -30,5 +33,15 @@ enum AdjustmentType: string implements HasColor, HasIcon, HasLabel
             self::Sales => 'heroicon-o-currency-dollar',
             self::Purchase => 'heroicon-o-shopping-bag',
         };
+    }
+
+    public function isSales(): bool
+    {
+        return $this === self::Sales;
+    }
+
+    public function isPurchase(): bool
+    {
+        return $this === self::Purchase;
     }
 }
