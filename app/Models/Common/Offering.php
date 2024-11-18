@@ -10,11 +10,14 @@ use App\Enums\Accounting\AdjustmentType;
 use App\Enums\Common\OfferingType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Adjustment;
+use App\Observers\OfferingObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
+#[ObservedBy(OfferingObserver::class)]
 class Offering extends Model
 {
     use Blamable;
@@ -27,6 +30,8 @@ class Offering extends Model
         'description',
         'type',
         'price',
+        'sellable',
+        'purchasable',
         'income_account_id',
         'expense_account_id',
         'created_by',
@@ -36,7 +41,31 @@ class Offering extends Model
     protected $casts = [
         'type' => OfferingType::class,
         'price' => MoneyCast::class,
+        'sellable' => 'boolean',
+        'purchasable' => 'boolean',
     ];
+
+    public function clearSellableAdjustments(): void
+    {
+        if (! $this->sellable) {
+            $this->income_account_id = null;
+
+            $adjustmentIds = $this->salesAdjustments()->pluck('adjustment_id');
+
+            $this->adjustments()->detach($adjustmentIds);
+        }
+    }
+
+    public function clearPurchasableAdjustments(): void
+    {
+        if (! $this->purchasable) {
+            $this->expense_account_id = null;
+
+            $adjustmentIds = $this->purchaseAdjustments()->pluck('adjustment_id');
+
+            $this->adjustments()->detach($adjustmentIds);
+        }
+    }
 
     public function incomeAccount(): BelongsTo
     {
@@ -51,6 +80,16 @@ class Offering extends Model
     public function adjustments(): MorphToMany
     {
         return $this->morphToMany(Adjustment::class, 'adjustmentable', 'adjustmentables');
+    }
+
+    public function salesAdjustments(): MorphToMany
+    {
+        return $this->adjustments()->where('type', AdjustmentType::Sales);
+    }
+
+    public function purchaseAdjustments(): MorphToMany
+    {
+        return $this->adjustments()->where('type', AdjustmentType::Purchase);
     }
 
     public function salesTaxes(): MorphToMany

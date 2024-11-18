@@ -26,7 +26,7 @@ use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
 use App\Filament\Company\Resources\Banking\AccountResource;
-use App\Filament\Company\Resources\Core\DepartmentResource;
+use App\Filament\Company\Resources\Common\OfferingResource;
 use App\Filament\Company\Resources\Purchases\BuyableOfferingResource;
 use App\Filament\Company\Resources\Sales\SellableOfferingResource;
 use App\Filament\Components\PanelShiftDropdown;
@@ -121,6 +121,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         ...Dashboard::getNavigationItems(),
                         ...Reports::getNavigationItems(),
                         ...Settings::getNavigationItems(),
+                        ...OfferingResource::getNavigationItems(),
                     ])
                     ->groups([
                         NavigationGroup::make('Sales & Payments')
@@ -143,9 +144,6 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ->localizeLabel()
                             ->icon('heroicon-o-building-library')
                             ->items(AccountResource::getNavigationItems()),
-                        NavigationGroup::make('HR')
-                            ->icon('heroicon-o-user-group')
-                            ->items(DepartmentResource::getNavigationItems()),
                         NavigationGroup::make('Services')
                             ->localizeLabel()
                             ->icon('heroicon-o-wrench-screwdriver')
@@ -155,6 +153,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ]),
                     ]);
             })
+            ->sidebarCollapsibleOnDesktop()
             ->viteTheme('resources/css/filament/company/theme.css')
             ->brandLogo(static fn () => view('components.icons.logo'))
             ->tenant(Company::class)

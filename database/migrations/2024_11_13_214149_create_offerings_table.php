@@ -18,6 +18,8 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->string('type')->nullable(); // product, service, etc.
             $table->integer('price')->default(0);
+            $table->boolean('sellable')->default(false);
+            $table->boolean('purchasable')->default(false);
             $table->foreignId('income_account_id')->nullable()->constrained('accounts')->nullOnDelete(); // income account e.g. sales/invoice
             $table->foreignId('expense_account_id')->nullable()->constrained('accounts')->nullOnDelete(); // expense account e.g. purchase/bill
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();

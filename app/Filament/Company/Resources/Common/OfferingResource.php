@@ -2,8 +2,11 @@
 
 namespace App\Filament\Company\Resources\Common;
 
+use App\Enums\Accounting\AccountCategory;
+use App\Enums\Accounting\AccountType;
 use App\Enums\Common\OfferingType;
 use App\Filament\Company\Resources\Common\OfferingResource\Pages;
+use App\Models\Accounting\Account;
 use App\Models\Common\Offering;
 use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Forms;
@@ -11,10 +14,16 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use JaOcero\RadioDeck\Forms\Components\RadioDeck;
 
 class OfferingResource extends Resource
 {
     protected static ?string $model = Offering::class;
+
+    protected static ?string $modelLabel = 'Offering';
+
+    protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
     public static function form(Form $form): Form
     {
@@ -22,82 +31,127 @@ class OfferingResource extends Resource
             ->schema([
                 Forms\Components\Section::make('General')
                     ->schema([
+                        RadioDeck::make('type')
+                            ->options(OfferingType::class)
+                            ->default(OfferingType::Product)
+                            ->icons(OfferingType::class)
+                            ->color('primary')
+                            ->columns()
+                            ->required(),
                         Forms\Components\TextInput::make('name')
                             ->autofocus()
                             ->required()
+                            ->columnStart(1)
                             ->maxLength(255),
-                        Forms\Components\Textarea::make('description')
-                            ->label('Description')
-                            ->autosize(),
-                        Forms\Components\Select::make('type')
-                            ->options(OfferingType::class)
-                            ->searchable()
-                            ->required(),
                         Forms\Components\TextInput::make('price')
                             ->required()
                             ->money(CurrencyAccessor::getDefaultCurrency()),
+                        Forms\Components\Textarea::make('description')
+                            ->label('Description')
+                            ->columnSpan(2)
+                            ->rows(3),
                         Forms\Components\Checkbox::make('sellable')
                             ->label('Sellable')
                             ->live()
-                            ->dehydrated(false)
-                            ->default(false),
+                            ->columnStart(1)
+                            ->accepted(fn (Forms\Get $get) => ! $get('purchasable'))
+                            ->validationMessages([
+                                'accepted' => 'The offering must be either sellable or purchasable.',
+                            ]),
                         Forms\Components\Checkbox::make('purchasable')
                             ->label('Purchasable')
                             ->live()
-                            ->dehydrated(false)
-                            ->default(false),
-                    ]),
+                            ->columnStart(1)
+                            ->accepted(fn (Forms\Get $get) => ! $get('sellable'))
+                            ->validationMessages([
+                                'accepted' => 'The offering must be either sellable or purchasable.',
+                            ]),
+                    ])->columns(),
                 // Sellable Section
-                Forms\Components\Section::make('Sellable Configuration')
+                Forms\Components\Section::make('Sale Information')
                     ->schema([
                         Forms\Components\Select::make('income_account_id')
-                            ->relationship('incomeAccount', 'name')
+                            ->label('Income Account')
+                            ->options(Account::query()
+                                ->where('category', AccountCategory::Revenue)
+                                ->where('type', AccountType::OperatingRevenue)
+                                ->pluck('name', 'id')
+                                ->toArray())
                             ->searchable()
-                            ->preload(),
-                        Forms\Components\Select::make('sales_taxes')
+                            ->preload()
+                            ->requiredIfAccepted('sellable')
+                            ->validationMessages([
+                                'required_if_accepted' => 'The income account is required for sellable offerings.',
+                            ]),
+                        Forms\Components\Select::make('salesTaxes')
+                            ->label('Sales Tax')
                             ->relationship('salesTaxes', 'name')
                             ->preload()
                             ->multiple(),
-                        Forms\Components\Select::make('sales_discounts')
+                        Forms\Components\Select::make('salesDiscounts')
+                            ->label('Sales Discount')
                             ->relationship('salesDiscounts', 'name')
                             ->preload()
                             ->multiple(),
                     ])
-                    ->columns(2)
+                    ->columns()
                     ->visible(fn (Forms\Get $get) => $get('sellable')),
 
                 // Purchasable Section
-                Forms\Components\Section::make('Purchasable Configuration')
+                Forms\Components\Section::make('Purchase Information')
                     ->schema([
                         Forms\Components\Select::make('expense_account_id')
-                            ->relationship('expenseAccount', 'name')
+                            ->label('Expense Account')
+                            ->options(Account::query()
+                                ->where('category', AccountCategory::Expense)
+                                ->where('type', AccountType::OperatingExpense)
+                                ->orderBy('name')
+                                ->pluck('name', 'id')
+                                ->toArray())
                             ->searchable()
-                            ->preload(),
-                        Forms\Components\Select::make('purchase_taxes')
+                            ->preload()
+                            ->requiredIfAccepted('purchasable')
+                            ->validationMessages([
+                                'required_if_accepted' => 'The expense account is required for purchasable offerings.',
+                            ]),
+                        Forms\Components\Select::make('purchaseTaxes')
+                            ->label('Purchase Tax')
                             ->relationship('purchaseTaxes', 'name')
                             ->preload()
                             ->multiple(),
-                        Forms\Components\Select::make('purchase_discounts')
+                        Forms\Components\Select::make('purchaseDiscounts')
+                            ->label('Purchase Discount')
                             ->relationship('purchaseDiscounts', 'name')
                             ->preload()
                             ->multiple(),
                     ])
-                    ->columns(2)
+                    ->columns()
                     ->visible(fn (Forms\Get $get) => $get('purchasable')),
-            ])->columns(1);
+            ])->columns();
     }
 
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $query->selectRaw("
+                        *,
+                        CONCAT_WS(' & ',
+                            CASE WHEN sellable THEN 'Sellable' END,
+                            CASE WHEN purchasable THEN 'Purchasable' END
+                        ) AS attributes
+                    ");
+            })
             ->columns([
-                Tables\Columns\ViewColumn::make('name')
-                    ->label('Name')
-                    ->view('filament.company.components.tables.columns.offering-status'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Name'),
+                Tables\Columns\TextColumn::make('attributes')
+                    ->label('Attributes')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('type')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('price')
-                    ->money()
+                    ->currency(CurrencyAccessor::getDefaultCurrency(), true)
                     ->sortable(),
             ])
             ->filters([
