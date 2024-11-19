@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use JaOcero\RadioDeck\Forms\Components\RadioDeck;
 
 class OfferingResource extends Resource
@@ -50,21 +51,18 @@ class OfferingResource extends Resource
                             ->label('Description')
                             ->columnSpan(2)
                             ->rows(3),
-                        Forms\Components\Checkbox::make('sellable')
-                            ->label('Sellable')
+                        Forms\Components\CheckboxList::make('attributes')
+                            ->options([
+                                'Sellable' => 'Sellable',
+                                'Purchasable' => 'Purchasable',
+                            ])
+                            ->hiddenLabel()
+                            ->required()
                             ->live()
-                            ->columnStart(1)
-                            ->accepted(fn (Forms\Get $get) => ! $get('purchasable'))
+                            ->columnSpan(2)
+                            ->bulkToggleable()
                             ->validationMessages([
-                                'accepted' => 'The offering must be either sellable or purchasable.',
-                            ]),
-                        Forms\Components\Checkbox::make('purchasable')
-                            ->label('Purchasable')
-                            ->live()
-                            ->columnStart(1)
-                            ->accepted(fn (Forms\Get $get) => ! $get('sellable'))
-                            ->validationMessages([
-                                'accepted' => 'The offering must be either sellable or purchasable.',
+                                'required' => 'The offering must be either sellable or purchasable.',
                             ]),
                     ])->columns(),
                 // Sellable Section
@@ -79,9 +77,9 @@ class OfferingResource extends Resource
                                 ->toArray())
                             ->searchable()
                             ->preload()
-                            ->requiredIfAccepted('sellable')
+                            ->required(fn (Forms\Get $get) => in_array('Sellable', $get('attributes') ?? []))
                             ->validationMessages([
-                                'required_if_accepted' => 'The income account is required for sellable offerings.',
+                                'required' => 'The income account is required for sellable offerings.',
                             ]),
                         Forms\Components\Select::make('salesTaxes')
                             ->label('Sales Tax')
@@ -95,7 +93,7 @@ class OfferingResource extends Resource
                             ->multiple(),
                     ])
                     ->columns()
-                    ->visible(fn (Forms\Get $get) => $get('sellable')),
+                    ->visible(fn (Forms\Get $get) => in_array('Sellable', $get('attributes') ?? [])),
 
                 // Purchasable Section
                 Forms\Components\Section::make('Purchase Information')
@@ -110,9 +108,9 @@ class OfferingResource extends Resource
                                 ->toArray())
                             ->searchable()
                             ->preload()
-                            ->requiredIfAccepted('purchasable')
+                            ->required(fn (Forms\Get $get) => in_array('Purchasable', $get('attributes') ?? []))
                             ->validationMessages([
-                                'required_if_accepted' => 'The expense account is required for purchasable offerings.',
+                                'required' => 'The expense account is required for purchasable offerings.',
                             ]),
                         Forms\Components\Select::make('purchaseTaxes')
                             ->label('Purchase Tax')
@@ -126,7 +124,7 @@ class OfferingResource extends Resource
                             ->multiple(),
                     ])
                     ->columns()
-                    ->visible(fn (Forms\Get $get) => $get('purchasable')),
+                    ->visible(fn (Forms\Get $get) => in_array('Purchasable', $get('attributes') ?? [])),
             ])->columns();
     }
 
@@ -152,7 +150,20 @@ class OfferingResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('price')
                     ->currency(CurrencyAccessor::getDefaultCurrency(), true)
-                    ->sortable(),
+                    ->sortable()
+                    ->description(function (Offering $record) {
+                        $adjustments = $record->adjustments()
+                            ->pluck('name')
+                            ->join(', ');
+
+                        if (empty($adjustments)) {
+                            return null;
+                        }
+
+                        $adjustmentsList = Str::of($adjustments)->limit(40);
+
+                        return "+ $adjustmentsList";
+                    }),
             ])
             ->filters([
                 //
