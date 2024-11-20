@@ -46,7 +46,7 @@ class OfferingResource extends Resource
                             ->maxLength(255),
                         Forms\Components\TextInput::make('price')
                             ->required()
-                            ->money(CurrencyAccessor::getDefaultCurrency()),
+                            ->money(),
                         Forms\Components\Textarea::make('description')
                             ->label('Description')
                             ->columnSpan(2)
@@ -59,7 +59,6 @@ class OfferingResource extends Resource
                             ->hiddenLabel()
                             ->required()
                             ->live()
-                            ->columnSpan(2)
                             ->bulkToggleable()
                             ->validationMessages([
                                 'required' => 'The offering must be either sellable or purchasable.',
@@ -77,7 +76,7 @@ class OfferingResource extends Resource
                                 ->toArray())
                             ->searchable()
                             ->preload()
-                            ->required(fn (Forms\Get $get) => in_array('Sellable', $get('attributes') ?? []))
+                            ->required()
                             ->validationMessages([
                                 'required' => 'The income account is required for sellable offerings.',
                             ]),
@@ -108,7 +107,7 @@ class OfferingResource extends Resource
                                 ->toArray())
                             ->searchable()
                             ->preload()
-                            ->required(fn (Forms\Get $get) => in_array('Purchasable', $get('attributes') ?? []))
+                            ->required()
                             ->validationMessages([
                                 'required' => 'The expense account is required for purchasable offerings.',
                             ]),
@@ -162,7 +161,7 @@ class OfferingResource extends Resource
 
                         $adjustmentsList = Str::of($adjustments)->limit(40);
 
-                        return "+ $adjustmentsList";
+                        return "+ {$adjustmentsList}";
                     }),
             ])
             ->filters([

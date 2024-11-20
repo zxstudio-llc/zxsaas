@@ -2,11 +2,59 @@
 
 namespace App\Models\Common;
 
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Common\AddressType;
+use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Client extends Model
 {
-    /** @use HasFactory<\Database\Factories\Common\ClientFactory> */
+    use Blamable;
+    use CompanyOwned;
     use HasFactory;
+
+    protected $table = 'clients';
+
+    protected $fillable = [
+        'company_id',
+        'name',
+        'currency_code',
+        'account_number',
+        'website',
+        'notes',
+        'created_by',
+        'updated_by',
+    ];
+
+    public function contacts(): MorphMany
+    {
+        return $this->morphMany(Contact::class, 'contactable');
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency_code', 'code');
+    }
+
+    public function addresses(): MorphMany
+    {
+        return $this->morphMany(Address::class, 'addressable');
+    }
+
+    public function billingAddress(): MorphOne
+    {
+        return $this->morphOne(Address::class, 'addressable')
+            ->where('type', AddressType::Billing);
+    }
+
+    public function shippingAddress(): MorphOne
+    {
+        return $this->morphOne(Address::class, 'addressable')
+            ->where('type', AddressType::Shipping);
+    }
 }

@@ -35,6 +35,8 @@ class MacroServiceProvider extends ServiceProvider
     public function boot(): void
     {
         TextInput::macro('money', function (string | Closure | null $currency = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+
             $this->extraAttributes(['wire:key' => Str::random()])
                 ->prefix(static function (TextInput $component) use ($currency) {
                     $currency = $component->evaluate($currency);
