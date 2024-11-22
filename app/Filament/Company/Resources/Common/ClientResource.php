@@ -4,6 +4,7 @@ namespace App\Filament\Company\Resources\Common;
 
 use App\Filament\Company\Resources\Common\ClientResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
+use App\Filament\Forms\Components\PhoneBuilder;
 use App\Models\Common\Client;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -22,7 +23,7 @@ class ClientResource extends Resource
                 Forms\Components\Section::make('General Information')
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Client')
+                            ->label('Client Name')
                             ->required()
                             ->maxLength(255),
                         CreateCurrencySelect::make('currency_code')
@@ -35,9 +36,115 @@ class ClientResource extends Resource
                         Forms\Components\Textarea::make('notes')
                             ->columnSpanFull(),
                     ])->columns(),
+                Forms\Components\Section::make('Primary Contact')
+                    ->relationship('primaryContact')
+                    ->schema([
+                        Forms\Components\Hidden::make('is_primary')
+                            ->default(true),
+                        Forms\Components\TextInput::make('first_name')
+                            ->label('First Name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('last_name')
+                            ->label('Last Name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->required()
+                            ->email()
+                            ->maxLength(255),
+                        PhoneBuilder::make('phones')
+                            ->hiddenLabel()
+                            ->blockLabels(false)
+                            ->default([
+                                ['type' => 'office'],
+                            ])
+                            ->blocks([
+                                Forms\Components\Builder\Block::make('office')
+                                    ->label('Office')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('number')
+                                            ->label('Office')
+                                            ->required()
+                                            ->maxLength(15),
+                                    ])->maxItems(1),
+                                Forms\Components\Builder\Block::make('mobile')
+                                    ->label('Mobile')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('number')
+                                            ->label('Mobile')
+                                            ->required()
+                                            ->maxLength(15),
+                                    ])->maxItems(1),
+                                Forms\Components\Builder\Block::make('toll_free')
+                                    ->label('Toll Free')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('number')
+                                            ->label('Toll Free')
+                                            ->required()
+                                            ->maxLength(15),
+                                    ])->maxItems(1),
+                                Forms\Components\Builder\Block::make('fax')
+                                    ->label('Fax')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('number')
+                                            ->label('Fax')
+                                            ->live()
+                                            ->maxLength(15),
+                                    ])->maxItems(1),
+                            ])
+                            ->deletable(fn (PhoneBuilder $builder) => $builder->getItemsCount() > 1)
+                            ->reorderable(false)
+                            ->blockNumbers(false)
+                            ->addActionLabel('Add Phone'),
+                    ]),
+                Forms\Components\Repeater::make('secondaryContacts')
+                    ->relationship()
+                    ->columnSpanFull()
+                    ->hiddenLabel()
+                    ->defaultItems(0)
+                    ->addActionLabel('Add Contact')
+                    ->schema([
+                        Forms\Components\TextInput::make('first_name')
+                            ->label('First Name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('last_name')
+                            ->label('Last Name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->required()
+                            ->email()
+                            ->maxLength(255),
+                        PhoneBuilder::make('phones')
+                            ->hiddenLabel()
+                            ->blockLabels(false)
+                            ->default([
+                                ['type' => 'office'],
+                            ])
+                            ->blocks([
+                                Forms\Components\Builder\Block::make('office')
+                                    ->label('Office')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('number')
+                                            ->label('Office')
+                                            ->required()
+                                            ->maxLength(255),
+                                    ])->maxItems(1),
+                            ])
+                            ->addable(false)
+                            ->deletable(false)
+                            ->reorderable(false)
+                            ->blockNumbers(false),
+                    ]),
                 Forms\Components\Section::make('Billing')
                     ->relationship('billingAddress')
                     ->schema([
+                        Forms\Components\Hidden::make('type')
+                            ->default('billing'),
                         Forms\Components\TextInput::make('address_line_1')
                             ->label('Address Line 1')
                             ->required()
@@ -65,6 +172,8 @@ class ClientResource extends Resource
                 Forms\Components\Section::make('Shipping')
                     ->relationship('shippingAddress')
                     ->schema([
+                        Forms\Components\Hidden::make('type')
+                            ->default('shipping'),
                         Forms\Components\TextInput::make('recipient')
                             ->label('Recipient')
                             ->required()
@@ -98,7 +207,8 @@ class ClientResource extends Resource
                             ->maxLength(255),
                         Forms\Components\Textarea::make('notes')
                             ->label('Delivery Instructions')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->columnSpanFull(),
                     ])->columns(),
             ]);
     }

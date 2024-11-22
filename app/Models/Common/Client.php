@@ -36,6 +36,18 @@ class Client extends Model
         return $this->morphMany(Contact::class, 'contactable');
     }
 
+    public function primaryContact(): MorphOne
+    {
+        return $this->morphOne(Contact::class, 'contactable')
+            ->where('is_primary', true);
+    }
+
+    public function secondaryContacts(): MorphMany
+    {
+        return $this->morphMany(Contact::class, 'contactable')
+            ->where('is_primary', false);
+    }
+
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_code', 'code');

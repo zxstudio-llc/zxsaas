@@ -8,6 +8,10 @@
     @apply hidden;
 }
 
+.fi-fo-repeater-item {
+    @apply divide-y divide-gray-200 rounded-xl bg-white dark:bg-gray-900;
+}
+
 .fi-fo-field-wrp.report-hidden-label {
     @apply lg:mt-8;
 }

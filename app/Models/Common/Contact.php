@@ -33,6 +33,7 @@ class Contact extends Model
 
     protected $casts = [
         'type' => ContactType::class,
+        'phones' => 'array',
     ];
 
     public function contactable(): MorphTo

@@ -6,6 +6,7 @@ use App\Enums\Setting\DocumentType;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Banking\BankAccount;
 use App\Models\Banking\ConnectedBankAccount;
+use App\Models\Common\Client;
 use App\Models\Common\Contact;
 use App\Models\Common\Offering;
 use App\Models\Core\Department;
@@ -73,6 +74,11 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasMany(Accounting\Account::class, 'company_id');
     }
 
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Common\Address::class, 'company_id');
+    }
+
     public function adjustments(): HasMany
     {
         return $this->hasMany(Accounting\Adjustment::class, 'company_id');
@@ -92,6 +98,11 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
     {
         return $this->hasMany(AccountSubtype::class, 'company_id');
 
+    }
+
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'company_id');
     }
 
     public function contacts(): HasMany
