@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('type');
             $table->string('contractor_type')->nullable();
-            $table->string('ssn')->nullable();
+            $table->text('ssn')->nullable();
+            $table->text('ein')->nullable();
             $table->string('currency_code')->nullable();
             $table->string('account_number')->nullable();
             $table->string('website')->nullable();

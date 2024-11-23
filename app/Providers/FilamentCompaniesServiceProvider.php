@@ -28,7 +28,7 @@ use App\Filament\Company\Pages\Service\LiveCurrency;
 use App\Filament\Company\Resources\Banking\AccountResource;
 use App\Filament\Company\Resources\Common\ClientResource;
 use App\Filament\Company\Resources\Common\OfferingResource;
-use App\Filament\Company\Resources\Purchases\BuyableOfferingResource;
+use App\Filament\Company\Resources\Common\VendorResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
 use App\Http\Middleware\ConfigureCurrentCompany;
@@ -113,7 +113,6 @@ class FilamentCompaniesServiceProvider extends PanelProvider
             )
             ->colors([
                 'primary' => Color::Indigo,
-                'gray' => Color::Gray,
             ])
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 return $builder
@@ -131,7 +130,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         NavigationGroup::make('Purchases')
                             ->label('Purchases')
                             ->icon('heroicon-o-shopping-cart')
-                            ->items(BuyableOfferingResource::getNavigationItems()),
+                            ->items(VendorResource::getNavigationItems()),
                         NavigationGroup::make('Accounting')
                             ->localizeLabel()
                             ->icon('heroicon-o-clipboard-document-list')

@@ -4,6 +4,8 @@ namespace App\Models\Common;
 
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Common\ContractorType;
+use App\Enums\Common\VendorType;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,12 +26,20 @@ class Vendor extends Model
         'type',
         'contractor_type',
         'ssn',
+        'ein',
         'currency_code',
         'account_number',
         'website',
         'notes',
         'created_by',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'type' => VendorType::class,
+        'contractor_type' => ContractorType::class,
+        'ssn' => 'encrypted',
+        'ein' => 'encrypted',
     ];
 
     public function currency(): BelongsTo
