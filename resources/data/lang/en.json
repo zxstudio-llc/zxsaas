@@ -207,5 +207,9 @@
     "Billing Address": "Billing Address",
     "Shipping Address": "Shipping Address",
     "Secondary Contacts": "Secondary Contacts",
-    "Address Information": "Address Information"
+    "Address Information": "Address Information",
+    "Invoice Header": "Invoice Header",
+    "Invoice Details": "Invoice Details",
+    "Footer": "Footer",
+    "Invoice Footer": "Invoice Footer"
 }

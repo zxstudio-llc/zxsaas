@@ -25,6 +25,7 @@ use App\Filament\Company\Pages\ManageCompany;
 use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
+use App\Filament\Company\Resources\Accounting\DocumentResource;
 use App\Filament\Company\Resources\Banking\AccountResource;
 use App\Filament\Company\Resources\Common\ClientResource;
 use App\Filament\Company\Resources\Common\OfferingResource;
@@ -136,6 +137,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ->icon('heroicon-o-clipboard-document-list')
                             ->extraSidebarAttributes(['class' => 'es-sidebar-group'])
                             ->items([
+                                ...DocumentResource::getNavigationItems(),
                                 ...AccountChart::getNavigationItems(),
                                 ...Transactions::getNavigationItems(),
                             ]),

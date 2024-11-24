@@ -43,6 +43,7 @@ class VendorResource extends Resource
                                     ->columnSpanFull(),
                                 CreateCurrencySelect::make('currency_code')
                                     ->relationship('currency', 'name')
+                                    ->nullable()
                                     ->visible(fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Regular),
                                 Forms\Components\Select::make('contractor_type')
                                     ->label('Contractor Type')
@@ -54,12 +55,18 @@ class VendorResource extends Resource
                                     ->label('Social Security Number')
                                     ->required()
                                     ->live()
+                                    ->mask('999-99-9999')
+                                    ->stripCharacters('-')
+                                    ->maxLength(11)
                                     ->visible(fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Individual)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('ein')
                                     ->label('Employer Identification Number')
                                     ->required()
                                     ->live()
+                                    ->mask('99-9999999')
+                                    ->stripCharacters('-')
+                                    ->maxLength(10)
                                     ->visible(fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Business)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('account_number')
@@ -174,13 +181,13 @@ class VendorResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
-                    ->description(fn (Vendor $vendor) => $vendor->contact->full_name),
+                    ->description(fn (Vendor $vendor) => $vendor->contact?->full_name),
                 Tables\Columns\TextColumn::make('contact.email')
                     ->label('Email')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('primaryContact.phones')
                     ->label('Phone')
-                    ->state(fn (Vendor $vendor) => $vendor->contact->primary_phone),
+                    ->state(fn (Vendor $vendor) => $vendor->contact?->primary_phone),
             ])
             ->filters([
                 //

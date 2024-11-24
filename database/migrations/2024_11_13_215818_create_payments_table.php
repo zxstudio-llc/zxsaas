@@ -13,6 +13,15 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('document_id')->constrained()->cascadeOnDelete();
+            $table->date('date');
+            $table->integer('amount');
+            $table->string('payment_method');
+            $table->foreignId('bank_account_id')->nullable()->constrained()->nullOnDelete();
+            $table->text('notes')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }
