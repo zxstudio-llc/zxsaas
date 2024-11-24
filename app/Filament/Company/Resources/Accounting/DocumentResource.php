@@ -125,11 +125,13 @@ class DocumentResource extends Resource
                                     ->numeric()
                                     ->live()
                                     ->default(1),
-                                Forms\Components\TextInput::make('unit_price')
-                                    ->required()
-                                    ->live()
-                                    ->numeric()
-                                    ->default(0),
+                                Forms\Components\Group::make([
+                                    Forms\Components\TextInput::make('unit_price')
+                                        ->hiddenLabel()
+                                        ->live()
+                                        ->numeric()
+                                        ->default(0),
+                                ]),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()
                                     ->content(function (Forms\Get $get) {
