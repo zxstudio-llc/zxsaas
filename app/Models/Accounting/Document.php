@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\DocumentType;
 use App\Models\Banking\Payment;
 use App\Models\Common\Client;
 use App\Models\Common\Vendor;
@@ -47,6 +48,7 @@ class Document extends Model
     ];
 
     protected $casts = [
+        'type' => DocumentType::class,
         'date' => 'date',
         'due_date' => 'date',
         'subtotal' => MoneyCast::class,

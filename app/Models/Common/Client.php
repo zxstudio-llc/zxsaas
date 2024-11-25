@@ -4,11 +4,14 @@ namespace App\Models\Common;
 
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Common\AddressType;
+use App\Models\Accounting\Document;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
@@ -68,5 +71,11 @@ class Client extends Model
     {
         return $this->morphOne(Address::class, 'addressable')
             ->where('type', AddressType::Shipping);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Document::class, 'client_id')
+            ->where('type', DocumentType::Invoice);
     }
 }

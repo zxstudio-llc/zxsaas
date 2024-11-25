@@ -137,6 +137,11 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasMany(Department::class, 'company_id');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Accounting\Document::class, 'company_id');
+    }
+
     public function locale(): HasOne
     {
         return $this->hasOne(Localization::class, 'company_id');

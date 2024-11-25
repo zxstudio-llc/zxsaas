@@ -6,6 +6,7 @@ use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentCategory;
+use App\Enums\Accounting\AdjustmentType;
 use App\Models\Common\Offering;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -54,6 +55,16 @@ class DocumentLineItem extends Model
     public function adjustments(): MorphToMany
     {
         return $this->morphToMany(Adjustment::class, 'adjustmentable', 'adjustmentables');
+    }
+
+    public function salesTaxes(): MorphToMany
+    {
+        return $this->adjustments()->where('category', AdjustmentCategory::Tax)->where('type', AdjustmentType::Sales);
+    }
+
+    public function salesDiscounts(): MorphToMany
+    {
+        return $this->adjustments()->where('category', AdjustmentCategory::Discount)->where('type', AdjustmentType::Sales);
     }
 
     public function taxes(): MorphToMany

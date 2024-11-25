@@ -4,12 +4,15 @@ namespace App\Models\Common;
 
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Common\ContractorType;
 use App\Enums\Common\VendorType;
+use App\Models\Accounting\Document;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Vendor extends Model
@@ -41,6 +44,12 @@ class Vendor extends Model
         'ssn' => 'encrypted',
         'ein' => 'encrypted',
     ];
+
+    public function bills(): HasMany
+    {
+        return $this->hasMany(Document::class, 'vendor_id')
+            ->where('type', DocumentType::Bill);
+    }
 
     public function currency(): BelongsTo
     {
