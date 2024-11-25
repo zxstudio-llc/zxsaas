@@ -9,11 +9,14 @@ use App\Enums\Accounting\DocumentType;
 use App\Models\Banking\Payment;
 use App\Models\Common\Client;
 use App\Models\Common\Vendor;
+use App\Observers\DocumentObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy(DocumentObserver::class)]
 class Document extends Model
 {
     use Blamable;
@@ -56,6 +59,7 @@ class Document extends Model
         'discount_total' => MoneyCast::class,
         'total' => MoneyCast::class,
         'amount_paid' => MoneyCast::class,
+        'amount_due' => MoneyCast::class,
     ];
 
     public function client(): BelongsTo

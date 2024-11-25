@@ -339,66 +339,26 @@ class DocumentResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('client.name')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('vendor.name')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('type')
+                Tables\Columns\TextColumn::make('status')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('logo')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('header')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('subheader')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('document_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('order_number')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('date')
-                    ->date()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('due_date')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('currency_code')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('subtotal')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('date')
+                    ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('tax_total')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('discount_total')
+                Tables\Columns\TextColumn::make('document_number')
+                    ->label('Number')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('client.name')
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->numeric()
-                    ->sortable(),
+                    ->money(),
                 Tables\Columns\TextColumn::make('amount_paid')
-                    ->numeric()
-                    ->sortable(),
+                    ->money(),
                 Tables\Columns\TextColumn::make('amount_due')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_by')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('updated_by')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->money(),
             ])
             ->filters([
                 //

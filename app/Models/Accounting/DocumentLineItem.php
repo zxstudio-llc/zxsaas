@@ -8,11 +8,14 @@ use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentCategory;
 use App\Enums\Accounting\AdjustmentType;
 use App\Models\Common\Offering;
+use App\Observers\DocumentLineItemObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
+#[ObservedBy(DocumentLineItemObserver::class)]
 class DocumentLineItem extends Model
 {
     use Blamable;
