@@ -103,6 +103,40 @@ class DocumentResource extends Resource
                         ])->from('md'),
                         TableRepeater::make('lineItems')
                             ->relationship()
+                            ->saveRelationshipsUsing(function (Document $document, array $state) {
+                                $document->lineItems()->delete();
+
+                                collect($state)->map(function ($lineItemData) use ($document) {
+                                    $lineItem = $document->lineItems()->create([
+                                        'offering_id' => $lineItemData['offering_id'],
+                                        'description' => $lineItemData['description'],
+                                        'quantity' => $lineItemData['quantity'],
+                                        'unit_price' => $lineItemData['unit_price'],
+                                        'tax_total' => collect($lineItemData['salesTaxes'] ?? [])->sum(function ($taxId) use ($lineItemData) {
+                                            $tax = Adjustment::find($taxId);
+
+                                            return $tax ? ($lineItemData['quantity'] * $lineItemData['unit_price']) * ($tax->rate / 100) : 0;
+                                        }),
+                                    ]);
+
+                                    $lineItem->taxes()->sync($lineItemData['salesTaxes'] ?? []);
+
+                                    return $lineItem;
+                                });
+
+                                $document->refresh();
+                                $subtotal = $document->lineItems()->sum('subtotal') / 100;
+                                $taxTotal = $document->lineItems()->sum('tax_total') / 100;
+                                $discountTotal = $document->lineItems()->sum('discount_total') / 100;
+                                $grandTotal = $subtotal + $taxTotal - $discountTotal;
+
+                                $document->updateQuietly([
+                                    'subtotal' => $subtotal,
+                                    'tax_total' => $taxTotal,
+                                    'discount_total' => $discountTotal,
+                                    'total' => $grandTotal,
+                                ]);
+                            })
                             ->headers([
                                 Header::make('Items')->width('20%'),
                                 Header::make('Description')->width('30%'),
@@ -135,8 +169,7 @@ class DocumentResource extends Resource
                                             $set('total', $total + $taxAmount);
                                         }
                                     }),
-                                Forms\Components\TextInput::make('description')
-                                    ->required(),
+                                Forms\Components\TextInput::make('description'),
                                 Forms\Components\TextInput::make('quantity')
                                     ->required()
                                     ->numeric()
@@ -175,68 +208,11 @@ class DocumentResource extends Resource
                                     }),
                             ]),
                         Forms\Components\Grid::make(6)
-                            ->inlineLabel()
-                            ->extraAttributes([
-                                'class' => 'text-right pr-16',
-                            ])
                             ->schema([
-                                Forms\Components\Group::make([
-                                    Forms\Components\Placeholder::make('subtotal')
-                                        ->label('Subtotal')
-                                        ->content(function (Forms\Get $get) {
-                                            $lineItems = $get('lineItems');
-
-                                            $subtotal = collect($lineItems)
-                                                ->sum(fn ($item) => ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0));
-
-                                            return money($subtotal, CurrencyAccessor::getDefaultCurrency(), true)->format();
-                                        }),
-                                    Forms\Components\Placeholder::make('tax_total')
-                                        ->label('Taxes')
-                                        ->content(function (Forms\Get $get) {
-                                            $lineItems = $get('lineItems');
-
-                                            $totalTaxes = collect($lineItems)->reduce(function ($carry, $item) {
-                                                $quantity = $item['quantity'] ?? 0;
-                                                $unitPrice = $item['unit_price'] ?? 0;
-                                                $salesTaxes = $item['salesTaxes'] ?? [];
-                                                $lineTotal = $quantity * $unitPrice;
-
-                                                $taxAmount = Adjustment::whereIn('id', $salesTaxes)
-                                                    ->pluck('rate')
-                                                    ->sum(fn ($rate) => $lineTotal * ($rate / 100));
-
-                                                return $carry + $taxAmount;
-                                            }, 0);
-
-                                            return money($totalTaxes, CurrencyAccessor::getDefaultCurrency(), true)->format();
-                                        }),
-                                    Forms\Components\Placeholder::make('total')
-                                        ->label('Total')
-                                        ->content(function (Forms\Get $get) {
-                                            $lineItems = $get('lineItems') ?? [];
-
-                                            $subtotal = collect($lineItems)
-                                                ->sum(fn ($item) => ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0));
-
-                                            $totalTaxes = collect($lineItems)->reduce(function ($carry, $item) {
-                                                $quantity = $item['quantity'] ?? 0;
-                                                $unitPrice = $item['unit_price'] ?? 0;
-                                                $salesTaxes = $item['salesTaxes'] ?? [];
-                                                $lineTotal = $quantity * $unitPrice;
-
-                                                $taxAmount = Adjustment::whereIn('id', $salesTaxes)
-                                                    ->pluck('rate')
-                                                    ->sum(fn ($rate) => $lineTotal * ($rate / 100));
-
-                                                return $carry + $taxAmount;
-                                            }, 0);
-
-                                            $grandTotal = $subtotal + $totalTaxes;
-
-                                            return money($grandTotal, CurrencyAccessor::getDefaultCurrency(), true)->format();
-                                        }),
-                                ])->columnStart(6),
+                                Forms\Components\ViewField::make('totals')
+                                    ->columnStart(5)
+                                    ->columnSpan(2)
+                                    ->view('filament.forms.components.invoice-totals'),
                             ]),
                         //                        Forms\Components\Repeater::make('lineItems')
                         //                            ->relationship()

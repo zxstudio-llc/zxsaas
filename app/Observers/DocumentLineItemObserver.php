@@ -22,18 +22,6 @@ class DocumentLineItemObserver
         //
     }
 
-    public function saving(DocumentLineItem $lineItem): void
-    {
-        // Calculate the base total (quantity * unit price)
-        $lineItem->total = $lineItem->quantity * $lineItem->unit_price;
-
-        // Calculate tax total (if applicable)
-        $lineItem->tax_total = $lineItem->taxes->sum(fn ($tax) => $lineItem->total * ($tax->rate / 100));
-
-        // Calculate discount total (if applicable)
-        $lineItem->discount_total = $lineItem->discounts->sum(fn ($discount) => $lineItem->total * ($discount->rate / 100));
-    }
-
     /**
      * Handle the DocumentLineItem "deleted" event.
      */

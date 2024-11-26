@@ -31,7 +31,6 @@ class DocumentLineItem extends Model
         'description',
         'quantity',
         'unit_price',
-        'total',
         'tax_total',
         'discount_total',
         'created_by',
@@ -40,9 +39,10 @@ class DocumentLineItem extends Model
 
     protected $casts = [
         'unit_price' => MoneyCast::class,
-        'total' => MoneyCast::class,
+        'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
+        'total' => MoneyCast::class,
     ];
 
     public function document(): BelongsTo

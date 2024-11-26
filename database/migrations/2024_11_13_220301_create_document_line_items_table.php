@@ -19,7 +19,8 @@ return new class extends Migration
             $table->string('description')->nullable();
             $table->integer('quantity')->default(1);
             $table->integer('unit_price')->default(0);
-            $table->integer('total')->default(0);
+            $table->integer('subtotal')->storedAs('quantity * unit_price');
+            $table->integer('total')->storedAs('(quantity * unit_price) + tax_total - discount_total');
             $table->integer('tax_total')->default(0);
             $table->integer('discount_total')->default(0);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
