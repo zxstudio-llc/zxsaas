@@ -27,7 +27,7 @@ class DocumentLineItemObserver
      */
     public function deleted(DocumentLineItem $documentLineItem): void
     {
-        //
+        $documentLineItem->adjustments()->detach();
     }
 
     /**

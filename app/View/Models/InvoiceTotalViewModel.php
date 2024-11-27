@@ -32,15 +32,30 @@ class InvoiceTotalViewModel
             return $carry + $taxAmount;
         }, 0);
 
-        $grandTotal = $subtotal + $taxTotal;
+        $discountTotal = $lineItems->reduce(function ($carry, $item) {
+            $quantity = $item['quantity'] ?? 0;
+            $unitPrice = $item['unit_price'] ?? 0;
+            $salesDiscounts = $item['salesDiscounts'] ?? [];
+            $lineTotal = $quantity * $unitPrice;
+
+            $discountAmount = Adjustment::whereIn('id', $salesDiscounts)
+                ->pluck('rate')
+                ->sum(fn ($rate) => $lineTotal * ($rate / 100));
+
+            return $carry + $discountAmount;
+        }, 0);
+
+        $grandTotal = $subtotal + ($taxTotal - $discountTotal);
 
         $subTotalFormatted = CurrencyConverter::formatToMoney($subtotal);
         $taxTotalFormatted = CurrencyConverter::formatToMoney($taxTotal);
+        $discountTotalFormatted = CurrencyConverter::formatToMoney($discountTotal);
         $grandTotalFormatted = CurrencyConverter::formatToMoney($grandTotal);
 
         return [
             'subtotal' => $subTotalFormatted,
             'taxTotal' => $taxTotalFormatted,
+            'discountTotal' => $discountTotalFormatted,
             'grandTotal' => $grandTotalFormatted,
         ];
     }

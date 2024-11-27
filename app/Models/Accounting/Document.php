@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\DocumentStatus;
 use App\Enums\Accounting\DocumentType;
 use App\Models\Banking\Payment;
 use App\Models\Common\Client;
@@ -54,6 +55,7 @@ class Document extends Model
         'type' => DocumentType::class,
         'date' => 'date',
         'due_date' => 'date',
+        'status' => DocumentStatus::class,
         'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
@@ -80,5 +82,39 @@ class Document extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public static function getNextDocumentNumber(DocumentType $documentType = DocumentType::Invoice): string
+    {
+        $company = auth()->user()->currentCompany;
+
+        if (! $company) {
+            throw new \RuntimeException('No current company is set for the user.');
+        }
+
+        $defaultInvoiceSettings = $company->defaultInvoice;
+
+        $numberPrefix = $defaultInvoiceSettings->number_prefix;
+        $numberDigits = $defaultInvoiceSettings->number_digits;
+
+        $latestDocument = static::query()
+            ->whereNotNull('document_number')
+            ->where('type', $documentType)
+            ->latest('document_number')
+            ->first();
+
+        $lastNumberNumericPart = $latestDocument
+            ? (int) substr($latestDocument->document_number, strlen($numberPrefix))
+            : 0;
+
+        $numberNext = $lastNumberNumericPart + 1;
+
+        return $defaultInvoiceSettings->getNumberNext(
+            padded: true,
+            format: true,
+            prefix: $numberPrefix,
+            digits: $numberDigits,
+            next: $numberNext
+        );
     }
 }

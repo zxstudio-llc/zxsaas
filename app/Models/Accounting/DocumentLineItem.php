@@ -2,6 +2,8 @@
 
 namespace App\Models\Accounting;
 
+use Akaunting\Money\Money;
+use App\Casts\DocumentMoneyCast;
 use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
@@ -9,6 +11,7 @@ use App\Enums\Accounting\AdjustmentCategory;
 use App\Enums\Accounting\AdjustmentType;
 use App\Models\Common\Offering;
 use App\Observers\DocumentLineItemObserver;
+use App\Utilities\Currency\CurrencyAccessor;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -39,7 +42,7 @@ class DocumentLineItem extends Model
 
     protected $casts = [
         'unit_price' => MoneyCast::class,
-        'subtotal' => MoneyCast::class,
+        'subtotal' => DocumentMoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
         'total' => MoneyCast::class,
@@ -78,5 +81,25 @@ class DocumentLineItem extends Model
     public function discounts(): MorphToMany
     {
         return $this->adjustments()->where('category', AdjustmentCategory::Discount);
+    }
+
+    public function calculateTaxTotal(): Money
+    {
+        $subtotal = money($this->subtotal, CurrencyAccessor::getDefaultCurrency());
+
+        return $this->taxes->reduce(
+            fn (Money $carry, Adjustment $tax) => $carry->add($subtotal->multiply($tax->rate / 100)),
+            money(0, CurrencyAccessor::getDefaultCurrency())
+        );
+    }
+
+    public function calculateDiscountTotal(): Money
+    {
+        $subtotal = money($this->subtotal, CurrencyAccessor::getDefaultCurrency());
+
+        return $this->discounts->reduce(
+            fn (Money $carry, Adjustment $discount) => $carry->add($subtotal->multiply($discount->rate / 100)),
+            money(0, CurrencyAccessor::getDefaultCurrency())
+        );
     }
 }

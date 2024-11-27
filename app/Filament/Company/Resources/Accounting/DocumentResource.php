@@ -6,10 +6,12 @@ use App\Enums\Accounting\AdjustmentCategory;
 use App\Filament\Company\Resources\Accounting\DocumentResource\Pages;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Document;
+use App\Models\Accounting\DocumentLineItem;
 use App\Models\Common\Offering;
 use App\Utilities\Currency\CurrencyAccessor;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
+use Carbon\CarbonInterface;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
@@ -17,6 +19,8 @@ use Filament\Resources\Resource;
 use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -88,7 +92,7 @@ class DocumentResource extends Resource
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('document_number')
                                     ->label('Invoice Number')
-                                    ->default(fn () => $company->defaultInvoice->getNumberNext()),
+                                    ->default(fn () => Document::getNextDocumentNumber()),
                                 Forms\Components\TextInput::make('order_number')
                                     ->label('P.O/S.O Number'),
                                 Forms\Components\DatePicker::make('date')
@@ -103,28 +107,96 @@ class DocumentResource extends Resource
                         ])->from('md'),
                         TableRepeater::make('lineItems')
                             ->relationship()
-                            ->saveRelationshipsUsing(function (Document $document, array $state) {
-                                $document->lineItems()->delete();
+                            ->saveRelationshipsUsing(function (TableRepeater $component, Forms\Contracts\HasForms $livewire, ?array $state) {
+                                if (! is_array($state)) {
+                                    $state = [];
+                                }
 
-                                collect($state)->map(function ($lineItemData) use ($document) {
-                                    $lineItem = $document->lineItems()->create([
-                                        'offering_id' => $lineItemData['offering_id'],
-                                        'description' => $lineItemData['description'],
-                                        'quantity' => $lineItemData['quantity'],
-                                        'unit_price' => $lineItemData['unit_price'],
-                                        'tax_total' => collect($lineItemData['salesTaxes'] ?? [])->sum(function ($taxId) use ($lineItemData) {
-                                            $tax = Adjustment::find($taxId);
+                                $relationship = $component->getRelationship();
 
-                                            return $tax ? ($lineItemData['quantity'] * $lineItemData['unit_price']) * ($tax->rate / 100) : 0;
-                                        }),
+                                $existingRecords = $component->getCachedExistingRecords();
+
+                                $recordsToDelete = [];
+
+                                foreach ($existingRecords->pluck($relationship->getRelated()->getKeyName()) as $keyToCheckForDeletion) {
+                                    if (array_key_exists("record-{$keyToCheckForDeletion}", $state)) {
+                                        continue;
+                                    }
+
+                                    $recordsToDelete[] = $keyToCheckForDeletion;
+                                    $existingRecords->forget("record-{$keyToCheckForDeletion}");
+                                }
+
+                                $relationship
+                                    ->whereKey($recordsToDelete)
+                                    ->get()
+                                    ->each(static fn (Model $record) => $record->delete());
+
+                                $childComponentContainers = $component->getChildComponentContainers(
+                                    withHidden: $component->shouldSaveRelationshipsWhenHidden(),
+                                );
+
+                                $itemOrder = 1;
+                                $orderColumn = $component->getOrderColumn();
+
+                                $translatableContentDriver = $livewire->makeFilamentTranslatableContentDriver();
+
+                                foreach ($childComponentContainers as $itemKey => $item) {
+                                    $itemData = $item->getState(shouldCallHooksBefore: false);
+
+                                    if ($orderColumn) {
+                                        $itemData[$orderColumn] = $itemOrder;
+
+                                        $itemOrder++;
+                                    }
+
+                                    if ($record = ($existingRecords[$itemKey] ?? null)) {
+                                        $itemData = $component->mutateRelationshipDataBeforeSave($itemData, record: $record);
+
+                                        if ($itemData === null) {
+                                            continue;
+                                        }
+
+                                        $translatableContentDriver ?
+                                            $translatableContentDriver->updateRecord($record, $itemData) :
+                                            $record->fill($itemData)->save();
+
+                                        continue;
+                                    }
+
+                                    $relatedModel = $component->getRelatedModel();
+
+                                    $itemData = $component->mutateRelationshipDataBeforeCreate($itemData);
+
+                                    if ($itemData === null) {
+                                        continue;
+                                    }
+
+                                    if ($translatableContentDriver) {
+                                        $record = $translatableContentDriver->makeRecord($relatedModel, $itemData);
+                                    } else {
+                                        $record = new $relatedModel;
+                                        $record->fill($itemData);
+                                    }
+
+                                    $record = $relationship->save($record);
+                                    $item->model($record)->saveRelationships();
+                                    $existingRecords->push($record);
+                                }
+
+                                $component->getRecord()->setRelation($component->getRelationshipName(), $existingRecords);
+
+                                /** @var Document $document */
+                                $document = $component->getRecord();
+
+                                // Recalculate totals for line items
+                                $document->lineItems()->each(function (DocumentLineItem $lineItem) {
+                                    $lineItem->updateQuietly([
+                                        'tax_total' => $lineItem->calculateTaxTotal()->getAmount(),
+                                        'discount_total' => $lineItem->calculateDiscountTotal()->getAmount(),
                                     ]);
-
-                                    $lineItem->taxes()->sync($lineItemData['salesTaxes'] ?? []);
-
-                                    return $lineItem;
                                 });
 
-                                $document->refresh();
                                 $subtotal = $document->lineItems()->sum('subtotal') / 100;
                                 $taxTotal = $document->lineItems()->sum('tax_total') / 100;
                                 $discountTotal = $document->lineItems()->sum('discount_total') / 100;
@@ -138,11 +210,12 @@ class DocumentResource extends Resource
                                 ]);
                             })
                             ->headers([
-                                Header::make('Items')->width('20%'),
-                                Header::make('Description')->width('30%'),
+                                Header::make('Items')->width('15%'),
+                                Header::make('Description')->width('25%'),
                                 Header::make('Quantity')->width('10%'),
                                 Header::make('Price')->width('10%'),
-                                Header::make('Taxes')->width('20%'),
+                                Header::make('Taxes')->width('15%'),
+                                Header::make('Discounts')->width('15%'),
                                 Header::make('Amount')->width('10%')->align('right'),
                             ])
                             ->live()
@@ -160,13 +233,7 @@ class DocumentResource extends Resource
                                             $set('description', $offeringRecord->description);
                                             $set('unit_price', $offeringRecord->price);
                                             $set('salesTaxes', $offeringRecord->salesTaxes->pluck('id')->toArray());
-
-                                            $quantity = $get('quantity');
-                                            $total = $quantity * $offeringRecord->price;
-
-                                            // Calculate taxes and update total
-                                            $taxAmount = $offeringRecord->salesTaxes->sum(fn ($tax) => $total * ($tax->rate / 100));
-                                            $set('total', $total + $taxAmount);
+                                            $set('salesDiscounts', $offeringRecord->salesDiscounts->pluck('id')->toArray());
                                         }
                                     }),
                                 Forms\Components\TextInput::make('description'),
@@ -183,26 +250,38 @@ class DocumentResource extends Resource
                                     ->preload()
                                     ->multiple()
                                     ->searchable(),
+                                Forms\Components\Select::make('salesDiscounts')
+                                    ->relationship('salesDiscounts', 'name')
+                                    ->preload()
+                                    ->multiple()
+                                    ->searchable(),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()
                                     ->content(function (Forms\Get $get) {
                                         $quantity = $get('quantity') ?? 0;
                                         $unitPrice = $get('unit_price') ?? 0;
                                         $salesTaxes = $get('salesTaxes') ?? [];
+                                        $salesDiscounts = $get('salesDiscounts') ?? [];
 
-                                        $total = $quantity * $unitPrice;
+                                        // Base total (subtotal)
+                                        $subtotal = $quantity * $unitPrice;
 
+                                        // Calculate tax amount based on subtotal
+                                        $taxAmount = 0;
                                         if (! empty($salesTaxes)) {
                                             $taxRates = Adjustment::whereIn('id', $salesTaxes)->pluck('rate');
-
-                                            $taxAmount = $taxRates->sum(function ($rate) use ($total) {
-                                                return $total * ($rate / 100);
-                                            });
-
-                                            $total += $taxAmount;
-
-                                            return money($total, CurrencyAccessor::getDefaultCurrency(), true)->format();
+                                            $taxAmount = collect($taxRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
                                         }
+
+                                        // Calculate discount amount based on subtotal
+                                        $discountAmount = 0;
+                                        if (! empty($salesDiscounts)) {
+                                            $discountRates = Adjustment::whereIn('id', $salesDiscounts)->pluck('rate');
+                                            $discountAmount = collect($discountRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
+                                        }
+
+                                        // Final total
+                                        $total = $subtotal + ($taxAmount - $discountAmount);
 
                                         return money($total, CurrencyAccessor::getDefaultCurrency(), true)->format();
                                     }),
@@ -316,9 +395,26 @@ class DocumentResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('status')
+                    ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('due_date')
-                    ->date()
+                    ->label('Due')
+                    ->formatStateUsing(function (Tables\Columns\TextColumn $column, mixed $state) {
+                        if (blank($state)) {
+                            return null;
+                        }
+
+                        $date = Carbon::parse($state)
+                            ->setTimezone($timezone ?? $column->getTimezone());
+
+                        if ($date->isToday()) {
+                            return 'Today';
+                        }
+
+                        return $date->diffForHumans([
+                            'options' => CarbonInterface::ONE_DAY_WORDS,
+                        ]);
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date')
                     ->date()
@@ -330,11 +426,13 @@ class DocumentResource extends Resource
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->money(),
+                    ->currency(),
                 Tables\Columns\TextColumn::make('amount_paid')
-                    ->money(),
+                    ->label('Amount Paid')
+                    ->currency(),
                 Tables\Columns\TextColumn::make('amount_due')
-                    ->money(),
+                    ->label('Amount Due')
+                    ->currency(),
             ])
             ->filters([
                 //

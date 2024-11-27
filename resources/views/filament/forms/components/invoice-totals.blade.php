@@ -17,6 +17,10 @@
                 <td class="w-2/3 text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Taxes:</td>
                 <td class="w-1/3 text-sm pl-4 py-2 leading-6">{{ $taxTotal }}</td>
             </tr>
+            <tr>
+                <td class="w-2/3 text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Discounts:</td>
+                <td class="w-1/3 text-sm pl-4 py-2 leading-6">({{ $discountTotal }})</td>
+            </tr>
             <tr class="font-semibold">
                 <td class="w-2/3 text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Total:</td>
                 <td class="w-1/3 text-sm pl-4 py-2 leading-6">{{ $grandTotal }}</td>

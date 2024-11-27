@@ -81,6 +81,9 @@ class MacroServiceProvider extends ServiceProvider
         });
 
         TextColumn::macro('currency', function (string | Closure | null $currency = null, ?bool $convert = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convert ??= true;
+
             $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency, $convert): ?string {
                 if (blank($state)) {
                     return null;
