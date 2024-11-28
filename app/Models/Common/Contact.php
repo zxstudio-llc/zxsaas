@@ -77,6 +77,22 @@ class Contact extends Model
         });
     }
 
+    protected function firstAvailablePhone(): Attribute
+    {
+        return Attribute::get(function () {
+            $priority = ['primary', 'mobile', 'toll_free', 'fax'];
+
+            foreach ($priority as $type) {
+                $phone = $this->getPhoneByType($type);
+                if ($phone) {
+                    return $phone;
+                }
+            }
+
+            return null; // Return null if no phone numbers are available
+        });
+    }
+
     private function getPhoneByType(string $type): ?string
     {
         if (! is_array($this->phones)) {

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('document_id')->constrained()->cascadeOnDelete();
+            $table->morphs('payable');
             $table->date('date');
             $table->integer('amount');
             $table->string('payment_method');

@@ -4,10 +4,9 @@ namespace App\Models\Common;
 
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
-use App\Enums\Accounting\DocumentType;
 use App\Enums\Common\ContractorType;
 use App\Enums\Common\VendorType;
-use App\Models\Accounting\Document;
+use App\Models\Accounting\Bill;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -47,8 +46,7 @@ class Vendor extends Model
 
     public function bills(): HasMany
     {
-        return $this->hasMany(Document::class, 'vendor_id')
-            ->where('type', DocumentType::Bill);
+        return $this->hasMany(Bill::class);
     }
 
     public function currency(): BelongsTo

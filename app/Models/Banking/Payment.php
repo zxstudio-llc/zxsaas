@@ -5,10 +5,10 @@ namespace App\Models\Banking;
 use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
-use App\Models\Accounting\Document;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Payment extends Model
 {
@@ -18,7 +18,6 @@ class Payment extends Model
 
     protected $fillable = [
         'company_id',
-        'document_id',
         'date',
         'amount',
         'payment_method',
@@ -33,9 +32,9 @@ class Payment extends Model
         'amount' => MoneyCast::class,
     ];
 
-    public function document(): BelongsTo
+    public function payable(): MorphTo
     {
-        return $this->belongsTo(Document::class);
+        return $this->morphTo();
     }
 
     public function bankAccount(): BelongsTo

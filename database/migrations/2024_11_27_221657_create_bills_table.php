@@ -11,18 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('document_line_items', function (Blueprint $table) {
+        Schema::create('bills', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->morphs('documentable');
-            $table->foreignId('offering_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('description')->nullable();
-            $table->integer('quantity')->default(1);
-            $table->integer('unit_price')->default(0);
-            $table->integer('subtotal')->storedAs('quantity * unit_price');
-            $table->integer('total')->storedAs('(quantity * unit_price) + tax_total - discount_total');
+            $table->foreignId('vendor_id')->nullable()->constrained('vendors')->nullOnDelete();
+            $table->string('bill_number')->nullable();
+            $table->string('order_number')->nullable(); // PO, SO, etc.
+            $table->date('date')->nullable();
+            $table->date('due_date')->nullable();
+            $table->string('status')->default('draft');
+            $table->string('currency_code')->nullable();
+            $table->integer('subtotal')->default(0);
             $table->integer('tax_total')->default(0);
             $table->integer('discount_total')->default(0);
+            $table->integer('total')->default(0);
+            $table->integer('amount_paid')->default(0);
+            $table->integer('amount_due')->storedAs('total - amount_paid');
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
@@ -34,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('document_line_items');
+        Schema::dropIfExists('bills');
     }
 };

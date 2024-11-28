@@ -11,6 +11,7 @@ use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Infolist;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages\Page;
 use Filament\Support\Colors\Color;
 
@@ -19,6 +20,25 @@ class Reports extends Page
     protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
 
     protected static string $view = 'filament.company.pages.reports';
+
+    public static function getNavigationItems(): array
+    {
+        return [
+            NavigationItem::make(static::getNavigationLabel())
+                ->group(static::getNavigationGroup())
+                ->parentItem(static::getNavigationParentItem())
+                ->icon(static::getNavigationIcon())
+                ->activeIcon(static::getActiveNavigationIcon())
+                ->isActiveWhen(fn (): bool => request()->routeIs([
+                    static::getRouteName(),
+                    static::getRouteName() . '.*',
+                ]))
+                ->sort(static::getNavigationSort())
+                ->badge(static::getNavigationBadge(), color: static::getNavigationBadgeColor())
+                ->badgeTooltip(static::getNavigationBadgeTooltip())
+                ->url(static::getNavigationUrl()),
+        ];
+    }
 
     public function reportsInfolist(Infolist $infolist): Infolist
     {

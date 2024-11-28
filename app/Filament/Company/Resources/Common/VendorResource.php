@@ -187,7 +187,7 @@ class VendorResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('primaryContact.phones')
                     ->label('Phone')
-                    ->state(fn (Vendor $vendor) => $vendor->contact?->primary_phone),
+                    ->state(fn (Vendor $vendor) => $vendor->contact?->first_available_phone),
             ])
             ->filters([
                 //

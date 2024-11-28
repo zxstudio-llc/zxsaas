@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 #[ObservedBy(DocumentLineItemObserver::class)]
@@ -29,7 +30,6 @@ class DocumentLineItem extends Model
 
     protected $fillable = [
         'company_id',
-        'document_id',
         'offering_id',
         'description',
         'quantity',
@@ -48,9 +48,9 @@ class DocumentLineItem extends Model
         'total' => MoneyCast::class,
     ];
 
-    public function document(): BelongsTo
+    public function documentable(): MorphTo
     {
-        return $this->belongsTo(Document::class);
+        return $this->morphTo();
     }
 
     public function offering(): BelongsTo

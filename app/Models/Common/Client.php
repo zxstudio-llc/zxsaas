@@ -4,9 +4,8 @@ namespace App\Models\Common;
 
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
-use App\Enums\Accounting\DocumentType;
 use App\Enums\Common\AddressType;
-use App\Models\Accounting\Document;
+use App\Models\Accounting\Invoice;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -75,7 +74,6 @@ class Client extends Model
 
     public function invoices(): HasMany
     {
-        return $this->hasMany(Document::class, 'client_id')
-            ->where('type', DocumentType::Invoice);
+        return $this->hasMany(Invoice::class);
     }
 }

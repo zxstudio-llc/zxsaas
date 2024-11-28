@@ -11,16 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('documents', function (Blueprint $table) {
+        Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
-            $table->foreignId('vendor_id')->nullable()->constrained('vendors')->nullOnDelete();
-            $table->string('type'); // invoice, bill, etc.
             $table->string('logo')->nullable();
             $table->string('header')->nullable();
             $table->string('subheader')->nullable();
-            $table->string('document_number')->nullable();
+            $table->string('invoice_number')->nullable();
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();
@@ -45,6 +43,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('documents');
+        Schema::dropIfExists('invoices');
     }
 };

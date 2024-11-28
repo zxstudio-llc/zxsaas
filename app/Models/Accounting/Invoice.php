@@ -5,36 +5,29 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
-use App\Enums\Accounting\DocumentStatus;
-use App\Enums\Accounting\DocumentType;
+use App\Enums\Accounting\InvoiceStatus;
 use App\Models\Banking\Payment;
 use App\Models\Common\Client;
-use App\Models\Common\Vendor;
-use App\Observers\DocumentObserver;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[ObservedBy(DocumentObserver::class)]
-class Document extends Model
+class Invoice extends Model
 {
     use Blamable;
     use CompanyOwned;
     use HasFactory;
 
-    protected $table = 'documents';
+    protected $table = 'invoices';
 
     protected $fillable = [
         'company_id',
         'client_id',
-        'vendor_id',
-        'type',
         'logo',
         'header',
         'subheader',
-        'document_number',
+        'invoice_number',
         'order_number',
         'date',
         'due_date',
@@ -52,10 +45,9 @@ class Document extends Model
     ];
 
     protected $casts = [
-        'type' => DocumentType::class,
         'date' => 'date',
         'due_date' => 'date',
-        'status' => DocumentStatus::class,
+        'status' => InvoiceStatus::class,
         'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
@@ -69,22 +61,17 @@ class Document extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function vendor(): BelongsTo
+    public function lineItems(): MorphMany
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->morphMany(DocumentLineItem::class, 'documentable');
     }
 
-    public function lineItems(): HasMany
+    public function payments(): MorphMany
     {
-        return $this->hasMany(DocumentLineItem::class);
+        return $this->morphMany(Payment::class, 'payable');
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
-    }
-
-    public static function getNextDocumentNumber(DocumentType $documentType = DocumentType::Invoice): string
+    public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;
 
@@ -98,9 +85,8 @@ class Document extends Model
         $numberDigits = $defaultInvoiceSettings->number_digits;
 
         $latestDocument = static::query()
-            ->whereNotNull('document_number')
-            ->where('type', $documentType)
-            ->latest('document_number')
+            ->whereNotNull('invoice_number')
+            ->latest('invoice_number')
             ->first();
 
         $lastNumberNumericPart = $latestDocument

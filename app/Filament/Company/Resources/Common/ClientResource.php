@@ -261,7 +261,7 @@ class ClientResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('primaryContact.phones')
                     ->label('Phone')
-                    ->state(fn (Client $client) => $client->primaryContact->primary_phone),
+                    ->state(fn (Client $client) => $client->primaryContact->first_available_phone),
             ])
             ->filters([
                 //

@@ -3,13 +3,13 @@
 namespace App\View\Models;
 
 use App\Models\Accounting\Adjustment;
-use App\Models\Accounting\Document;
+use App\Models\Accounting\Invoice;
 use App\Utilities\Currency\CurrencyConverter;
 
 class InvoiceTotalViewModel
 {
     public function __construct(
-        public ?Document $invoice,
+        public ?Invoice $invoice,
         public ?array $data = null
     ) {}
 
@@ -17,11 +17,16 @@ class InvoiceTotalViewModel
     {
         $lineItems = collect($this->data['lineItems'] ?? []);
 
-        $subtotal = $lineItems->sum(fn ($item) => ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0));
+        $subtotal = $lineItems->sum(function ($item) {
+            $quantity = max((float) ($item['quantity'] ?? 0), 0);
+            $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
+
+            return $quantity * $unitPrice;
+        });
 
         $taxTotal = $lineItems->reduce(function ($carry, $item) {
-            $quantity = $item['quantity'] ?? 0;
-            $unitPrice = $item['unit_price'] ?? 0;
+            $quantity = max((float) ($item['quantity'] ?? 0), 0);
+            $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
             $salesTaxes = $item['salesTaxes'] ?? [];
             $lineTotal = $quantity * $unitPrice;
 
@@ -33,8 +38,8 @@ class InvoiceTotalViewModel
         }, 0);
 
         $discountTotal = $lineItems->reduce(function ($carry, $item) {
-            $quantity = $item['quantity'] ?? 0;
-            $unitPrice = $item['unit_price'] ?? 0;
+            $quantity = max((float) ($item['quantity'] ?? 0), 0);
+            $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
             $salesDiscounts = $item['salesDiscounts'] ?? [];
             $lineTotal = $quantity * $unitPrice;
 
@@ -47,16 +52,11 @@ class InvoiceTotalViewModel
 
         $grandTotal = $subtotal + ($taxTotal - $discountTotal);
 
-        $subTotalFormatted = CurrencyConverter::formatToMoney($subtotal);
-        $taxTotalFormatted = CurrencyConverter::formatToMoney($taxTotal);
-        $discountTotalFormatted = CurrencyConverter::formatToMoney($discountTotal);
-        $grandTotalFormatted = CurrencyConverter::formatToMoney($grandTotal);
-
         return [
-            'subtotal' => $subTotalFormatted,
-            'taxTotal' => $taxTotalFormatted,
-            'discountTotal' => $discountTotalFormatted,
-            'grandTotal' => $grandTotalFormatted,
+            'subtotal' => CurrencyConverter::formatToMoney($subtotal),
+            'taxTotal' => CurrencyConverter::formatToMoney($taxTotal),
+            'discountTotal' => CurrencyConverter::formatToMoney($discountTotal),
+            'grandTotal' => CurrencyConverter::formatToMoney($grandTotal),
         ];
     }
 }

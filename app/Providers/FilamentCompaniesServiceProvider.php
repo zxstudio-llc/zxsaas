@@ -25,11 +25,11 @@ use App\Filament\Company\Pages\ManageCompany;
 use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
-use App\Filament\Company\Resources\Accounting\DocumentResource;
 use App\Filament\Company\Resources\Banking\AccountResource;
 use App\Filament\Company\Resources\Common\ClientResource;
 use App\Filament\Company\Resources\Common\OfferingResource;
 use App\Filament\Company\Resources\Common\VendorResource;
+use App\Filament\Company\Resources\Purchases\BillResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
@@ -135,13 +135,15 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         NavigationGroup::make('Purchases')
                             ->label('Purchases')
                             ->icon('heroicon-o-shopping-cart')
-                            ->items(VendorResource::getNavigationItems()),
+                            ->items([
+                                ...BillResource::getNavigationItems(),
+                                ...VendorResource::getNavigationItems(),
+                            ]),
                         NavigationGroup::make('Accounting')
                             ->localizeLabel()
                             ->icon('heroicon-o-clipboard-document-list')
                             ->extraSidebarAttributes(['class' => 'es-sidebar-group'])
                             ->items([
-                                ...DocumentResource::getNavigationItems(),
                                 ...AccountChart::getNavigationItems(),
                                 ...Transactions::getNavigationItems(),
                             ]),
