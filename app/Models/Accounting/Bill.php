@@ -65,4 +65,37 @@ class Bill extends Model
     {
         return $this->morphMany(Payment::class, 'payable');
     }
+
+    public static function getNextDocumentNumber(): string
+    {
+        $company = auth()->user()->currentCompany;
+
+        if (! $company) {
+            throw new \RuntimeException('No current company is set for the user.');
+        }
+
+        $defaultBillSettings = $company->defaultBill;
+
+        $numberPrefix = $defaultBillSettings->number_prefix;
+        $numberDigits = $defaultBillSettings->number_digits;
+
+        $latestDocument = static::query()
+            ->whereNotNull('bill_number')
+            ->latest('bill_number')
+            ->first();
+
+        $lastNumberNumericPart = $latestDocument
+            ? (int) substr($latestDocument->bill_number, strlen($numberPrefix))
+            : 0;
+
+        $numberNext = $lastNumberNumericPart + 1;
+
+        return $defaultBillSettings->getNumberNext(
+            padded: true,
+            format: true,
+            prefix: $numberPrefix,
+            digits: $numberDigits,
+            next: $numberNext
+        );
+    }
 }

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();
-            $table->string('status')->default('draft');
+            $table->string('status')->default('unpaid');
             $table->string('currency_code')->nullable();
             $table->integer('subtotal')->default(0);
             $table->integer('tax_total')->default(0);

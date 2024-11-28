@@ -90,7 +90,7 @@ class Invoice extends Model
             ->first();
 
         $lastNumberNumericPart = $latestDocument
-            ? (int) substr($latestDocument->document_number, strlen($numberPrefix))
+            ? (int) substr($latestDocument->invoice_number, strlen($numberPrefix))
             : 0;
 
         $numberNext = $lastNumberNumericPart + 1;

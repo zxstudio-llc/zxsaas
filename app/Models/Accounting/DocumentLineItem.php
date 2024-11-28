@@ -58,6 +58,16 @@ class DocumentLineItem extends Model
         return $this->belongsTo(Offering::class);
     }
 
+    public function sellableOffering(): BelongsTo
+    {
+        return $this->offering()->where('sellable', true);
+    }
+
+    public function purchasableOffering(): BelongsTo
+    {
+        return $this->offering()->where('purchasable', true);
+    }
+
     public function adjustments(): MorphToMany
     {
         return $this->morphToMany(Adjustment::class, 'adjustmentable', 'adjustmentables');
@@ -68,9 +78,19 @@ class DocumentLineItem extends Model
         return $this->adjustments()->where('category', AdjustmentCategory::Tax)->where('type', AdjustmentType::Sales);
     }
 
+    public function purchaseTaxes(): MorphToMany
+    {
+        return $this->adjustments()->where('category', AdjustmentCategory::Tax)->where('type', AdjustmentType::Purchase);
+    }
+
     public function salesDiscounts(): MorphToMany
     {
         return $this->adjustments()->where('category', AdjustmentCategory::Discount)->where('type', AdjustmentType::Sales);
+    }
+
+    public function purchaseDiscounts(): MorphToMany
+    {
+        return $this->adjustments()->where('category', AdjustmentCategory::Discount)->where('type', AdjustmentType::Purchase);
     }
 
     public function taxes(): MorphToMany

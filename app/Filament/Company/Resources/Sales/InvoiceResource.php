@@ -219,7 +219,7 @@ class InvoiceResource extends Resource
                             ])
                             ->schema([
                                 Forms\Components\Select::make('offering_id')
-                                    ->relationship('offering', 'name')
+                                    ->relationship('sellableOffering', 'name')
                                     ->preload()
                                     ->searchable()
                                     ->required()
@@ -425,7 +425,6 @@ class InvoiceResource extends Resource
                     ->label('Number')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('client.name')
-                    ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
                     ->currency(),
