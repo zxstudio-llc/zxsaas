@@ -8,6 +8,7 @@ use App\Enums\Setting\RecordsPerPage;
 use App\Enums\Setting\TableSortDirection;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\Appearance as AppearanceModel;
+use App\Services\CompanySettingsService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
@@ -165,8 +166,19 @@ class Appearance extends Page
             'font',
         ];
 
+        $cachedKeysToWatch = [
+            'primary_color',
+            'font',
+            'table_sort_direction',
+            'records_per_page',
+        ];
+
         if ($record->isDirty($keysToWatch)) {
             $this->dispatch('appearanceUpdated');
+        }
+
+        if ($record->isDirty($cachedKeysToWatch)) {
+            CompanySettingsService::invalidateSettings($record->company_id);
         }
 
         $record->save();
