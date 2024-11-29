@@ -440,6 +440,7 @@ class InvoiceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -460,6 +461,7 @@ class InvoiceResource extends Resource
         return [
             'index' => Pages\ListInvoices::route('/'),
             'create' => Pages\CreateInvoice::route('/create'),
+            'view' => Pages\ViewInvoice::route('/{record}'),
             'edit' => Pages\EditInvoice::route('/{record}/edit'),
         ];
     }

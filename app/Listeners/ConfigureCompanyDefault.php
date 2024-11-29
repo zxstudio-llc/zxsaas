@@ -3,7 +3,6 @@
 namespace App\Listeners;
 
 use App\Enums\Setting\PrimaryColor;
-use App\Enums\Setting\RecordsPerPage;
 use App\Events\CompanyConfigured;
 use App\Services\CompanySettingsService;
 use App\Utilities\Currency\ConfigureCurrencies;
@@ -13,7 +12,6 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Resources\Components\Tab as ResourcesTab;
 use Filament\Support\Facades\FilamentColor;
-use Filament\Tables\Table;
 
 class ConfigureCompanyDefault
 {
@@ -33,16 +31,6 @@ class ConfigureCompanyDefault
         locale_set_default($settings['default_language']);
         config(['app.timezone' => $settings['default_timezone']]);
         date_default_timezone_set($settings['default_timezone']);
-
-        $paginationPageOptions = RecordsPerPage::caseValues();
-
-        Table::configureUsing(static function (Table $table) use ($settings, $paginationPageOptions): void {
-
-            $table
-                ->paginationPageOptions($paginationPageOptions)
-                ->defaultSort(column: 'id', direction: $settings['default_sort'])
-                ->defaultPaginationPageOption($settings['default_pagination_page_option']);
-        }, isImportant: true);
 
         FilamentColor::register([
             'primary' => PrimaryColor::from($settings['default_primary_color'])->getColor(),

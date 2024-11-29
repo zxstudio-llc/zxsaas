@@ -26,10 +26,10 @@ use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
 use App\Filament\Company\Resources\Banking\AccountResource;
-use App\Filament\Company\Resources\Common\ClientResource;
 use App\Filament\Company\Resources\Common\OfferingResource;
-use App\Filament\Company\Resources\Common\VendorResource;
 use App\Filament\Company\Resources\Purchases\BillResource;
+use App\Filament\Company\Resources\Purchases\VendorResource;
+use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
@@ -261,6 +261,10 @@ class FilamentCompaniesServiceProvider extends PanelProvider
         Forms\Components\DateTimePicker::configureUsing(static function (Forms\Components\DateTimePicker $component) {
             $component->native(false);
         });
+
+        Tables\Table::configureUsing(static function (Tables\Table $table): void {
+            $table->paginationPageOptions([5, 10, 25, 50, 100]);
+        }, isImportant: true);
     }
 
     /**

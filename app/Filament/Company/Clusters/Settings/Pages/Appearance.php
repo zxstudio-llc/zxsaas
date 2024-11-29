@@ -4,8 +4,6 @@ namespace App\Filament\Company\Clusters\Settings\Pages;
 
 use App\Enums\Setting\Font;
 use App\Enums\Setting\PrimaryColor;
-use App\Enums\Setting\RecordsPerPage;
-use App\Enums\Setting\TableSortDirection;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\Appearance as AppearanceModel;
 use App\Services\CompanySettingsService;
@@ -104,7 +102,6 @@ class Appearance extends Page
         return $form
             ->schema([
                 $this->getGeneralSection(),
-                $this->getDataPresentationSection(),
             ])
             ->model($this->record)
             ->statePath('data')
@@ -142,21 +139,6 @@ class Appearance extends Page
             ])->columns();
     }
 
-    protected function getDataPresentationSection(): Component
-    {
-        return Section::make('Data Presentation')
-            ->schema([
-                Select::make('table_sort_direction')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->options(TableSortDirection::class),
-                Select::make('records_per_page')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->options(RecordsPerPage::class),
-            ])->columns();
-    }
-
     protected function handleRecordUpdate(AppearanceModel $record, array $data): AppearanceModel
     {
         $record->fill($data);
@@ -166,19 +148,9 @@ class Appearance extends Page
             'font',
         ];
 
-        $cachedKeysToWatch = [
-            'primary_color',
-            'font',
-            'table_sort_direction',
-            'records_per_page',
-        ];
-
         if ($record->isDirty($keysToWatch)) {
-            $this->dispatch('appearanceUpdated');
-        }
-
-        if ($record->isDirty($cachedKeysToWatch)) {
             CompanySettingsService::invalidateSettings($record->company_id);
+            $this->dispatch('appearanceUpdated');
         }
 
         $record->save();

@@ -16,8 +16,6 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->string('primary_color')->default('indigo');
             $table->string('font')->default('inter');
-            $table->string('table_sort_direction')->default('asc');
-            $table->unsignedTinyInteger('records_per_page')->default(10);
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

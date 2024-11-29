@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Company\Resources\Common\ClientResource\Pages;
+namespace App\Filament\Company\Resources\Sales\ClientResource\Pages;
 
 use App\Concerns\RedirectToListPage;
-use App\Filament\Company\Resources\Common\ClientResource;
+use App\Filament\Company\Resources\Sales\ClientResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\MaxWidth;

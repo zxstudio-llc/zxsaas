@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Company\Resources\Common;
+namespace App\Filament\Company\Resources\Purchases;
 
 use App\Enums\Common\ContractorType;
 use App\Enums\Common\VendorType;
-use App\Filament\Company\Resources\Common\VendorResource\Pages;
+use App\Filament\Company\Resources\Purchases\VendorResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;

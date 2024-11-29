@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Company\Resources\Common;
+namespace App\Filament\Company\Resources\Sales;
 
-use App\Filament\Company\Resources\Common\ClientResource\Pages;
+use App\Filament\Company\Resources\Sales\ClientResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
