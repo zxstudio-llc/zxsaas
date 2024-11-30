@@ -34,25 +34,28 @@ class MacroServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        TextInput::macro('money', function (string | Closure | null $currency = null): static {
+        TextInput::macro('money', function (string | Closure | null $currency = null, bool $useAffix = true): static {
             $currency ??= CurrencyAccessor::getDefaultCurrency();
 
-            $this
-                ->prefix(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+            if ($useAffix) {
+                $this
+                    ->prefix(static function (TextInput $component) use ($currency) {
+                        $currency = $component->evaluate($currency);
 
-                    return currency($currency)->getPrefix();
-                })
-                ->suffix(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+                        return currency($currency)->getPrefix();
+                    })
+                    ->suffix(static function (TextInput $component) use ($currency) {
+                        $currency = $component->evaluate($currency);
 
-                    return currency($currency)->getSuffix();
-                })
-                ->mask(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+                        return currency($currency)->getSuffix();
+                    });
+            }
 
-                    return moneyMask($currency);
-                });
+            $this->mask(static function (TextInput $component) use ($currency) {
+                $currency = $component->evaluate($currency);
+
+                return moneyMask($currency);
+            });
 
             return $this;
         });

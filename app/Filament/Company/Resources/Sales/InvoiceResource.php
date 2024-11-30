@@ -2,12 +2,15 @@
 
 namespace App\Filament\Company\Resources\Sales;
 
+use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
+use App\Models\Banking\BankAccount;
 use App\Models\Common\Offering;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Carbon\CarbonInterface;
@@ -439,8 +442,133 @@ class InvoiceResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\ReplicateAction::make()
+                        ->label('Duplicate')
+                        ->excludeAttributes(['status', 'amount_paid', 'amount_due', 'created_by', 'updated_by', 'created_at', 'updated_at', 'invoice_number', 'date', 'due_date'])
+                        ->modal(false)
+                        ->beforeReplicaSaved(function (Invoice $original, Invoice $replica) {
+                            $replica->status = InvoiceStatus::Draft;
+                            $replica->invoice_number = Invoice::getNextDocumentNumber();
+                            $replica->date = now();
+                            $replica->due_date = now()->addDays($original->company->defaultInvoice->payment_terms->getDays());
+                        })
+                        ->after(function (Invoice $original, Invoice $replica) {
+                            $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
+                                $replicaLineItem = $lineItem->replicate([
+                                    'documentable_id',
+                                    'documentable_type',
+                                    'subtotal',
+                                    'total',
+                                    'created_by',
+                                    'updated_by',
+                                    'created_at',
+                                    'updated_at',
+                                ]);
+
+                                $replicaLineItem->documentable_id = $replica->id;
+                                $replicaLineItem->documentable_type = $replica->getMorphClass();
+
+                                $replicaLineItem->save();
+
+                                $replicaLineItem->adjustments()->sync($lineItem->adjustments->pluck('id'));
+                            });
+                        })
+                        ->successRedirectUrl(function (Invoice $replica) {
+                            return InvoiceResource::getUrl('edit', ['record' => $replica]);
+                        }),
+                    Tables\Actions\Action::make('approveDraft')
+                        ->label('Approve')
+                        ->icon('heroicon-o-check-circle')
+                        ->visible(function (Invoice $record) {
+                            return $record->isDraft();
+                        })
+                        ->action(function (Invoice $record) {
+                            $record->updateQuietly([
+                                'status' => InvoiceStatus::Unsent,
+                            ]);
+                        }),
+                    Tables\Actions\Action::make('markAsSent')
+                        ->label('Mark as Sent')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->visible(function (Invoice $record) {
+                            return $record->status === InvoiceStatus::Unsent;
+                        })
+                        ->action(function (Invoice $record) {
+                            $record->updateQuietly([
+                                'status' => InvoiceStatus::Sent,
+                            ]);
+                        }),
+                    Tables\Actions\Action::make('recordPayment')
+                        ->label('Record Payment')
+                        ->modalWidth(MaxWidth::TwoExtraLarge)
+                        ->icon('heroicon-o-credit-card')
+                        ->visible(function (Invoice $record) {
+                            return $record->canRecordPayment();
+                        })
+                        ->mountUsing(function (Invoice $record, Form $form) {
+                            $form->fill([
+                                'date' => now(),
+                                'amount' => $record->amount_due,
+                            ]);
+                        })
+                        ->form([
+                            Forms\Components\DatePicker::make('date')
+                                ->label('Payment Date'),
+                            Forms\Components\TextInput::make('amount')
+                                ->label('Amount')
+                                ->required()
+                                ->money(),
+                            Forms\Components\Select::make('payment_method')
+                                ->label('Payment Method')
+                                ->options([
+                                    'bank_payment' => 'Bank Payment',
+                                    'cash' => 'Cash',
+                                    'check' => 'Check',
+                                    'credit_card' => 'Credit Card',
+                                    'paypal' => 'PayPal',
+                                    'other' => 'Other',
+                                ]),
+                            Forms\Components\Select::make('bank_account_id')
+                                ->label('Account')
+                                ->options(BankAccount::query()
+                                    ->get()
+                                    ->pluck('account.name', 'id'))
+                                ->searchable(),
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Notes'),
+                        ])
+                        ->action(function (Invoice $record, array $data) {
+                            $payment = $record->payments()->create([
+                                'date' => $data['date'],
+                                'amount' => $data['amount'],
+                                'payment_method' => $data['payment_method'],
+                                'bank_account_id' => $data['bank_account_id'],
+                                'notes' => $data['notes'],
+                            ]);
+
+                            $amountPaid = $record->getRawOriginal('amount_paid');
+                            $paymentAmount = $payment->getRawOriginal('amount');
+                            $totalAmount = $record->getRawOriginal('total');
+
+                            $newAmountPaid = $amountPaid + $paymentAmount;
+
+                            $record->amount_paid = CurrencyConverter::convertCentsToFloat($newAmountPaid);
+
+                            if ($newAmountPaid > $totalAmount) {
+                                $record->status = InvoiceStatus::Overpaid;
+                            } elseif ($newAmountPaid === $totalAmount) {
+                                $record->status = InvoiceStatus::Paid;
+                            } else {
+                                $record->status = InvoiceStatus::Partial;
+                            }
+
+                            $record->save();
+                        }),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

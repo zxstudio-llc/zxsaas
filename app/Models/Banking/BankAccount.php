@@ -51,19 +51,24 @@ class BankAccount extends Model
         'mask',
     ];
 
-    public function connectedBankAccount(): HasOne
-    {
-        return $this->hasOne(ConnectedBankAccount::class, 'bank_account_id');
-    }
-
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
     }
 
+    public function connectedBankAccount(): HasOne
+    {
+        return $this->hasOne(ConnectedBankAccount::class, 'bank_account_id');
+    }
+
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class, 'institution_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class, 'bank_account_id');
     }
 
     public function transactions(): HasMany

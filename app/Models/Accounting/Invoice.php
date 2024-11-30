@@ -71,6 +71,21 @@ class Invoice extends Model
         return $this->morphMany(Payment::class, 'payable');
     }
 
+    public function isDraft(): bool
+    {
+        return $this->status === InvoiceStatus::Draft;
+    }
+
+    public function canRecordPayment(): bool
+    {
+        return ! in_array($this->status, [
+            InvoiceStatus::Draft,
+            InvoiceStatus::Paid,
+            InvoiceStatus::Overpaid,
+            InvoiceStatus::Void,
+        ]);
+    }
+
     public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;
