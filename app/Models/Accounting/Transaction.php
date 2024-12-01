@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[ObservedBy(TransactionObserver::class)]
 class Transaction extends Model
@@ -32,6 +33,8 @@ class Transaction extends Model
         'contact_id',
         'type', // 'deposit', 'withdrawal', 'journal'
         'payment_channel',
+        'payment_method',
+        'is_payment',
         'description',
         'notes',
         'reference',
@@ -69,6 +72,11 @@ class Transaction extends Model
     public function journalEntries(): HasMany
     {
         return $this->hasMany(JournalEntry::class, 'transaction_id');
+    }
+
+    public function transactionable(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     public function isUncategorized(): bool

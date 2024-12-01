@@ -14,6 +14,8 @@ enum TransactionType: string implements HasLabel
     case Journal = 'journal';
     case Transfer = 'transfer';
 
+    case Approval = 'approval';
+
     public function getLabel(): ?string
     {
         return $this->name;

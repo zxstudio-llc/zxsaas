@@ -122,4 +122,11 @@ class DocumentLineItem extends Model
             money(0, CurrencyAccessor::getDefaultCurrency())
         );
     }
+
+    public function calculateAdjustmentTotal(Adjustment $adjustment): Money
+    {
+        $subtotal = money($this->subtotal, CurrencyAccessor::getDefaultCurrency());
+
+        return $subtotal->multiply($adjustment->rate / 100);
+    }
 }

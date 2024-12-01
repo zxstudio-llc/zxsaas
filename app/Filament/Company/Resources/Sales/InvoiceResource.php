@@ -3,7 +3,10 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Enums\Accounting\InvoiceStatus;
+use App\Enums\Accounting\JournalEntryType;
+use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
+use App\Models\Accounting\Account;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
@@ -487,6 +490,38 @@ class InvoiceResource extends Resource
                             return $record->isDraft();
                         })
                         ->action(function (Invoice $record) {
+                            $transaction = $record->transactions()->create([
+                                'type' => TransactionType::Journal,
+                                'posted_at' => now(),
+                                'amount' => $record->total,
+                                'description' => 'Invoice Approval for Invoice #' . $record->invoice_number,
+                            ]);
+
+                            $transaction->journalEntries()->create([
+                                'type' => JournalEntryType::Debit,
+                                'account_id' => Account::where('name', 'Accounts Receivable')->first()->id,
+                                'amount' => $record->total,
+                                'description' => $transaction->description,
+                            ]);
+
+                            foreach ($record->lineItems as $lineItem) {
+                                $transaction->journalEntries()->create([
+                                    'type' => JournalEntryType::Credit,
+                                    'account_id' => $lineItem->offering->income_account_id,
+                                    'amount' => $lineItem->subtotal,
+                                    'description' => $transaction->description,
+                                ]);
+
+                                foreach ($lineItem->adjustments as $adjustment) {
+                                    $transaction->journalEntries()->create([
+                                        'type' => $adjustment->category->isDiscount() ? JournalEntryType::Debit : JournalEntryType::Credit,
+                                        'account_id' => $adjustment->account_id,
+                                        'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
+                                        'description' => $transaction->description,
+                                    ]);
+                                }
+                            }
+
                             $record->updateQuietly([
                                 'status' => InvoiceStatus::Unsent,
                             ]);
@@ -511,12 +546,12 @@ class InvoiceResource extends Resource
                         })
                         ->mountUsing(function (Invoice $record, Form $form) {
                             $form->fill([
-                                'date' => now(),
+                                'posted_at' => now(),
                                 'amount' => $record->amount_due,
                             ]);
                         })
                         ->form([
-                            Forms\Components\DatePicker::make('date')
+                            Forms\Components\DatePicker::make('posted_at')
                                 ->label('Payment Date'),
                             Forms\Components\TextInput::make('amount')
                                 ->label('Amount')
@@ -542,12 +577,16 @@ class InvoiceResource extends Resource
                                 ->label('Notes'),
                         ])
                         ->action(function (Invoice $record, array $data) {
-                            $payment = $record->payments()->create([
-                                'date' => $data['date'],
+                            $payment = $record->transactions()->create([
+                                'type' => TransactionType::Deposit,
+                                'is_payment' => true,
+                                'posted_at' => $data['posted_at'],
                                 'amount' => $data['amount'],
                                 'payment_method' => $data['payment_method'],
                                 'bank_account_id' => $data['bank_account_id'],
-                                'notes' => $data['notes'],
+                                'account_id' => Account::where('name', 'Accounts Receivable')->first()?->id,
+                                'description' => 'Payment for Invoice #' . $record->invoice_number,
+                                'notes' => $data['notes'] ?? null,
                             ]);
 
                             $amountPaid = $record->getRawOriginal('amount_paid');

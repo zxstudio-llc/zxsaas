@@ -6,12 +6,13 @@ use App\Casts\MoneyCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\InvoiceStatus;
-use App\Models\Banking\Payment;
+use App\Enums\Accounting\TransactionType;
 use App\Models\Common\Client;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class Invoice extends Model
 {
@@ -66,9 +67,30 @@ class Invoice extends Model
         return $this->morphMany(DocumentLineItem::class, 'documentable');
     }
 
+    public function transactions(): MorphMany
+    {
+        return $this->morphMany(Transaction::class, 'transactionable');
+    }
+
     public function payments(): MorphMany
     {
-        return $this->morphMany(Payment::class, 'payable');
+        return $this->transactions()->where('is_payment', true);
+    }
+
+    public function deposits(): MorphMany
+    {
+        return $this->transactions()->where('type', TransactionType::Deposit)->where('is_payment', true);
+    }
+
+    public function withdrawals(): MorphMany
+    {
+        return $this->transactions()->where('type', TransactionType::Withdrawal)->where('is_payment', true);
+    }
+
+    public function approvalTransaction(): MorphOne
+    {
+        return $this->morphOne(Transaction::class, 'transactionable')
+            ->where('type', TransactionType::Approval);
     }
 
     public function isDraft(): bool
