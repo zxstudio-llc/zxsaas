@@ -63,6 +63,23 @@ class CurrencyConverter
         return money($amount, $currency)->getValue();
     }
 
+    public static function isValidAmount(?string $amount, ?string $currency = null): bool
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        if (blank($amount)) {
+            return false;
+        }
+
+        try {
+            money($amount, $currency);
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        return true;
+    }
+
     public static function handleCurrencyChange(Set $set, $state): void
     {
         $currency = currency($state);

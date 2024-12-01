@@ -5,6 +5,7 @@ namespace App\Models\Accounting;
 use App\Casts\TransactionAmountCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\PaymentMethod;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Contact;
@@ -48,6 +49,7 @@ class Transaction extends Model
 
     protected $casts = [
         'type' => TransactionType::class,
+        'payment_method' => PaymentMethod::class,
         'amount' => TransactionAmountCast::class,
         'pending' => 'boolean',
         'reviewed' => 'boolean',

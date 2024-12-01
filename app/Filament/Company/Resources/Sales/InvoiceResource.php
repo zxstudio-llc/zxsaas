@@ -4,8 +4,10 @@ namespace App\Filament\Company\Resources\Sales;
 
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
+use App\Enums\Accounting\PaymentMethod;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
+use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\DocumentLineItem;
@@ -17,10 +19,12 @@ use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Carbon\CarbonInterface;
+use Closure;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -459,6 +463,7 @@ class InvoiceResource extends Resource
                             $replica->date = now();
                             $replica->due_date = now()->addDays($original->company->defaultInvoice->payment_terms->getDays());
                         })
+                        ->databaseTransaction()
                         ->after(function (Invoice $original, Invoice $replica) {
                             $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
                                 $replicaLineItem = $lineItem->replicate([
@@ -489,7 +494,9 @@ class InvoiceResource extends Resource
                         ->visible(function (Invoice $record) {
                             return $record->isDraft();
                         })
-                        ->action(function (Invoice $record) {
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Invoice Approved')
+                        ->action(function (Invoice $record, Tables\Actions\Action $action) {
                             $transaction = $record->transactions()->create([
                                 'type' => TransactionType::Journal,
                                 'posted_at' => now(),
@@ -499,7 +506,7 @@ class InvoiceResource extends Resource
 
                             $transaction->journalEntries()->create([
                                 'type' => JournalEntryType::Debit,
-                                'account_id' => Account::where('name', 'Accounts Receivable')->first()->id,
+                                'account_id' => Account::getAccountsReceivableAccount()->id,
                                 'amount' => $record->total,
                                 'description' => $transaction->description,
                             ]);
@@ -525,6 +532,8 @@ class InvoiceResource extends Resource
                             $record->updateQuietly([
                                 'status' => InvoiceStatus::Unsent,
                             ]);
+
+                            $action->success();
                         }),
                     Tables\Actions\Action::make('markAsSent')
                         ->label('Mark as Sent')
@@ -532,13 +541,19 @@ class InvoiceResource extends Resource
                         ->visible(function (Invoice $record) {
                             return $record->status === InvoiceStatus::Unsent;
                         })
-                        ->action(function (Invoice $record) {
+                        ->successNotificationTitle('Invoice Sent')
+                        ->action(function (Invoice $record, Tables\Actions\Action $action) {
                             $record->updateQuietly([
                                 'status' => InvoiceStatus::Sent,
                             ]);
+
+                            $action->success();
                         }),
                     Tables\Actions\Action::make('recordPayment')
-                        ->label('Record Payment')
+                        ->label(fn (Invoice $record) => $record->status === InvoiceStatus::Overpaid ? 'Refund Overpayment' : 'Record Payment')
+                        ->stickyModalHeader()
+                        ->stickyModalFooter()
+                        ->modalFooterActionsAlignment(Alignment::End)
                         ->modalWidth(MaxWidth::TwoExtraLarge)
                         ->icon('heroicon-o-credit-card')
                         ->visible(function (Invoice $record) {
@@ -547,28 +562,58 @@ class InvoiceResource extends Resource
                         ->mountUsing(function (Invoice $record, Form $form) {
                             $form->fill([
                                 'posted_at' => now(),
-                                'amount' => $record->amount_due,
+                                'amount' => $record->status === InvoiceStatus::Overpaid ? ltrim($record->amount_due, '-') : $record->amount_due,
                             ]);
                         })
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Payment Recorded')
                         ->form([
                             Forms\Components\DatePicker::make('posted_at')
-                                ->label('Payment Date'),
+                                ->label('Date'),
                             Forms\Components\TextInput::make('amount')
                                 ->label('Amount')
                                 ->required()
-                                ->money(),
+                                ->money()
+                                ->live(onBlur: true)
+                                ->helperText(function (Invoice $record, $state) {
+                                    if (! CurrencyConverter::isValidAmount($state)) {
+                                        return null;
+                                    }
+
+                                    $amountDue = $record->getRawOriginal('amount_due');
+
+                                    $amount = CurrencyConverter::convertToCents($state);
+
+                                    if ($amount <= 0) {
+                                        return 'Please enter a valid positive amount';
+                                    }
+
+                                    if ($record->status === InvoiceStatus::Overpaid) {
+                                        $newAmountDue = $amountDue + $amount;
+                                    } else {
+                                        $newAmountDue = $amountDue - $amount;
+                                    }
+
+                                    return match (true) {
+                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue),
+                                        $newAmountDue === 0 => 'Invoice will be fully paid',
+                                        default => 'Invoice will be overpaid by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue)),
+                                    };
+                                })
+                                ->rules([
+                                    static fn (): Closure => static function (string $attribute, $value, Closure $fail) {
+                                        if (! CurrencyConverter::isValidAmount($value)) {
+                                            $fail('Please enter a valid amount');
+                                        }
+                                    },
+                                ]),
                             Forms\Components\Select::make('payment_method')
                                 ->label('Payment Method')
-                                ->options([
-                                    'bank_payment' => 'Bank Payment',
-                                    'cash' => 'Cash',
-                                    'check' => 'Check',
-                                    'credit_card' => 'Credit Card',
-                                    'paypal' => 'PayPal',
-                                    'other' => 'Other',
-                                ]),
+                                ->required()
+                                ->options(PaymentMethod::class),
                             Forms\Components\Select::make('bank_account_id')
                                 ->label('Account')
+                                ->required()
                                 ->options(BankAccount::query()
                                     ->get()
                                     ->pluck('account.name', 'id'))
@@ -576,36 +621,10 @@ class InvoiceResource extends Resource
                             Forms\Components\Textarea::make('notes')
                                 ->label('Notes'),
                         ])
-                        ->action(function (Invoice $record, array $data) {
-                            $payment = $record->transactions()->create([
-                                'type' => TransactionType::Deposit,
-                                'is_payment' => true,
-                                'posted_at' => $data['posted_at'],
-                                'amount' => $data['amount'],
-                                'payment_method' => $data['payment_method'],
-                                'bank_account_id' => $data['bank_account_id'],
-                                'account_id' => Account::where('name', 'Accounts Receivable')->first()?->id,
-                                'description' => 'Payment for Invoice #' . $record->invoice_number,
-                                'notes' => $data['notes'] ?? null,
-                            ]);
+                        ->action(function (Invoice $record, Tables\Actions\Action $action, array $data) {
+                            $record->recordPayment($data);
 
-                            $amountPaid = $record->getRawOriginal('amount_paid');
-                            $paymentAmount = $payment->getRawOriginal('amount');
-                            $totalAmount = $record->getRawOriginal('total');
-
-                            $newAmountPaid = $amountPaid + $paymentAmount;
-
-                            $record->amount_paid = CurrencyConverter::convertCentsToFloat($newAmountPaid);
-
-                            if ($newAmountPaid > $totalAmount) {
-                                $record->status = InvoiceStatus::Overpaid;
-                            } elseif ($newAmountPaid === $totalAmount) {
-                                $record->status = InvoiceStatus::Paid;
-                            } else {
-                                $record->status = InvoiceStatus::Partial;
-                            }
-
-                            $record->save();
+                            $action->success();
                         }),
                 ]),
             ])
@@ -619,7 +638,7 @@ class InvoiceResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\PaymentsRelationManager::class,
         ];
     }
 

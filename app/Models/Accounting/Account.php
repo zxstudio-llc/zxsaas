@@ -123,6 +123,11 @@ class Account extends Model
         return $this->hasMany(JournalEntry::class, 'account_id');
     }
 
+    public static function getAccountsReceivableAccount(): self
+    {
+        return self::where('name', 'Accounts Receivable')->firstOrFail();
+    }
+
     protected static function newFactory(): Factory
     {
         return AccountFactory::new();

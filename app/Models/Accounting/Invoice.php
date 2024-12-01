@@ -8,12 +8,15 @@ use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Common\Client;
+use App\Observers\InvoiceObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
+#[ObservedBy(InvoiceObserver::class)]
 class Invoice extends Model
 {
     use Blamable;
@@ -90,7 +93,7 @@ class Invoice extends Model
     public function approvalTransaction(): MorphOne
     {
         return $this->morphOne(Transaction::class, 'transactionable')
-            ->where('type', TransactionType::Approval);
+            ->where('type', TransactionType::Journal);
     }
 
     public function isDraft(): bool
@@ -103,7 +106,6 @@ class Invoice extends Model
         return ! in_array($this->status, [
             InvoiceStatus::Draft,
             InvoiceStatus::Paid,
-            InvoiceStatus::Overpaid,
             InvoiceStatus::Void,
         ]);
     }
@@ -139,5 +141,31 @@ class Invoice extends Model
             digits: $numberDigits,
             next: $numberNext
         );
+    }
+
+    public function recordPayment(array $data): void
+    {
+        $isRefund = $this->status === InvoiceStatus::Overpaid;
+
+        if ($isRefund) {
+            $transactionType = TransactionType::Withdrawal;
+            $transactionDescription = 'Refund for Overpayment on Invoice #' . $this->invoice_number;
+        } else {
+            $transactionType = TransactionType::Deposit;
+            $transactionDescription = 'Payment for Invoice #' . $this->invoice_number;
+        }
+
+        // Create transaction
+        $this->transactions()->create([
+            'type' => $transactionType,
+            'is_payment' => true,
+            'posted_at' => $data['posted_at'],
+            'amount' => $data['amount'],
+            'payment_method' => $data['payment_method'],
+            'bank_account_id' => $data['bank_account_id'],
+            'account_id' => Account::getAccountsReceivableAccount()->id,
+            'description' => $transactionDescription,
+            'notes' => $data['notes'] ?? null,
+        ]);
     }
 }

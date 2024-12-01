@@ -5,45 +5,44 @@ namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Models\Accounting\Invoice;
 use Carbon\CarbonInterface;
-use Filament\Infolists\Components\Actions\Action;
-use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\FontWeight;
-use Filament\Support\Enums\MaxWidth;
 use Illuminate\Support\Carbon;
 
 class ViewInvoice extends ViewRecord
 {
     protected static string $resource = InvoiceResource::class;
 
+    protected $listeners = [
+        'refresh' => '$refresh',
+    ];
+
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist
-            ->columns(1)
             ->schema([
-                Grid::make(5)
+                Section::make('Invoice Details')
+                    ->columns(3)
                     ->schema([
                         TextEntry::make('invoice_number')
-                            ->label('Invoice #')
-                            ->size(TextEntry\TextEntrySize::Large),
+                            ->label('Invoice #'),
                         TextEntry::make('status')
-                            ->badge()
-                            ->size(TextEntry\TextEntrySize::Large),
+                            ->badge(),
                         TextEntry::make('client.name')
+                            ->label('Client')
                             ->color('primary')
                             ->weight(FontWeight::SemiBold)
-                            ->size(TextEntry\TextEntrySize::Large)
-                            ->url(fn ($record) => ClientResource::getUrl('edit', ['record' => $record->client_id]), true),
+                            ->url(fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                         TextEntry::make('amount_due')
                             ->label('Amount Due')
-                            ->money()
-                            ->size(TextEntry\TextEntrySize::Large),
+                            ->money(),
                         TextEntry::make('due_date')
-                            ->label('Due')
+                            ->label('Due Date')
                             ->formatStateUsing(function (TextEntry $entry, mixed $state) {
                                 if (blank($state)) {
                                     return null;
@@ -59,30 +58,7 @@ class ViewInvoice extends ViewRecord
                                 return $date->diffForHumans([
                                     'options' => CarbonInterface::ONE_DAY_WORDS,
                                 ]);
-                            })
-                            ->size(TextEntry\TextEntrySize::Large),
-                    ]),
-                ViewEntry::make('create')
-                    ->view('filament.infolists.invoice-create-step')
-                    ->registerActions([
-                        Action::make('approveDraft')
-                            ->label('Approve Draft')
-                            ->action('approveDraft')
-                            ->visible(fn ($record) => $record->status === InvoiceStatus::Draft),
-                        Action::make('edit')
-                            ->label('Edit')
-                            ->outlined()
-                            ->url(fn ($record) => InvoiceResource::getUrl('edit', ['record' => $record->id]), true),
-                        Action::make('markAsSent')
-                            ->label('Mark as Sent')
-                            ->outlined()
-                            ->action('markAsSent'),
-                        Action::make('sendInvoice')
-                            ->label('Send Invoice')
-                            ->action('sendInvoice'),
-                        Action::make('recordPayment')
-                            ->label('Record Payment')
-                            ->action('recordPayment'),
+                            }),
                     ]),
             ]);
     }
@@ -99,10 +75,5 @@ class ViewInvoice extends ViewRecord
         $this->record->update([
             'status' => InvoiceStatus::Sent,
         ]);
-    }
-
-    public function getMaxContentWidth(): MaxWidth | string | null
-    {
-        return MaxWidth::FiveExtraLarge;
     }
 }

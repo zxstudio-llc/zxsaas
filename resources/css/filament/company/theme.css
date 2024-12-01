@@ -1,8 +1,8 @@
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '/vendor/filament/filament/resources/css/theme.css';
 @import 'tooltip.css';
-@import '../../../../vendor/awcodes/filament-table-repeater/resources/css/plugin.css';
+@import '/vendor/awcodes/filament-table-repeater/resources/css/plugin.css';
 
-@config './tailwind.config.js';
+@config 'tailwind.config.js';
 
 .fi-fo-repeater.uncontained .fi-fo-repeater-item {
     @apply divide-y-0 rounded-none bg-none shadow-none ring-0 ring-gray-950/5 dark:divide-white/10 dark:bg-white/5 dark:ring-white/10;

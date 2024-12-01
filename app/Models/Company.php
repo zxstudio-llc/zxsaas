@@ -152,11 +152,6 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasOne(Localization::class, 'company_id');
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Banking\Payment::class, 'company_id');
-    }
-
     public function profile(): HasOne
     {
         return $this->hasOne(CompanyProfile::class, 'company_id');

@@ -15,8 +15,13 @@ class FilamentComponentConfigurator
             ->stickyModalFooter()
             ->modalFooterActionsAlignment(Alignment::End);
 
-        if ($action instanceof CreateAction) {
+        if ($action instanceof CreateAction || $action instanceof \Filament\Tables\Actions\CreateAction) {
             $action->createAnother(false);
         }
+    }
+
+    public static function configureDeleteAction(MountableAction $action): void
+    {
+        $action->databaseTransaction();
     }
 }

@@ -85,7 +85,7 @@ class Bill extends Model
     public function approvalTransaction(): MorphOne
     {
         return $this->morphOne(Transaction::class, 'transactionable')
-            ->where('type', TransactionType::Approval);
+            ->where('type', TransactionType::Journal);
     }
 
     public static function getNextDocumentNumber(): string

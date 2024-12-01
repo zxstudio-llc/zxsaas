@@ -66,11 +66,6 @@ class BankAccount extends Model
         return $this->belongsTo(Institution::class, 'institution_id');
     }
 
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class, 'bank_account_id');
-    }
-
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class, 'bank_account_id');
