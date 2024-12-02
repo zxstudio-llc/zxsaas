@@ -38,6 +38,9 @@ class ViewInvoice extends ViewRecord
                             ->color('primary')
                             ->weight(FontWeight::SemiBold)
                             ->url(fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
+                        TextEntry::make('total')
+                            ->label('Total')
+                            ->money(),
                         TextEntry::make('amount_due')
                             ->label('Amount Due')
                             ->money(),

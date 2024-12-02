@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\Accounting\InvoiceStatus;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Models\Common\Client;
 use App\Models\Common\Offering;
@@ -88,6 +90,66 @@ class CompanyFactory extends Factory
                 ->withSalesAdjustments()
                 ->purchasable()
                 ->withPurchaseAdjustments()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+        });
+    }
+
+    public function withInvoices(int $count = 10): self
+    {
+        return $this->afterCreating(function (Company $company) use ($count) {
+            $draftCount = (int) floor($count * 0.2);
+            $approvedCount = (int) floor($count * 0.2);
+            $paidCount = (int) floor($count * 0.3);
+            $partialCount = (int) floor($count * 0.2);
+            $overpaidCount = $count - ($draftCount + $approvedCount + $paidCount + $partialCount);
+
+            Invoice::factory()
+                ->count($draftCount)
+                ->withLineItems()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Invoice::factory()
+                ->count($approvedCount)
+                ->withLineItems()
+                ->approved()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Invoice::factory()
+                ->count($paidCount)
+                ->withLineItems()
+                ->withPayments(max: 4)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Invoice::factory()
+                ->count($partialCount)
+                ->withLineItems()
+                ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Partial)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Invoice::factory()
+                ->count($overpaidCount)
+                ->withLineItems()
+                ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Overpaid)
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,

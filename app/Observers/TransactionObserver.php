@@ -78,6 +78,10 @@ class TransactionObserver
 
             $invoice = $transaction->transactionable;
 
+            if ($invoice instanceof Invoice && ! $invoice->exists) {
+                return;
+            }
+
             if ($invoice instanceof Invoice) {
                 $this->updateInvoiceTotals($invoice, $transaction);
             }

@@ -27,6 +27,14 @@ class InvoiceObserver
 
     public function deleting(Invoice $invoice): void
     {
+        //
+    }
+
+    /**
+     * Handle the Invoice "deleted" event.
+     */
+    public function deleted(Invoice $invoice): void
+    {
         DB::transaction(function () use ($invoice) {
             $invoice->lineItems()->each(function (DocumentLineItem $lineItem) {
                 $lineItem->delete();
@@ -36,14 +44,6 @@ class InvoiceObserver
                 $transaction->delete();
             });
         });
-    }
-
-    /**
-     * Handle the Invoice "deleted" event.
-     */
-    public function deleted(Invoice $invoice): void
-    {
-        //
     }
 
     /**

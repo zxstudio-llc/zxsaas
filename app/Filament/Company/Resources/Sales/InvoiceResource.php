@@ -2,13 +2,13 @@
 
 namespace App\Filament\Company\Resources\Sales;
 
+use App\Collections\Accounting\InvoiceCollection;
 use App\Enums\Accounting\InvoiceStatus;
-use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\PaymentMethod;
-use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
-use App\Models\Accounting\Account;
+use App\Filament\Tables\Actions\ReplicateBulkAction;
+use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
@@ -23,11 +23,13 @@ use Closure;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -236,7 +238,7 @@ class InvoiceResource extends Resource
                                     ->live()
                                     ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
                                         $offeringId = $state;
-                                        $offeringRecord = Offering::with('salesTaxes')->find($offeringId);
+                                        $offeringRecord = Offering::with(['salesTaxes', 'salesDiscounts'])->find($offeringId);
 
                                         if ($offeringRecord) {
                                             $set('description', $offeringRecord->description);
@@ -446,8 +448,24 @@ class InvoiceResource extends Resource
                     ->currency(),
             ])
             ->filters([
-                //
-            ])
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(InvoiceStatus::class)
+                    ->native(false),
+                Tables\Filters\SelectFilter::make('client')
+                    ->relationship('client', 'name')
+                    ->searchable()
+                    ->preload(),
+                DateRangeFilter::make('date')
+                    ->fromLabel('From Date')
+                    ->untilLabel('Until Date')
+                    ->indicatorLabel('Date Range'),
+            ], layout: Tables\Enums\FiltersLayout::Modal)
+            ->filtersFormWidth(MaxWidth::Small)
+            ->filtersTriggerAction(
+                fn (Tables\Actions\Action $action) => $action
+                    ->label('Filter')
+                    ->slideOver(),
+            )
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make(),
@@ -497,41 +515,7 @@ class InvoiceResource extends Resource
                         ->databaseTransaction()
                         ->successNotificationTitle('Invoice Approved')
                         ->action(function (Invoice $record, Tables\Actions\Action $action) {
-                            $transaction = $record->transactions()->create([
-                                'type' => TransactionType::Journal,
-                                'posted_at' => now(),
-                                'amount' => $record->total,
-                                'description' => 'Invoice Approval for Invoice #' . $record->invoice_number,
-                            ]);
-
-                            $transaction->journalEntries()->create([
-                                'type' => JournalEntryType::Debit,
-                                'account_id' => Account::getAccountsReceivableAccount()->id,
-                                'amount' => $record->total,
-                                'description' => $transaction->description,
-                            ]);
-
-                            foreach ($record->lineItems as $lineItem) {
-                                $transaction->journalEntries()->create([
-                                    'type' => JournalEntryType::Credit,
-                                    'account_id' => $lineItem->offering->income_account_id,
-                                    'amount' => $lineItem->subtotal,
-                                    'description' => $transaction->description,
-                                ]);
-
-                                foreach ($lineItem->adjustments as $adjustment) {
-                                    $transaction->journalEntries()->create([
-                                        'type' => $adjustment->category->isDiscount() ? JournalEntryType::Debit : JournalEntryType::Credit,
-                                        'account_id' => $adjustment->account_id,
-                                        'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
-                                        'description' => $transaction->description,
-                                    ]);
-                                }
-                            }
-
-                            $record->updateQuietly([
-                                'status' => InvoiceStatus::Unsent,
-                            ]);
+                            $record->approveDraft();
 
                             $action->success();
                         }),
@@ -631,6 +615,198 @@ class InvoiceResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ReplicateBulkAction::make()
+                        ->label('Replicate')
+                        ->modalWidth(MaxWidth::Large)
+                        ->modalDescription('Replicating invoices will also replicate their line items. Are you sure you want to proceed?')
+                        ->successNotificationTitle('Invoices Replicated Successfully')
+                        ->failureNotificationTitle('Failed to Replicate Invoices')
+                        ->databaseTransaction()
+                        ->deselectRecordsAfterCompletion()
+                        ->excludeAttributes([
+                            'status',
+                            'amount_paid',
+                            'amount_due',
+                            'created_by',
+                            'updated_by',
+                            'created_at',
+                            'updated_at',
+                            'invoice_number',
+                            'date',
+                            'due_date',
+                        ])
+                        ->beforeReplicaSaved(function (Invoice $replica) {
+                            $replica->status = InvoiceStatus::Draft;
+                            $replica->invoice_number = Invoice::getNextDocumentNumber();
+                            $replica->date = now();
+                            $replica->due_date = now()->addDays($replica->company->defaultInvoice->payment_terms->getDays());
+                        })
+                        ->withReplicatedRelationships(['lineItems'])
+                        ->withExcludedRelationshipAttributes('lineItems', [
+                            'subtotal',
+                            'total',
+                            'created_by',
+                            'updated_by',
+                            'created_at',
+                            'updated_at',
+                        ]),
+                    Tables\Actions\BulkAction::make('approveDrafts')
+                        ->label('Approve')
+                        ->icon('heroicon-o-check-circle')
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Invoices Approved')
+                        ->failureNotificationTitle('Failed to Approve Invoices')
+                        ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $containsNonDrafts = $records->contains(fn (Invoice $record) => ! $record->isDraft());
+
+                            if ($containsNonDrafts) {
+                                Notification::make()
+                                    ->title('Approval Failed')
+                                    ->body('Only draft invoices can be approved. Please adjust your selection and try again.')
+                                    ->persistent()
+                                    ->danger()
+                                    ->send();
+
+                                $action->cancel(true);
+                            }
+                        })
+                        ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $records->each(function (Invoice $record) {
+                                $record->approveDraft();
+                            });
+
+                            $action->success();
+                        }),
+                    Tables\Actions\BulkAction::make('markAsSent')
+                        ->label('Mark as Sent')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Invoices Sent')
+                        ->failureNotificationTitle('Failed to Mark Invoices as Sent')
+                        ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $doesntContainUnsent = $records->contains(fn (Invoice $record) => $record->status !== InvoiceStatus::Unsent);
+
+                            if ($doesntContainUnsent) {
+                                Notification::make()
+                                    ->title('Sending Failed')
+                                    ->body('Only unsent invoices can be marked as sent. Please adjust your selection and try again.')
+                                    ->persistent()
+                                    ->danger()
+                                    ->send();
+
+                                $action->cancel(true);
+                            }
+                        })
+                        ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $records->each(function (Invoice $record) {
+                                $record->updateQuietly([
+                                    'status' => InvoiceStatus::Sent,
+                                ]);
+                            });
+
+                            $action->success();
+                        }),
+                    Tables\Actions\BulkAction::make('recordPayments')
+                        ->label('Record Payments')
+                        ->icon('heroicon-o-credit-card')
+                        ->stickyModalHeader()
+                        ->stickyModalFooter()
+                        ->modalFooterActionsAlignment(Alignment::End)
+                        ->modalWidth(MaxWidth::TwoExtraLarge)
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Payments Recorded')
+                        ->failureNotificationTitle('Failed to Record Payments')
+                        ->deselectRecordsAfterCompletion()
+                        ->beforeFormFilled(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $cantRecordPayments = $records->contains(fn (Invoice $record) => ! $record->canBulkRecordPayment());
+
+                            if ($cantRecordPayments) {
+                                Notification::make()
+                                    ->title('Payment Recording Failed')
+                                    ->body('Invoices that are either draft, paid, overpaid, or voided cannot be processed through bulk payments. Please adjust your selection and try again.')
+                                    ->persistent()
+                                    ->danger()
+                                    ->send();
+
+                                $action->cancel(true);
+                            }
+                        })
+                        ->mountUsing(function (InvoiceCollection $records, Form $form) {
+                            $totalAmountDue = $records->sumMoneyFormattedSimple('amount_due');
+
+                            $form->fill([
+                                'posted_at' => now(),
+                                'amount' => $totalAmountDue,
+                            ]);
+                        })
+                        ->form([
+                            Forms\Components\DatePicker::make('posted_at')
+                                ->label('Date'),
+                            Forms\Components\TextInput::make('amount')
+                                ->label('Amount')
+                                ->required()
+                                ->money()
+                                ->rules([
+                                    static fn (): Closure => static function (string $attribute, $value, Closure $fail) {
+                                        if (! CurrencyConverter::isValidAmount($value)) {
+                                            $fail('Please enter a valid amount');
+                                        }
+                                    },
+                                ]),
+                            Forms\Components\Select::make('payment_method')
+                                ->label('Payment Method')
+                                ->required()
+                                ->options(PaymentMethod::class),
+                            Forms\Components\Select::make('bank_account_id')
+                                ->label('Account')
+                                ->required()
+                                ->options(BankAccount::query()
+                                    ->get()
+                                    ->pluck('account.name', 'id'))
+                                ->searchable(),
+                            Forms\Components\Textarea::make('notes')
+                                ->label('Notes'),
+                        ])
+                        ->before(function (InvoiceCollection $records, Tables\Actions\BulkAction $action, array $data) {
+                            $totalPaymentAmount = CurrencyConverter::convertToCents($data['amount']);
+                            $totalAmountDue = $records->sumMoneyInCents('amount_due');
+
+                            if ($totalPaymentAmount > $totalAmountDue) {
+                                $formattedTotalAmountDue = CurrencyConverter::formatCentsToMoney($totalAmountDue);
+
+                                Notification::make()
+                                    ->title('Excess Payment Amount')
+                                    ->body("The payment amount exceeds the total amount due of {$formattedTotalAmountDue}. Please adjust the payment amount and try again.")
+                                    ->persistent()
+                                    ->warning()
+                                    ->send();
+
+                                $action->halt(true);
+                            }
+                        })
+                        ->action(function (InvoiceCollection $records, Tables\Actions\BulkAction $action, array $data) {
+                            $totalPaymentAmount = CurrencyConverter::convertToCents($data['amount']);
+
+                            $remainingAmount = $totalPaymentAmount;
+
+                            $records->each(function (Invoice $record) use (&$remainingAmount, $data) {
+                                $amountDue = $record->getRawOriginal('amount_due');
+
+                                if ($amountDue <= 0 || $remainingAmount <= 0) {
+                                    return;
+                                }
+
+                                $paymentAmount = min($amountDue, $remainingAmount);
+
+                                $data['amount'] = CurrencyConverter::convertCentsToFormatSimple($paymentAmount);
+
+                                $record->recordPayment($data);
+
+                                $remainingAmount -= $paymentAmount;
+                            });
+
+                            $action->success();
+                        }),
                 ]),
             ]);
     }

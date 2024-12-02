@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class ReplicateBulkAction extends BulkAction implements ReplicatesRecords
 {
@@ -19,6 +20,8 @@ class ReplicateBulkAction extends BulkAction implements ReplicatesRecords
     protected ?Closure $afterReplicaSaved = null;
 
     protected array $relationshipsToReplicate = [];
+
+    protected array | Closure | null $excludedAttributesPerRelationship = null;
 
     public static function getDefaultName(): ?string
     {
@@ -48,8 +51,6 @@ class ReplicateBulkAction extends BulkAction implements ReplicatesRecords
                 $records->each(function (Model $record) {
                     $this->replica = $record->replicate($this->getExcludedAttributes());
 
-                    $this->replica->fill($record->attributesToArray());
-
                     $this->callBeforeReplicaSaved();
 
                     $this->replica->save();
@@ -73,17 +74,30 @@ class ReplicateBulkAction extends BulkAction implements ReplicatesRecords
         foreach ($this->relationshipsToReplicate as $relationship) {
             $relation = $original->$relationship();
 
+            $excludedAttributes = $this->excludedAttributesPerRelationship[$relationship] ?? [];
+
             if ($relation instanceof BelongsToMany) {
                 $replica->$relationship()->sync($relation->pluck($relation->getRelated()->getKeyName()));
             } elseif ($relation instanceof HasMany) {
-                $relation->each(function (Model $related) use ($replica, $relationship) {
-                    $relatedReplica = $related->replicate($this->getExcludedAttributes());
+                $relation->each(function (Model $related) use ($excludedAttributes, $replica, $relationship) {
+                    $relatedReplica = $related->replicate($excludedAttributes);
                     $relatedReplica->{$replica->$relationship()->getForeignKeyName()} = $replica->getKey();
                     $relatedReplica->save();
                 });
+            } elseif ($relation instanceof MorphMany) {
+                $relation->each(function (Model $related) use ($excludedAttributes, $relation, $replica) {
+                    $relatedReplica = $related->replicate($excludedAttributes);
+                    $relatedReplica->{$relation->getForeignKeyName()} = $replica->getKey();
+                    $relatedReplica->{$relation->getMorphType()} = $replica->getMorphClass();
+                    $relatedReplica->save();
+
+                    if (method_exists($related, 'adjustments')) {
+                        $relatedReplica->adjustments()->sync($related->adjustments->pluck('id'));
+                    }
+                });
             } elseif ($relation instanceof HasOne && $relation->exists()) {
                 $related = $relation->first();
-                $relatedReplica = $related->replicate($this->getExcludedAttributes());
+                $relatedReplica = $related->replicate($excludedAttributes);
                 $relatedReplica->{$replica->$relationship()->getForeignKeyName()} = $replica->getKey();
                 $relatedReplica->save();
             }
@@ -95,6 +109,18 @@ class ReplicateBulkAction extends BulkAction implements ReplicatesRecords
         $this->relationshipsToReplicate = $relationships;
 
         return $this;
+    }
+
+    public function withExcludedRelationshipAttributes(string $relationship, array | Closure | null $attributes): static
+    {
+        $this->excludedAttributesPerRelationship[$relationship] = $attributes;
+
+        return $this;
+    }
+
+    public function getExcludedRelationshipAttributes(): ?array
+    {
+        return $this->evaluate($this->excludedAttributesPerRelationship);
     }
 
     public function afterReplicaSaved(Closure $callback): static

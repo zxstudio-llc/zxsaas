@@ -3,12 +3,15 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Collections\Accounting\InvoiceCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\InvoiceStatus;
+use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Common\Client;
 use App\Observers\InvoiceObserver;
+use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 #[ObservedBy(InvoiceObserver::class)]
+#[CollectedBy(InvoiceCollection::class)]
 class Invoice extends Model
 {
     use Blamable;
@@ -110,6 +114,16 @@ class Invoice extends Model
         ]);
     }
 
+    public function canBulkRecordPayment(): bool
+    {
+        return ! in_array($this->status, [
+            InvoiceStatus::Draft,
+            InvoiceStatus::Paid,
+            InvoiceStatus::Void,
+            InvoiceStatus::Overpaid,
+        ]);
+    }
+
     public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;
@@ -157,6 +171,7 @@ class Invoice extends Model
 
         // Create transaction
         $this->transactions()->create([
+            'company_id' => $this->company_id,
             'type' => $transactionType,
             'is_payment' => true,
             'posted_at' => $data['posted_at'],
@@ -166,6 +181,53 @@ class Invoice extends Model
             'account_id' => Account::getAccountsReceivableAccount()->id,
             'description' => $transactionDescription,
             'notes' => $data['notes'] ?? null,
+        ]);
+    }
+
+    public function approveDraft(): void
+    {
+        if (! $this->isDraft()) {
+            throw new \RuntimeException('Invoice is not in draft status.');
+        }
+
+        $transaction = $this->transactions()->create([
+            'company_id' => $this->company_id,
+            'type' => TransactionType::Journal,
+            'posted_at' => now(),
+            'amount' => $this->total,
+            'description' => 'Invoice Approval for Invoice #' . $this->invoice_number,
+        ]);
+
+        $transaction->journalEntries()->create([
+            'company_id' => $this->company_id,
+            'type' => JournalEntryType::Debit,
+            'account_id' => Account::getAccountsReceivableAccount()->id,
+            'amount' => $this->total,
+            'description' => $transaction->description,
+        ]);
+
+        foreach ($this->lineItems as $lineItem) {
+            $transaction->journalEntries()->create([
+                'company_id' => $this->company_id,
+                'type' => JournalEntryType::Credit,
+                'account_id' => $lineItem->offering->income_account_id,
+                'amount' => $lineItem->subtotal,
+                'description' => $transaction->description,
+            ]);
+
+            foreach ($lineItem->adjustments as $adjustment) {
+                $transaction->journalEntries()->create([
+                    'company_id' => $this->company_id,
+                    'type' => $adjustment->category->isDiscount() ? JournalEntryType::Debit : JournalEntryType::Credit,
+                    'account_id' => $adjustment->account_id,
+                    'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
+                    'description' => $transaction->description,
+                ]);
+            }
+        }
+
+        $this->updateQuietly([
+            'status' => InvoiceStatus::Unsent,
         ]);
     }
 }

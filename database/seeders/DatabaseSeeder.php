@@ -23,7 +23,8 @@ class DatabaseSeeder extends Seeder
                     ->withTransactions()
                     ->withOfferings()
                     ->withClients()
-                    ->withVendors();
+                    ->withVendors()
+                    ->withInvoices(50);
             })
             ->create([
                 'name' => 'Admin',

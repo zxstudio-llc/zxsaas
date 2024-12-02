@@ -35,6 +35,13 @@ class CurrencyConverter
         return money($amount, $currency, true)->getAmount();
     }
 
+    public static function convertCentsToFormatSimple(int $amount, ?string $currency = null): string
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        return money($amount, $currency)->formatSimple();
+    }
+
     public static function convertToCents(string | float $amount, ?string $currency = null): int
     {
         $currency ??= CurrencyAccessor::getDefaultCurrency();
