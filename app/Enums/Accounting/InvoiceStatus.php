@@ -36,4 +36,13 @@ enum InvoiceStatus: string implements HasColor, HasLabel
             self::Overdue => 'danger',
         };
     }
+
+    public static function canBeOverdue(): array
+    {
+        return [
+            self::Partial,
+            self::Sent,
+            self::Unsent,
+        ];
+    }
 }

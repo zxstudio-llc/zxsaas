@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\ProcessOverdueInvoices;
 use Illuminate\Console\Command;
 
 class UpdateOverdueInvoices extends Command
@@ -23,8 +24,8 @@ class UpdateOverdueInvoices extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): void
     {
-        $this->info('Processing overdue invoices...');
+        ProcessOverdueInvoices::dispatch();
     }
 }

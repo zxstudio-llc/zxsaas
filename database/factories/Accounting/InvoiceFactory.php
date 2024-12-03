@@ -36,7 +36,7 @@ class InvoiceFactory extends Factory
             'invoice_number' => $this->faker->unique()->numerify('INV-#####'),
             'order_number' => $this->faker->unique()->numerify('ORD-#####'),
             'date' => $this->faker->dateTimeBetween('-1 year'),
-            'due_date' => $this->faker->dateTimeBetween('now', '+2 months'),
+            'due_date' => $this->faker->dateTimeBetween('-2 months', '+2 months'),
             'status' => InvoiceStatus::Draft,
             'currency_code' => 'USD',
             'terms' => $this->faker->sentence,
@@ -125,7 +125,7 @@ class InvoiceFactory extends Factory
 
             $this->recalculateTotals($invoice);
 
-            if ($invoice->due_date->isPast() && ! in_array($invoice->status, [InvoiceStatus::Draft, InvoiceStatus::Paid, InvoiceStatus::Void, InvoiceStatus::Overpaid])) {
+            if ($invoice->due_date->isPast() && $invoice->canBeOverdue()) {
                 $invoice->updateQuietly([
                     'status' => InvoiceStatus::Overdue,
                 ]);

@@ -124,6 +124,11 @@ class Invoice extends Model
         ]);
     }
 
+    public function canBeOverdue(): bool
+    {
+        return in_array($this->status, InvoiceStatus::canBeOverdue());
+    }
+
     public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;
