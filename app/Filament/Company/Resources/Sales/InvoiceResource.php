@@ -108,11 +108,23 @@ class InvoiceResource extends Resource
                                     ->label('P.O/S.O Number'),
                                 Forms\Components\DatePicker::make('date')
                                     ->label('Invoice Date')
-                                    ->default(now()),
+                                    ->live()
+                                    ->default(now())
+                                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                        $date = $state;
+                                        $dueDate = $get('due_date');
+
+                                        if ($date && $dueDate && $date > $dueDate) {
+                                            $set('due_date', $date);
+                                        }
+                                    }),
                                 Forms\Components\DatePicker::make('due_date')
                                     ->label('Payment Due')
                                     ->default(function () use ($company) {
                                         return now()->addDays($company->defaultInvoice->payment_terms->getDays());
+                                    })
+                                    ->minDate(static function (Forms\Get $get) {
+                                        return $get('date') ?? now();
                                     }),
                             ])->grow(true),
                         ])->from('md'),

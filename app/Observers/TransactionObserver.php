@@ -107,7 +107,7 @@ class TransactionObserver
 
         $invoiceTotal = (int) $invoice->getRawOriginal('total');
 
-        $invoice->updateQuietly([
+        $invoice->update([
             'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
             'status' => match (true) {
                 $totalPaid > $invoiceTotal => InvoiceStatus::Overpaid,

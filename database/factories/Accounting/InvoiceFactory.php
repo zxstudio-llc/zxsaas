@@ -125,7 +125,7 @@ class InvoiceFactory extends Factory
 
             $this->recalculateTotals($invoice);
 
-            if ($invoice->due_date->isPast() && $invoice->canBeOverdue()) {
+            if ($invoice->due_date->isBefore(today()) && $invoice->canBeOverdue()) {
                 $invoice->updateQuietly([
                     'status' => InvoiceStatus::Overdue,
                 ]);
@@ -141,7 +141,7 @@ class InvoiceFactory extends Factory
             $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
             $grandTotal = $subtotal + $taxTotal - $discountTotal;
 
-            $invoice->updateQuietly([
+            $invoice->update([
                 'subtotal' => $subtotal,
                 'tax_total' => $taxTotal,
                 'discount_total' => $discountTotal,

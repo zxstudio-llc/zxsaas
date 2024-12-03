@@ -231,7 +231,7 @@ class Invoice extends Model
             }
         }
 
-        $this->updateQuietly([
+        $this->update([
             'status' => InvoiceStatus::Unsent,
         ]);
     }

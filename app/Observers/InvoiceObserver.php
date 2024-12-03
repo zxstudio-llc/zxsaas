@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\Accounting\InvoiceStatus;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
@@ -28,6 +29,13 @@ class InvoiceObserver
     public function deleting(Invoice $invoice): void
     {
         //
+    }
+
+    public function saving(Invoice $invoice): void
+    {
+        if ($invoice->due_date->isBefore(today()) && $invoice->canBeOverdue()) {
+            $invoice->status = InvoiceStatus::Overdue;
+        }
     }
 
     /**
