@@ -26,7 +26,7 @@
 
         <div class="relative hidden w-0 flex-1 lg:block">
             <img class="absolute inset-0 size-full object-cover"
-                 src="https://img.freepik.com/free-vector/abstract-cyber-background-with-flowing-particles-design_1048-15243.jpg?t=st=1731895585~exp=1731899185~hmac=3397976be08b5dabed940a75fb1fd957cee7f1a32cd1da1f5951435265cf36f9&w=2000"
+                 src="https://images.unsplash.com/photo-1511376868136-742c0de8c9a8?q=80&w=3870&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                  alt="">
         </div>
 
