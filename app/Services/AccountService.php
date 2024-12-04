@@ -170,7 +170,15 @@ class AccountService
                 $join->on('transactions.id', '=', 'journal_entries.transaction_id')
                     ->where('transactions.posted_at', '<=', $endDate);
             })
-            ->groupBy('accounts.id')
+            ->groupBy([
+                'accounts.id',
+                'accounts.name',
+                'accounts.category',
+                'accounts.type',
+                'accounts.subtype_id',
+                'accounts.currency_code',
+                'accounts.code',
+            ])
             ->with(['subtype:id,name,inverse_cash_flow']);
 
         if (! empty($accountIds)) {
@@ -230,7 +238,15 @@ class AccountService
                     ->whereNotNull('bank_accounts.bank_account_id')
                     ->whereColumn('je.transaction_id', 'journal_entries.transaction_id');
             })
-            ->groupBy('accounts.id')
+            ->groupBy([
+                'accounts.id',
+                'accounts.name',
+                'accounts.category',
+                'accounts.type',
+                'accounts.subtype_id',
+                'accounts.currency_code',
+                'accounts.code',
+            ])
             ->with(['subtype:id,name,inverse_cash_flow']);
 
         if (! empty($accountIds)) {
