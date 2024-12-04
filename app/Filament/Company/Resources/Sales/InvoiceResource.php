@@ -29,6 +29,7 @@ use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -447,7 +448,8 @@ class InvoiceResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('invoice_number')
                     ->label('Number')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
@@ -460,24 +462,28 @@ class InvoiceResource extends Resource
                     ->currency(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->options(InvoiceStatus::class)
-                    ->native(false),
                 Tables\Filters\SelectFilter::make('client')
                     ->relationship('client', 'name')
                     ->searchable()
                     ->preload(),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(InvoiceStatus::class)
+                    ->native(false),
+                Tables\Filters\TernaryFilter::make('has_payments')
+                    ->label('Has Payments')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereHas('payments'),
+                        false: fn (Builder $query) => $query->whereDoesntHave('payments'),
+                    ),
                 DateRangeFilter::make('date')
                     ->fromLabel('From Date')
-                    ->untilLabel('Until Date')
-                    ->indicatorLabel('Date Range'),
-            ], layout: Tables\Enums\FiltersLayout::Modal)
-            ->filtersFormWidth(MaxWidth::Small)
-            ->filtersTriggerAction(
-                fn (Tables\Actions\Action $action) => $action
-                    ->label('Filter')
-                    ->slideOver(),
-            )
+                    ->untilLabel('To Date')
+                    ->indicatorLabel('Date'),
+                DateRangeFilter::make('due_date')
+                    ->fromLabel('From Due Date')
+                    ->untilLabel('To Due Date')
+                    ->indicatorLabel('Due'),
+            ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\EditAction::make(),

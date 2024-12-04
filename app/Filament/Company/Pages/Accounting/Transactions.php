@@ -12,6 +12,7 @@ use App\Filament\Forms\Components\DateRangeSelect;
 use App\Filament\Forms\Components\JournalEntryRepeater;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
@@ -262,7 +263,16 @@ class Transactions extends Page implements HasTable
                     'account',
                     'bankAccount.account',
                     'journalEntries.account',
-                ]);
+                ])
+                    ->where(function (Builder $query) {
+                        $query->whereDoesntHaveMorph(
+                            'transactionable',
+                            [Invoice::class],
+                            function (Builder $query) {
+                                $query->where('type', TransactionType::Journal);
+                            }
+                        );
+                    });
             })
             ->columns([
                 Tables\Columns\TextColumn::make('posted_at')
@@ -275,7 +285,7 @@ class Transactions extends Page implements HasTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')
-                    ->limit(30)
+                    ->limit(50)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('bankAccount.account.name')
                     ->label('Account')
@@ -320,7 +330,7 @@ class Transactions extends Page implements HasTable
                     ->options(TransactionType::class),
                 $this->buildDateRangeFilter('posted_at', 'Posted', true),
                 $this->buildDateRangeFilter('updated_at', 'Last Modified'),
-            ], layout: Tables\Enums\FiltersLayout::Modal)
+            ])
             ->filtersFormSchema(fn (array $filters): array => [
                 Grid::make()
                     ->schema([

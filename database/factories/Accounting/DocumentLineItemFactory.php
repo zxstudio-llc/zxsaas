@@ -30,7 +30,7 @@ class DocumentLineItemFactory extends Factory
 
         return [
             'company_id' => 1,
-            'offering_id' => 1,
+            'offering_id' => $offering->id,
             'description' => $this->faker->sentence,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
@@ -48,6 +48,8 @@ class DocumentLineItemFactory extends Factory
                 $lineItem->salesTaxes()->sync($offering->salesTaxes->pluck('id')->toArray());
                 $lineItem->salesDiscounts()->sync($offering->salesDiscounts->pluck('id')->toArray());
             }
+
+            $lineItem->refresh();
 
             $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
             $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();

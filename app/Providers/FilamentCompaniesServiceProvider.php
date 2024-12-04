@@ -52,6 +52,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -266,7 +267,10 @@ class FilamentCompaniesServiceProvider extends PanelProvider
         });
 
         Tables\Table::configureUsing(static function (Tables\Table $table): void {
-            $table->paginationPageOptions([5, 10, 25, 50, 100]);
+            $table
+                ->paginationPageOptions([5, 10, 25, 50, 100])
+                ->filtersFormWidth(MaxWidth::Small)
+                ->filtersTriggerAction(fn (Tables\Actions\Action $action) => $action->slideOver());
         }, isImportant: true);
     }
 

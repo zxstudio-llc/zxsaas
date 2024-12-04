@@ -33,7 +33,7 @@ class InvoiceObserver
 
     public function saving(Invoice $invoice): void
     {
-        if ($invoice->due_date->isBefore(today()) && $invoice->canBeOverdue()) {
+        if ($invoice->is_currently_overdue) {
             $invoice->status = InvoiceStatus::Overdue;
         }
     }

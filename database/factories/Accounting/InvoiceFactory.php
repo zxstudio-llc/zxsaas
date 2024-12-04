@@ -58,6 +58,8 @@ class InvoiceFactory extends Factory
                 return;
             }
 
+            $this->recalculateTotals($invoice);
+
             $invoice->approveDraft();
         });
     }
@@ -66,10 +68,11 @@ class InvoiceFactory extends Factory
     {
         return $this->afterCreating(function (Invoice $invoice) use ($invoiceStatus, $max, $min) {
             if ($invoice->isDraft()) {
+
+                $this->recalculateTotals($invoice);
+
                 $invoice->approveDraft();
             }
-
-            $this->recalculateTotals($invoice);
 
             $invoice->refresh();
 
@@ -125,7 +128,7 @@ class InvoiceFactory extends Factory
 
             $this->recalculateTotals($invoice);
 
-            if ($invoice->due_date->isBefore(today()) && $invoice->canBeOverdue()) {
+            if ($invoice->is_currently_overdue) {
                 $invoice->updateQuietly([
                     'status' => InvoiceStatus::Overdue,
                 ]);
@@ -136,6 +139,7 @@ class InvoiceFactory extends Factory
     protected function recalculateTotals(Invoice $invoice): void
     {
         if ($invoice->lineItems()->exists()) {
+            $invoice->refresh();
             $subtotal = $invoice->lineItems()->sum('subtotal') / 100;
             $taxTotal = $invoice->lineItems()->sum('tax_total') / 100;
             $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;

@@ -13,6 +13,7 @@ use App\Models\Common\Client;
 use App\Observers\InvoiceObserver;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -98,6 +99,13 @@ class Invoice extends Model
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    protected function isCurrentlyOverdue(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->due_date->isBefore(today()) && $this->canBeOverdue();
+        });
     }
 
     public function isDraft(): bool

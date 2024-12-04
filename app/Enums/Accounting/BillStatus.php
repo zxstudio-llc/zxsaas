@@ -7,6 +7,7 @@ use Filament\Support\Contracts\HasLabel;
 
 enum BillStatus: string implements HasColor, HasLabel
 {
+    case Overdue = 'overdue';
     case Partial = 'partial';
     case Paid = 'paid';
     case Unpaid = 'unpaid';
@@ -20,6 +21,7 @@ enum BillStatus: string implements HasColor, HasLabel
     public function getColor(): string | array | null
     {
         return match ($this) {
+            self::Overdue => 'danger',
             self::Partial, self::Unpaid => 'warning',
             self::Paid => 'success',
             self::Void => 'gray',
