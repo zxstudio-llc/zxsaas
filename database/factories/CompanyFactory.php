@@ -129,6 +129,7 @@ class CompanyFactory extends Factory
             Invoice::factory()
                 ->count($paidCount)
                 ->withLineItems()
+                ->approved()
                 ->withPayments(max: 4)
                 ->create([
                     'company_id' => $company->id,
@@ -139,6 +140,7 @@ class CompanyFactory extends Factory
             Invoice::factory()
                 ->count($partialCount)
                 ->withLineItems()
+                ->approved()
                 ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Partial)
                 ->create([
                     'company_id' => $company->id,
@@ -149,6 +151,7 @@ class CompanyFactory extends Factory
             Invoice::factory()
                 ->count($overpaidCount)
                 ->withLineItems()
+                ->approved()
                 ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Overpaid)
                 ->create([
                     'company_id' => $company->id,

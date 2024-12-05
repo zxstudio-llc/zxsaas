@@ -7,6 +7,7 @@ use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
+use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
@@ -420,6 +421,7 @@ class InvoiceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('due_date')
             ->columns([
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -451,15 +453,19 @@ class InvoiceResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')
@@ -545,7 +551,7 @@ class InvoiceResource extends Resource
                         })
                         ->successNotificationTitle('Invoice Sent')
                         ->action(function (Invoice $record, Tables\Actions\Action $action) {
-                            $record->updateQuietly([
+                            $record->update([
                                 'status' => InvoiceStatus::Sent,
                             ]);
 
@@ -843,6 +849,13 @@ class InvoiceResource extends Resource
             'create' => Pages\CreateInvoice::route('/create'),
             'view' => Pages\ViewInvoice::route('/{record}'),
             'edit' => Pages\EditInvoice::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getWidgets(): array
+    {
+        return [
+            Widgets\InvoiceOverview::class,
         ];
     }
 }

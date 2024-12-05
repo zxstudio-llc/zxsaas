@@ -24,4 +24,13 @@ class InvoiceCollection extends Collection
 
         return CurrencyConverter::convertCentsToFormatSimple($totalCents, $currency);
     }
+
+    public function sumMoneyFormatted(string $column, ?string $currency = null): string
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        $totalCents = $this->sumMoneyInCents($column);
+
+        return CurrencyConverter::formatCentsToMoney($totalCents, $currency);
+    }
 }

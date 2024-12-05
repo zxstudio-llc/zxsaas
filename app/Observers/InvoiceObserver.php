@@ -23,7 +23,14 @@ class InvoiceObserver
      */
     public function updated(Invoice $invoice): void
     {
-        //
+        if ($invoice->wasChanged('status')) {
+            $invoice->statusHistories()->create([
+                'company_id' => $invoice->company_id,
+                'old_status' => $invoice->getOriginal('status'),
+                'new_status' => $invoice->status,
+                'changed_by' => $invoice->updated_by,
+            ]);
+        }
     }
 
     public function deleting(Invoice $invoice): void

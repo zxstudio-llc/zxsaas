@@ -17,8 +17,10 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Support\Carbon;
 
 #[ObservedBy(InvoiceObserver::class)]
 #[CollectedBy(InvoiceCollection::class)]
@@ -95,10 +97,44 @@ class Invoice extends Model
         return $this->transactions()->where('type', TransactionType::Withdrawal)->where('is_payment', true);
     }
 
+    protected function lastSent(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->getStatusChangedAt(InvoiceStatus::Sent);
+        });
+    }
+
+    protected function approvedAt(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->getStatusChangedAt(InvoiceStatus::Unsent);
+        });
+    }
+
+    protected function paidAt(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->getStatusChangedAt(InvoiceStatus::Paid);
+        });
+    }
+
+    protected function getStatusChangedAt(InvoiceStatus $status): ?Carbon
+    {
+        return $this->statusHistories
+            ->where('new_status', $status)
+            ->sortByDesc('changed_at')
+            ->first()?->changed_at;
+    }
+
     public function approvalTransaction(): MorphOne
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(InvoiceStatusHistory::class);
     }
 
     protected function isCurrentlyOverdue(): Attribute

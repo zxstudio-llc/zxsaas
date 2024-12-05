@@ -2,7 +2,6 @@
 
 namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 
-use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Accounting\Invoice;
@@ -27,7 +26,7 @@ class ViewInvoice extends ViewRecord
         return $infolist
             ->schema([
                 Section::make('Invoice Details')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
                         TextEntry::make('invoice_number')
                             ->label('Invoice #'),
@@ -44,8 +43,11 @@ class ViewInvoice extends ViewRecord
                         TextEntry::make('amount_due')
                             ->label('Amount Due')
                             ->money(),
+                        TextEntry::make('date')
+                            ->label('Date')
+                            ->date(),
                         TextEntry::make('due_date')
-                            ->label('Due Date')
+                            ->label('Due')
                             ->formatStateUsing(function (TextEntry $entry, mixed $state) {
                                 if (blank($state)) {
                                     return null;
@@ -62,21 +64,19 @@ class ViewInvoice extends ViewRecord
                                     'options' => CarbonInterface::ONE_DAY_WORDS,
                                 ]);
                             }),
+                        TextEntry::make('approved_at')
+                            ->label('Approved At')
+                            ->placeholder('Not Approved')
+                            ->date(),
+                        TextEntry::make('last_sent')
+                            ->label('Last Sent')
+                            ->placeholder('Never')
+                            ->date(),
+                        TextEntry::make('paid_at')
+                            ->label('Paid At')
+                            ->placeholder('Not Paid')
+                            ->date(),
                     ]),
             ]);
-    }
-
-    public function approveDraft(): void
-    {
-        $this->record->update([
-            'status' => InvoiceStatus::Unsent,
-        ]);
-    }
-
-    public function markAsSent(): void
-    {
-        $this->record->update([
-            'status' => InvoiceStatus::Sent,
-        ]);
     }
 }

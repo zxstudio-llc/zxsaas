@@ -88,6 +88,11 @@ class Transactions extends Page implements HasTable
         return static::getModel()::query();
     }
 
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-8xl';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
