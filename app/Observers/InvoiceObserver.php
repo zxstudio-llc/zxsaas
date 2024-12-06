@@ -23,12 +23,7 @@ class InvoiceObserver
      */
     public function updated(Invoice $invoice): void
     {
-        if ($invoice->wasChanged('status')) {
-            match ($invoice->status) {
-                InvoiceStatus::Sent => $invoice->updateQuietly(['last_sent' => now()]),
-                default => null,
-            };
-        }
+        //
     }
 
     public function deleting(Invoice $invoice): void

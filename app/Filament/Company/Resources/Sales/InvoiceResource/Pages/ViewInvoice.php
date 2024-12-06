@@ -6,11 +6,14 @@ use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Accounting\Invoice;
 use Carbon\CarbonInterface;
+use Filament\Actions;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\IconSize;
 use Illuminate\Support\Carbon;
 
 class ViewInvoice extends ViewRecord
@@ -20,6 +23,26 @@ class ViewInvoice extends ViewRecord
     protected $listeners = [
         'refresh' => '$refresh',
     ];
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\ActionGroup::make([
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
+                Invoice::getApproveDraftAction(),
+                Invoice::getMarkAsSentAction(),
+                Invoice::getReplicateAction(),
+            ])
+                ->label('Actions')
+                ->button()
+                ->outlined()
+                ->dropdownPlacement('bottom-end')
+                ->icon('heroicon-c-chevron-down')
+                ->iconSize(IconSize::Small)
+                ->iconPosition(IconPosition::After),
+        ];
+    }
 
     public function infolist(Infolist $infolist): Infolist
     {

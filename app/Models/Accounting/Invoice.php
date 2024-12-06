@@ -9,8 +9,12 @@ use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
+use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Common\Client;
 use App\Observers\InvoiceObserver;
+use Filament\Actions\Action;
+use Filament\Actions\MountableAction;
+use Filament\Actions\ReplicateAction;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -252,5 +256,79 @@ class Invoice extends Model
             'approved_at' => $approvedAt,
             'status' => InvoiceStatus::Unsent,
         ]);
+    }
+
+    public static function getApproveDraftAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('approveDraft')
+            ->label('Approve')
+            ->icon('heroicon-o-check-circle')
+            ->visible(function (Invoice $record) {
+                return $record->isDraft();
+            })
+            ->databaseTransaction()
+            ->successNotificationTitle('Invoice Approved')
+            ->action(function (Invoice $record, MountableAction $action) {
+                $record->approveDraft();
+
+                $action->success();
+            });
+    }
+
+    public static function getMarkAsSentAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('markAsSent')
+            ->label('Mark as Sent')
+            ->icon('heroicon-o-paper-airplane')
+            ->visible(function (Invoice $record) {
+                return ! $record->last_sent;
+            })
+            ->successNotificationTitle('Invoice Sent')
+            ->action(function (Invoice $record, MountableAction $action) {
+                $record->update([
+                    'status' => InvoiceStatus::Sent,
+                    'last_sent' => now(),
+                ]);
+
+                $action->success();
+            });
+    }
+
+    public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction
+    {
+        return $action::make()
+            ->excludeAttributes(['status', 'amount_paid', 'amount_due', 'created_by', 'updated_by', 'created_at', 'updated_at', 'invoice_number', 'date', 'due_date'])
+            ->modal(false)
+            ->beforeReplicaSaved(function (Invoice $original, Invoice $replica) {
+                $replica->status = InvoiceStatus::Draft;
+                $replica->invoice_number = Invoice::getNextDocumentNumber();
+                $replica->date = now();
+                $replica->due_date = now()->addDays($original->company->defaultInvoice->payment_terms->getDays());
+            })
+            ->databaseTransaction()
+            ->after(function (Invoice $original, Invoice $replica) {
+                $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
+                    $replicaLineItem = $lineItem->replicate([
+                        'documentable_id',
+                        'documentable_type',
+                        'subtotal',
+                        'total',
+                        'created_by',
+                        'updated_by',
+                        'created_at',
+                        'updated_at',
+                    ]);
+
+                    $replicaLineItem->documentable_id = $replica->id;
+                    $replicaLineItem->documentable_type = $replica->getMorphClass();
+
+                    $replicaLineItem->save();
+
+                    $replicaLineItem->adjustments()->sync($lineItem->adjustments->pluck('id'));
+                });
+            })
+            ->successRedirectUrl(function (Invoice $replica) {
+                return InvoiceResource::getUrl('edit', ['record' => $replica]);
+            });
     }
 }
