@@ -22,6 +22,9 @@ return new class extends Migration
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('last_sent')->nullable();
             $table->string('status')->default('draft');
             $table->string('currency_code')->nullable();
             $table->integer('subtotal')->default(0);

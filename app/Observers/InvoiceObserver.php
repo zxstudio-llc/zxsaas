@@ -24,12 +24,10 @@ class InvoiceObserver
     public function updated(Invoice $invoice): void
     {
         if ($invoice->wasChanged('status')) {
-            $invoice->statusHistories()->create([
-                'company_id' => $invoice->company_id,
-                'old_status' => $invoice->getOriginal('status'),
-                'new_status' => $invoice->status,
-                'changed_by' => $invoice->updated_by,
-            ]);
+            match ($invoice->status) {
+                InvoiceStatus::Sent => $invoice->updateQuietly(['last_sent' => now()]),
+                default => null,
+            };
         }
     }
 
@@ -40,7 +38,7 @@ class InvoiceObserver
 
     public function saving(Invoice $invoice): void
     {
-        if ($invoice->is_currently_overdue) {
+        if ($invoice->approved_at && $invoice->is_currently_overdue) {
             $invoice->status = InvoiceStatus::Overdue;
         }
     }

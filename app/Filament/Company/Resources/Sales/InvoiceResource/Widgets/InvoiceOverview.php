@@ -59,16 +59,8 @@ class InvoiceOverview extends BaseWidget
         $averageInvoiceTotal = $totalValidInvoiceCount > 0 ? $totalValidInvoiceAmount / $totalValidInvoiceCount : 0;
 
         $averagePaymentTime = $this->getPageTableQuery()
-            ->withWhereHas('statusHistories', function ($query) {
-                $query->where('new_status', InvoiceStatus::Paid);
-            })
-            ->selectRaw('AVG(TIMESTAMPDIFF(DAY, date, (
-                SELECT changed_at
-                FROM invoice_status_histories
-                WHERE invoice_status_histories.invoice_id = invoices.id
-                AND status = ?
-                LIMIT 1
-            ))) as avg_days', [InvoiceStatus::Paid])
+            ->whereNotNull('paid_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(DAY, date, paid_at)) as avg_days')
             ->value('avg_days');
 
         return [

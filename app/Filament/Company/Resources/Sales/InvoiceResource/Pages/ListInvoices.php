@@ -44,13 +44,6 @@ class ListInvoices extends ListRecords
             'all' => Tab::make()
                 ->label('All'),
 
-            'overdue' => Tab::make()
-                ->label('Overdue')
-                ->modifyQueryUsing(function (Builder $query) {
-                    $query->where('status', InvoiceStatus::Overdue);
-                })
-                ->badge(Invoice::where('status', InvoiceStatus::Overdue)->count()),
-
             'unpaid' => Tab::make()
                 ->label('Unpaid')
                 ->modifyQueryUsing(function (Builder $query) {
@@ -58,12 +51,14 @@ class ListInvoices extends ListRecords
                         InvoiceStatus::Unsent,
                         InvoiceStatus::Sent,
                         InvoiceStatus::Partial,
+                        InvoiceStatus::Overdue,
                     ]);
                 })
                 ->badge(Invoice::whereIn('status', [
                     InvoiceStatus::Unsent,
                     InvoiceStatus::Sent,
                     InvoiceStatus::Partial,
+                    InvoiceStatus::Overdue,
                 ])->count()),
 
             'draft' => Tab::make()

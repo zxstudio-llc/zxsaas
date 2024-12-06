@@ -107,14 +107,24 @@ class TransactionObserver
 
         $invoiceTotal = (int) $invoice->getRawOriginal('total');
 
+        $newStatus = match (true) {
+            $totalPaid > $invoiceTotal => InvoiceStatus::Overpaid,
+            $totalPaid === $invoiceTotal => InvoiceStatus::Paid,
+            default => InvoiceStatus::Partial,
+        };
+
+        $paidAt = $invoice->paid_at;
+
+        if (in_array($newStatus, [InvoiceStatus::Paid, InvoiceStatus::Overpaid]) && ! $paidAt) {
+            $paidAt = $invoice->deposits()
+                ->latest('posted_at')
+                ->value('posted_at');
+        }
+
         $invoice->update([
             'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
-            'status' => match (true) {
-                $totalPaid > $invoiceTotal => InvoiceStatus::Overpaid,
-                $totalPaid === $invoiceTotal => InvoiceStatus::Paid,
-                $totalPaid === 0 => InvoiceStatus::Sent,
-                default => InvoiceStatus::Partial,
-            },
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
         ]);
     }
 }

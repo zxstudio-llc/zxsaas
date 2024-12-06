@@ -10,6 +10,7 @@ use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
 use App\Utilities\Currency\CurrencyConverter;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Carbon;
 
 /**
  * @extends Factory<Invoice>
@@ -28,6 +29,8 @@ class InvoiceFactory extends Factory
      */
     public function definition(): array
     {
+        $invoiceDate = $this->faker->dateTimeBetween('-1 year');
+
         return [
             'company_id' => 1,
             'client_id' => Client::inRandomOrder()->value('id'),
@@ -35,8 +38,8 @@ class InvoiceFactory extends Factory
             'subheader' => 'Invoice',
             'invoice_number' => $this->faker->unique()->numerify('INV-#####'),
             'order_number' => $this->faker->unique()->numerify('ORD-#####'),
-            'date' => $this->faker->dateTimeBetween('-1 year'),
-            'due_date' => $this->faker->dateTimeBetween('-2 months', '+2 months'),
+            'date' => $invoiceDate,
+            'due_date' => Carbon::parse($invoiceDate)->addDays($this->faker->numberBetween(14, 60)),
             'status' => InvoiceStatus::Draft,
             'currency_code' => 'USD',
             'terms' => $this->faker->sentence,
@@ -60,7 +63,9 @@ class InvoiceFactory extends Factory
 
             $this->recalculateTotals($invoice);
 
-            $invoice->approveDraft();
+            $approvedAt = Carbon::parse($invoice->date)->addHours($this->faker->numberBetween(1, 24));
+
+            $invoice->approveDraft($approvedAt);
         });
     }
 
@@ -68,10 +73,10 @@ class InvoiceFactory extends Factory
     {
         return $this->afterCreating(function (Invoice $invoice) use ($invoiceStatus, $max, $min) {
             if ($invoice->isDraft()) {
-
                 $this->recalculateTotals($invoice);
 
-                $invoice->approveDraft();
+                $approvedAt = Carbon::parse($invoice->date)->addHours($this->faker->numberBetween(1, 24));
+                $invoice->approveDraft($approvedAt);
             }
 
             $invoice->refresh();
@@ -89,9 +94,11 @@ class InvoiceFactory extends Factory
             }
 
             $paymentCount = $max && $min ? $this->faker->numberBetween($min, $max) : $min;
-
             $paymentAmount = (int) floor($totalAmountDue / $paymentCount);
             $remainingAmount = $totalAmountDue;
+
+            $paymentDate = Carbon::parse($invoice->approved_at);
+            $paymentDates = [];
 
             for ($i = 0; $i < $paymentCount; $i++) {
                 $amount = $i === $paymentCount - 1 ? $remainingAmount : $paymentAmount;
@@ -100,8 +107,11 @@ class InvoiceFactory extends Factory
                     break;
                 }
 
+                $postedAt = $paymentDate->copy()->addDays($this->faker->numberBetween(1, 30));
+                $paymentDates[] = $postedAt;
+
                 $data = [
-                    'posted_at' => $invoice->date->addDay(),
+                    'posted_at' => $postedAt,
                     'amount' => CurrencyConverter::convertCentsToFormatSimple($amount, $invoice->currency_code),
                     'payment_method' => $this->faker->randomElement(PaymentMethod::class),
                     'bank_account_id' => BankAccount::inRandomOrder()->value('id'),
@@ -109,8 +119,16 @@ class InvoiceFactory extends Factory
                 ];
 
                 $invoice->recordPayment($data);
-
                 $remainingAmount -= $amount;
+            }
+
+            // If it's a paid invoice, use the latest payment date as paid_at
+            if ($invoiceStatus === InvoiceStatus::Paid) {
+                $latestPaymentDate = max($paymentDates);
+                $invoice->updateQuietly([
+                    'status' => InvoiceStatus::Paid,
+                    'paid_at' => $latestPaymentDate,
+                ]);
             }
         });
     }
@@ -128,7 +146,7 @@ class InvoiceFactory extends Factory
 
             $this->recalculateTotals($invoice);
 
-            if ($invoice->is_currently_overdue) {
+            if ($invoice->approved_at && $invoice->is_currently_overdue) {
                 $invoice->updateQuietly([
                     'status' => InvoiceStatus::Overdue,
                 ]);
