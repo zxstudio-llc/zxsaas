@@ -263,12 +263,12 @@ class Invoice extends Model
         return $action::make('approveDraft')
             ->label('Approve')
             ->icon('heroicon-o-check-circle')
-            ->visible(function (Invoice $record) {
+            ->visible(function (self $record) {
                 return $record->isDraft();
             })
             ->databaseTransaction()
             ->successNotificationTitle('Invoice Approved')
-            ->action(function (Invoice $record, MountableAction $action) {
+            ->action(function (self $record, MountableAction $action) {
                 $record->approveDraft();
 
                 $action->success();
@@ -280,11 +280,11 @@ class Invoice extends Model
         return $action::make('markAsSent')
             ->label('Mark as Sent')
             ->icon('heroicon-o-paper-airplane')
-            ->visible(function (Invoice $record) {
+            ->visible(static function (self $record) {
                 return ! $record->last_sent;
             })
             ->successNotificationTitle('Invoice Sent')
-            ->action(function (Invoice $record, MountableAction $action) {
+            ->action(function (self $record, MountableAction $action) {
                 $record->update([
                     'status' => InvoiceStatus::Sent,
                     'last_sent' => now(),
@@ -299,14 +299,14 @@ class Invoice extends Model
         return $action::make()
             ->excludeAttributes(['status', 'amount_paid', 'amount_due', 'created_by', 'updated_by', 'created_at', 'updated_at', 'invoice_number', 'date', 'due_date'])
             ->modal(false)
-            ->beforeReplicaSaved(function (Invoice $original, Invoice $replica) {
+            ->beforeReplicaSaved(function (self $original, self $replica) {
                 $replica->status = InvoiceStatus::Draft;
-                $replica->invoice_number = Invoice::getNextDocumentNumber();
+                $replica->invoice_number = self::getNextDocumentNumber();
                 $replica->date = now();
                 $replica->due_date = now()->addDays($original->company->defaultInvoice->payment_terms->getDays());
             })
             ->databaseTransaction()
-            ->after(function (Invoice $original, Invoice $replica) {
+            ->after(function (self $original, self $replica) {
                 $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
                     $replicaLineItem = $lineItem->replicate([
                         'documentable_id',
@@ -327,7 +327,7 @@ class Invoice extends Model
                     $replicaLineItem->adjustments()->sync($lineItem->adjustments->pluck('id'));
                 });
             })
-            ->successRedirectUrl(function (Invoice $replica) {
+            ->successRedirectUrl(static function (self $replica) {
                 return InvoiceResource::getUrl('edit', ['record' => $replica]);
             });
     }
