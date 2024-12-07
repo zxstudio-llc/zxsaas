@@ -49,11 +49,17 @@ class CurrencyConverter
         return money($amount, $currency, true)->getAmount();
     }
 
-    public static function formatCentsToMoney(int $amount, ?string $currency = null): string
+    public static function formatCentsToMoney(int $amount, ?string $currency = null, bool $withCode = false): string
     {
         $currency ??= CurrencyAccessor::getDefaultCurrency();
 
-        return money($amount, $currency)->format();
+        $money = money($amount, $currency);
+
+        if ($withCode) {
+            return $money->formatWithCode();
+        }
+
+        return $money->format();
     }
 
     public static function formatToMoney(string | float $amount, ?string $currency = null): string

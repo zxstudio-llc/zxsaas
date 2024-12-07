@@ -128,6 +128,11 @@ class Account extends Model
         return self::where('name', 'Accounts Receivable')->firstOrFail();
     }
 
+    public static function getAccountsPayableAccount(): self
+    {
+        return self::where('name', 'Accounts Payable')->firstOrFail();
+    }
+
     protected static function newFactory(): Factory
     {
         return AccountFactory::new();

@@ -4,17 +4,15 @@ namespace App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
 
 use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages\ListInvoices;
+use App\Filament\Widgets\EnhancedStatsOverviewWidget;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Widgets\Concerns\InteractsWithPageTable;
-use Filament\Widgets\StatsOverviewWidget as BaseWidget;
-use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Number;
 
-class InvoiceOverview extends BaseWidget
+class InvoiceOverview extends EnhancedStatsOverviewWidget
 {
     use InteractsWithPageTable;
-
-    protected static ?string $pollingInterval = null;
 
     protected function getTablePage(): string
     {
@@ -23,27 +21,18 @@ class InvoiceOverview extends BaseWidget
 
     protected function getStats(): array
     {
-        $outstandingInvoices = $this->getPageTableQuery()
-            ->whereNotIn('status', [
-                InvoiceStatus::Paid,
-                InvoiceStatus::Void,
-                InvoiceStatus::Draft,
-                InvoiceStatus::Overpaid,
-            ]);
+        $unpaidInvoices = $this->getPageTableQuery()->unpaid();
 
-        $amountOutstanding = $outstandingInvoices
-            ->clone()
-            ->sum('amount_due');
+        $amountUnpaid = $unpaidInvoices->sum('amount_due');
 
-        $amountOverdue = $outstandingInvoices
+        $amountOverdue = $unpaidInvoices
             ->clone()
             ->where('status', InvoiceStatus::Overdue)
             ->sum('amount_due');
 
-        $amountDueWithin30Days = $outstandingInvoices
+        $amountDueWithin30Days = $unpaidInvoices
             ->clone()
-            ->where('due_date', '>=', today())
-            ->where('due_date', '<=', today()->addDays(30))
+            ->whereBetween('due_date', [today(), today()->addMonth()])
             ->sum('amount_due');
 
         $validInvoices = $this->getPageTableQuery()
@@ -52,9 +41,9 @@ class InvoiceOverview extends BaseWidget
                 InvoiceStatus::Draft,
             ]);
 
-        $totalValidInvoiceAmount = $validInvoices->clone()->sum('amount_due');
+        $totalValidInvoiceAmount = $validInvoices->sum('total');
 
-        $totalValidInvoiceCount = $validInvoices->clone()->count();
+        $totalValidInvoiceCount = $validInvoices->count();
 
         $averageInvoiceTotal = $totalValidInvoiceCount > 0 ? $totalValidInvoiceAmount / $totalValidInvoiceCount : 0;
 
@@ -63,14 +52,18 @@ class InvoiceOverview extends BaseWidget
             ->selectRaw('AVG(TIMESTAMPDIFF(DAY, date, paid_at)) as avg_days')
             ->value('avg_days');
 
+        $averagePaymentTimeFormatted = Number::format($averagePaymentTime ?? 0, maxPrecision: 1);
+
         return [
-            Stat::make('Total Outstanding', CurrencyConverter::formatCentsToMoney($amountOutstanding))
+            EnhancedStatsOverviewWidget\EnhancedStat::make('Total Unpaid', CurrencyConverter::formatCentsToMoney($amountUnpaid))
+                ->suffix(CurrencyAccessor::getDefaultCurrency())
                 ->description('Includes ' . CurrencyConverter::formatCentsToMoney($amountOverdue) . ' overdue'),
-            Stat::make('Due Within 30 Days', CurrencyConverter::formatCentsToMoney($amountDueWithin30Days)),
-            Stat::make('Average Payment Time', Number::format($averagePaymentTime ?? 0, maxPrecision: 1) . ' days')
-                ->description('From invoice date to payment received'),
-            Stat::make('Average Invoice Total', CurrencyConverter::formatCentsToMoney($averageInvoiceTotal))
-                ->description('Excludes void and draft invoices'),
+            EnhancedStatsOverviewWidget\EnhancedStat::make('Due Within 30 Days', CurrencyConverter::formatCentsToMoney($amountDueWithin30Days))
+                ->suffix(CurrencyAccessor::getDefaultCurrency()),
+            EnhancedStatsOverviewWidget\EnhancedStat::make('Average Payment Time', $averagePaymentTimeFormatted)
+                ->suffix('days'),
+            EnhancedStatsOverviewWidget\EnhancedStat::make('Average Invoice Total', CurrencyConverter::formatCentsToMoney($averageInvoiceTotal))
+                ->suffix(CurrencyAccessor::getDefaultCurrency()),
         ];
     }
 }

@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\InvoiceStatus;
+use App\Models\Accounting\Bill;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Services\TransactionService;
@@ -37,10 +39,12 @@ class TransactionObserver
             return;
         }
 
-        $invoice = $transaction->transactionable;
+        $document = $transaction->transactionable;
 
-        if ($invoice instanceof Invoice) {
-            $this->updateInvoiceTotals($invoice);
+        if ($document instanceof Invoice) {
+            $this->updateInvoiceTotals($document);
+        } elseif ($document instanceof Bill) {
+            $this->updateBillTotals($document);
         }
     }
 
@@ -57,10 +61,12 @@ class TransactionObserver
             return;
         }
 
-        $invoice = $transaction->transactionable;
+        $document = $transaction->transactionable;
 
-        if ($invoice instanceof Invoice) {
-            $this->updateInvoiceTotals($invoice);
+        if ($document instanceof Invoice) {
+            $this->updateInvoiceTotals($document);
+        } elseif ($document instanceof Bill) {
+            $this->updateBillTotals($document);
         }
     }
 
@@ -76,14 +82,16 @@ class TransactionObserver
                 return;
             }
 
-            $invoice = $transaction->transactionable;
+            $document = $transaction->transactionable;
 
-            if ($invoice instanceof Invoice && ! $invoice->exists) {
+            if (($document instanceof Invoice || $document instanceof Bill) && ! $document->exists) {
                 return;
             }
 
-            if ($invoice instanceof Invoice) {
-                $this->updateInvoiceTotals($invoice, $transaction);
+            if ($document instanceof Invoice) {
+                $this->updateInvoiceTotals($document, $transaction);
+            } elseif ($document instanceof Bill) {
+                $this->updateBillTotals($document, $transaction);
             }
         });
     }
@@ -122,6 +130,35 @@ class TransactionObserver
         }
 
         $invoice->update([
+            'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
+        ]);
+    }
+
+    protected function updateBillTotals(Bill $bill, ?Transaction $excludedTransaction = null): void
+    {
+        $withdrawalTotal = (int) $bill->withdrawals()
+            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
+            ->sum('amount');
+
+        $totalPaid = $withdrawalTotal;
+        $billTotal = (int) $bill->getRawOriginal('total');
+
+        $newStatus = match (true) {
+            $totalPaid >= $billTotal => BillStatus::Paid,
+            default => BillStatus::Partial,
+        };
+
+        $paidAt = $bill->paid_at;
+
+        if ($newStatus === BillStatus::Paid && ! $paidAt) {
+            $paidAt = $bill->withdrawals()
+                ->latest('posted_at')
+                ->value('posted_at');
+        }
+
+        $bill->update([
             'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
             'status' => $newStatus,
             'paid_at' => $paidAt,

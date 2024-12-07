@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();
+            $table->timestamp('paid_at')->nullable();
             $table->string('status')->default('unpaid');
             $table->string('currency_code')->nullable();
             $table->integer('subtotal')->default(0);
@@ -27,6 +28,7 @@ return new class extends Migration
             $table->integer('total')->default(0);
             $table->integer('amount_paid')->default(0);
             $table->integer('amount_due')->storedAs('total - amount_paid');
+            $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

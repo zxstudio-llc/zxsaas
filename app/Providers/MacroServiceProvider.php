@@ -204,10 +204,6 @@ class MacroServiceProvider extends ServiceProvider
 
             $currencyCode = $this->currency->getCurrency();
 
-            if ($currencyCode === CurrencyAccessor::getDefaultCurrency()) {
-                return $formatted;
-            }
-
             if ($codeBefore) {
                 return $currencyCode . ' ' . $formatted;
             }

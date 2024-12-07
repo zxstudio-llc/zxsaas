@@ -15,7 +15,6 @@ use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Offering;
-use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
@@ -311,7 +310,7 @@ class InvoiceResource extends Resource
                                         // Final total
                                         $total = $subtotal + ($taxAmount - $discountAmount);
 
-                                        return money($total, CurrencyAccessor::getDefaultCurrency(), true)->format();
+                                        return CurrencyConverter::formatToMoney($total);
                                     }),
                             ]),
                         Forms\Components\Grid::make(6)

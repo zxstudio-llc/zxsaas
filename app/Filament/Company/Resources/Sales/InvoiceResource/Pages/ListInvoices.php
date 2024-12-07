@@ -47,19 +47,9 @@ class ListInvoices extends ListRecords
             'unpaid' => Tab::make()
                 ->label('Unpaid')
                 ->modifyQueryUsing(function (Builder $query) {
-                    $query->whereIn('status', [
-                        InvoiceStatus::Unsent,
-                        InvoiceStatus::Sent,
-                        InvoiceStatus::Partial,
-                        InvoiceStatus::Overdue,
-                    ]);
+                    $query->unpaid();
                 })
-                ->badge(Invoice::whereIn('status', [
-                    InvoiceStatus::Unsent,
-                    InvoiceStatus::Sent,
-                    InvoiceStatus::Partial,
-                    InvoiceStatus::Overdue,
-                ])->count()),
+                ->badge(Invoice::unpaid()->count()),
 
             'draft' => Tab::make()
                 ->label('Draft')

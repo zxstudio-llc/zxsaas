@@ -51,7 +51,7 @@ class InvoiceFactory extends Factory
 
     public function withLineItems(int $count = 3): self
     {
-        return $this->has(DocumentLineItem::factory()->count($count), 'lineItems');
+        return $this->has(DocumentLineItem::factory()->forInvoice()->count($count), 'lineItems');
     }
 
     public function approved(): static
@@ -126,7 +126,7 @@ class InvoiceFactory extends Factory
             if ($invoiceStatus === InvoiceStatus::Paid) {
                 $latestPaymentDate = max($paymentDates);
                 $invoice->updateQuietly([
-                    'status' => InvoiceStatus::Paid,
+                    'status' => $invoiceStatus,
                     'paid_at' => $latestPaymentDate,
                 ]);
             }

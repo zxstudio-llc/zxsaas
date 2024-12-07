@@ -10,27 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceObserver
 {
-    /**
-     * Handle the Invoice "created" event.
-     */
-    public function created(Invoice $invoice): void
-    {
-        //
-    }
-
-    /**
-     * Handle the Invoice "updated" event.
-     */
-    public function updated(Invoice $invoice): void
-    {
-        //
-    }
-
-    public function deleting(Invoice $invoice): void
-    {
-        //
-    }
-
     public function saving(Invoice $invoice): void
     {
         if ($invoice->approved_at && $invoice->is_currently_overdue) {
@@ -52,21 +31,5 @@ class InvoiceObserver
                 $transaction->delete();
             });
         });
-    }
-
-    /**
-     * Handle the Invoice "restored" event.
-     */
-    public function restored(Invoice $invoice): void
-    {
-        //
-    }
-
-    /**
-     * Handle the Invoice "force deleted" event.
-     */
-    public function forceDeleted(Invoice $invoice): void
-    {
-        //
     }
 }

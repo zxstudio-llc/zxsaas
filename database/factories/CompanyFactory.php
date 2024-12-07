@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\InvoiceStatus;
+use App\Models\Accounting\Bill;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Models\Common\Client;
@@ -153,6 +155,50 @@ class CompanyFactory extends Factory
                 ->withLineItems()
                 ->approved()
                 ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Overpaid)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+        });
+    }
+
+    public function withBills(int $count = 10): self
+    {
+        return $this->afterCreating(function (Company $company) use ($count) {
+            $unpaidCount = (int) floor($count * 0.4);
+            $paidCount = (int) floor($count * 0.4);
+            $partialCount = $count - ($unpaidCount + $paidCount);
+
+            // Create unpaid bills
+            Bill::factory()
+                ->count($unpaidCount)
+                ->withLineItems()
+                ->initialized()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create paid bills
+            Bill::factory()
+                ->count($paidCount)
+                ->withLineItems()
+                ->initialized()
+                ->withPayments(max: 4)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create partially paid bills
+            Bill::factory()
+                ->count($partialCount)
+                ->withLineItems()
+                ->initialized()
+                ->withPayments(max: 4, billStatus: BillStatus::Partial)
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,

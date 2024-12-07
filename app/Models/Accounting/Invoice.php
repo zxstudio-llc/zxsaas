@@ -17,6 +17,7 @@ use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -110,6 +111,16 @@ class Invoice extends Model
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    public function scopeUnpaid(Builder $query): Builder
+    {
+        return $query->whereNotIn('status', [
+            InvoiceStatus::Paid,
+            InvoiceStatus::Void,
+            InvoiceStatus::Draft,
+            InvoiceStatus::Overpaid,
+        ]);
     }
 
     protected function isCurrentlyOverdue(): Attribute
@@ -297,7 +308,21 @@ class Invoice extends Model
     public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction
     {
         return $action::make()
-            ->excludeAttributes(['status', 'amount_paid', 'amount_due', 'created_by', 'updated_by', 'created_at', 'updated_at', 'invoice_number', 'date', 'due_date'])
+            ->excludeAttributes([
+                'status',
+                'amount_paid',
+                'amount_due',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+                'invoice_number',
+                'date',
+                'due_date',
+                'approved_at',
+                'paid_at',
+                'last_sent',
+            ])
             ->modal(false)
             ->beforeReplicaSaved(function (self $original, self $replica) {
                 $replica->status = InvoiceStatus::Draft;

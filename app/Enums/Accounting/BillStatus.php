@@ -27,4 +27,12 @@ enum BillStatus: string implements HasColor, HasLabel
             self::Void => 'gray',
         };
     }
+
+    public static function canBeOverdue(): array
+    {
+        return [
+            self::Partial,
+            self::Unpaid,
+        ];
+    }
 }
