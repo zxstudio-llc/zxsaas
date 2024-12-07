@@ -171,7 +171,7 @@ class Bill extends Model
     public function recordPayment(array $data): void
     {
         $transactionType = TransactionType::Withdrawal;
-        $transactionDescription = 'Payment for Bill #' . $this->bill_number;
+        $transactionDescription = "Bill #{$this->bill_number}: Payment to {$this->vendor->name}";
 
         // Create transaction
         $this->transactions()->create([
@@ -200,21 +200,25 @@ class Bill extends Model
             'description' => 'Bill Creation for Bill #' . $this->bill_number,
         ]);
 
+        $baseDescription = "{$this->vendor->name}: Bill #{$this->bill_number}";
+
         $transaction->journalEntries()->create([
             'company_id' => $this->company_id,
             'type' => JournalEntryType::Credit,
             'account_id' => Account::getAccountsPayableAccount()->id,
             'amount' => $this->total,
-            'description' => $transaction->description,
+            'description' => $baseDescription,
         ]);
 
         foreach ($this->lineItems as $lineItem) {
+            $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
+
             $transaction->journalEntries()->create([
                 'company_id' => $this->company_id,
                 'type' => JournalEntryType::Debit,
                 'account_id' => $lineItem->offering->expense_account_id,
                 'amount' => $lineItem->subtotal,
-                'description' => $transaction->description,
+                'description' => $lineItemDescription,
             ]);
 
             foreach ($lineItem->adjustments as $adjustment) {
@@ -224,7 +228,7 @@ class Bill extends Model
                         'type' => JournalEntryType::Debit,
                         'account_id' => $lineItem->offering->expense_account_id,
                         'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
-                        'description' => $transaction->description . " ($adjustment->name)",
+                        'description' => "{$lineItemDescription} ({$adjustment->name})",
                     ]);
                 } elseif ($adjustment->account_id) {
                     $transaction->journalEntries()->create([
@@ -232,7 +236,7 @@ class Bill extends Model
                         'type' => $adjustment->category->isDiscount() ? JournalEntryType::Credit : JournalEntryType::Debit,
                         'account_id' => $adjustment->account_id,
                         'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
-                        'description' => $transaction->description,
+                        'description' => $lineItemDescription,
                     ]);
                 }
             }

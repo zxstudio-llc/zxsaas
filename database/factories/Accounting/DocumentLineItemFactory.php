@@ -37,8 +37,7 @@ class DocumentLineItemFactory extends Factory
     public function forInvoice(): static
     {
         return $this->state(function (array $attributes) {
-            $offering = Offering::with(['salesTaxes', 'salesDiscounts'])
-                ->where('sellable', true)
+            $offering = Offering::where('sellable', true)
                 ->inRandomOrder()
                 ->first();
 
@@ -50,8 +49,8 @@ class DocumentLineItemFactory extends Factory
             $offering = $lineItem->offering;
 
             if ($offering) {
-                $lineItem->adjustments()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
-                $lineItem->adjustments()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
+                $lineItem->salesTaxes()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
+                $lineItem->salesDiscounts()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
             }
 
             $lineItem->refresh();
@@ -69,8 +68,7 @@ class DocumentLineItemFactory extends Factory
     public function forBill(): static
     {
         return $this->state(function (array $attributes) {
-            $offering = Offering::with(['purchaseTaxes', 'purchaseDiscounts'])
-                ->where('purchasable', true)
+            $offering = Offering::where('purchasable', true)
                 ->inRandomOrder()
                 ->first();
 
@@ -82,8 +80,8 @@ class DocumentLineItemFactory extends Factory
             $offering = $lineItem->offering;
 
             if ($offering) {
-                $lineItem->adjustments()->syncWithoutDetaching($offering->purchaseTaxes->pluck('id')->toArray());
-                $lineItem->adjustments()->syncWithoutDetaching($offering->purchaseDiscounts->pluck('id')->toArray());
+                $lineItem->purchaseTaxes()->syncWithoutDetaching($offering->purchaseTaxes->pluck('id')->toArray());
+                $lineItem->purchaseDiscounts()->syncWithoutDetaching($offering->purchaseDiscounts->pluck('id')->toArray());
             }
 
             $lineItem->refresh();

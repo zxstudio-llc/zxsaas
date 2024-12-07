@@ -12,7 +12,6 @@ use App\Filament\Forms\Components\DateRangeSelect;
 use App\Filament\Forms\Components\JournalEntryRepeater;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Models\Accounting\Account;
-use App\Models\Accounting\Invoice;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
@@ -270,13 +269,8 @@ class Transactions extends Page implements HasTable
                     'journalEntries.account',
                 ])
                     ->where(function (Builder $query) {
-                        $query->whereDoesntHaveMorph(
-                            'transactionable',
-                            [Invoice::class],
-                            function (Builder $query) {
-                                $query->where('type', TransactionType::Journal);
-                            }
-                        );
+                        $query->whereNull('transactionable_id')
+                            ->orWhere('is_payment', true);
                     });
             })
             ->columns([

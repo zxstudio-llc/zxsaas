@@ -152,17 +152,19 @@ class ReportService
         return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
-    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $entityId = 'all'): ReportDTO
     {
         $columns ??= [];
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
         $accountIds = $accountId !== 'all' ? [$accountId] : [];
 
+        $entityId = $entityId !== 'all' ? $entityId : null;
+
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds)
             ->orderByRaw('LENGTH(code), code');
 
-        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)])->get();
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $entityId)])->get();
 
         $reportCategories = [];
 
@@ -197,7 +199,7 @@ class ReportService
                 $accountTransactions[] = new AccountTransactionDTO(
                     id: $transaction->id,
                     date: $transaction->posted_at->toDefaultDateFormat(),
-                    description: $transaction->description ?? 'Add a description',
+                    description: $journalEntry->description ?: $transaction->description ?? 'Add a description',
                     debit: $journalEntry->type->isDebit() ? $formattedAmount : '',
                     credit: $journalEntry->type->isCredit() ? $formattedAmount : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),

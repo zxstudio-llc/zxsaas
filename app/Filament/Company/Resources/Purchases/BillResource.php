@@ -172,6 +172,10 @@ class BillResource extends Resource
                                     'discount_total' => $discountTotal,
                                     'total' => $grandTotal,
                                 ]);
+
+                                $bill->refresh();
+
+                                $bill->createInitialTransaction();
                             })
                             ->headers([
                                 Header::make('Items')->width('15%'),
