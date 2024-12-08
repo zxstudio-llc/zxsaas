@@ -152,7 +152,7 @@ class ReportService
         return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
-    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $entityId = 'all'): ReportDTO
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $basis = 'accrual', ?string $entityId = 'all'): ReportDTO
     {
         $columns ??= [];
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
@@ -164,11 +164,16 @@ class ReportService
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds)
             ->orderByRaw('LENGTH(code), code');
 
-        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $entityId)])->get();
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $basis, $entityId)])->get();
 
         $reportCategories = [];
 
         foreach ($accounts as $account) {
+            /** @var Account $account */
+            if ($account->journalEntries->isEmpty()) {
+                continue;
+            }
+
             $accountTransactions = [];
             $currentBalance = $account->starting_balance;
 
@@ -183,7 +188,6 @@ class ReportService
                 tableAction: null
             );
 
-            /** @var Account $account */
             foreach ($account->journalEntries as $journalEntry) {
                 $transaction = $journalEntry->transaction;
                 $signedAmount = $journalEntry->signed_amount;

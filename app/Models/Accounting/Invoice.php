@@ -198,10 +198,10 @@ class Invoice extends Model
 
         if ($isRefund) {
             $transactionType = TransactionType::Withdrawal;
-            $transactionDescription = 'Refund for Overpayment on Invoice #' . $this->invoice_number;
+            $transactionDescription = "Invoice #{$this->invoice_number}: Refund to {$this->client->name}";
         } else {
             $transactionType = TransactionType::Deposit;
-            $transactionDescription = 'Payment for Invoice #' . $this->invoice_number;
+            $transactionDescription = "Invoice #{$this->invoice_number}: Payment from {$this->client->name}";
         }
 
         // Create transaction
@@ -225,31 +225,45 @@ class Invoice extends Model
             throw new \RuntimeException('Invoice is not in draft status.');
         }
 
+        $this->createApprovalTransaction();
+
         $approvedAt ??= now();
 
+        $this->update([
+            'approved_at' => $approvedAt,
+            'status' => InvoiceStatus::Unsent,
+        ]);
+    }
+
+    public function createApprovalTransaction(): void
+    {
         $transaction = $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => TransactionType::Journal,
-            'posted_at' => $approvedAt,
+            'posted_at' => $this->date,
             'amount' => $this->total,
             'description' => 'Invoice Approval for Invoice #' . $this->invoice_number,
         ]);
+
+        $baseDescription = "{$this->client->name}: Invoice #{$this->invoice_number}";
 
         $transaction->journalEntries()->create([
             'company_id' => $this->company_id,
             'type' => JournalEntryType::Debit,
             'account_id' => Account::getAccountsReceivableAccount()->id,
             'amount' => $this->total,
-            'description' => $transaction->description,
+            'description' => $baseDescription,
         ]);
 
         foreach ($this->lineItems as $lineItem) {
+            $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
+
             $transaction->journalEntries()->create([
                 'company_id' => $this->company_id,
                 'type' => JournalEntryType::Credit,
                 'account_id' => $lineItem->offering->income_account_id,
                 'amount' => $lineItem->subtotal,
-                'description' => $transaction->description,
+                'description' => $lineItemDescription,
             ]);
 
             foreach ($lineItem->adjustments as $adjustment) {
@@ -258,15 +272,21 @@ class Invoice extends Model
                     'type' => $adjustment->category->isDiscount() ? JournalEntryType::Debit : JournalEntryType::Credit,
                     'account_id' => $adjustment->account_id,
                     'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
-                    'description' => $transaction->description,
+                    'description' => $lineItemDescription,
                 ]);
             }
         }
+    }
 
-        $this->update([
-            'approved_at' => $approvedAt,
-            'status' => InvoiceStatus::Unsent,
-        ]);
+    public function updateApprovalTransaction(): void
+    {
+        $transaction = $this->approvalTransaction;
+
+        if ($transaction) {
+            $transaction->delete();
+        }
+
+        $this->createApprovalTransaction();
     }
 
     public static function getApproveDraftAction(string $action = Action::class): MountableAction

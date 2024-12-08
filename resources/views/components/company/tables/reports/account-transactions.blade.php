@@ -1,7 +1,7 @@
 <table class="w-full table-auto divide-y divide-gray-200 dark:divide-white/5">
     <x-company.tables.header :headers="$report->getHeaders()" :alignmentClass="[$report, 'getAlignmentClass']"/>
     @foreach($report->getCategories() as $categoryIndex => $category)
-        <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
+        <tbody class="divide-y divide-gray-200 dark:divide-white/5">
         <!-- Category Header -->
         <tr class="bg-gray-50 dark:bg-white/5">
             <x-filament-tables::cell tag="th" colspan="{{ count($report->getHeaders()) }}" class="text-left">

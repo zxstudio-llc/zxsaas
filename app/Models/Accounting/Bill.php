@@ -190,7 +190,7 @@ class Bill extends Model
 
     public function createInitialTransaction(?Carbon $postedAt = null): void
     {
-        $postedAt ??= now();
+        $postedAt ??= $this->date;
 
         $transaction = $this->transactions()->create([
             'company_id' => $this->company_id,
@@ -241,6 +241,17 @@ class Bill extends Model
                 }
             }
         }
+    }
+
+    public function updateInitialTransaction(): void
+    {
+        $transaction = $this->initialTransaction;
+
+        if ($transaction) {
+            $transaction->delete();
+        }
+
+        $this->createInitialTransaction();
     }
 
     public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction

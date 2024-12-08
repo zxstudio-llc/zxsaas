@@ -232,6 +232,10 @@ class InvoiceResource extends Resource
                                     'discount_total' => $discountTotal,
                                     'total' => $grandTotal,
                                 ]);
+
+                                if ($invoice->approved_at && $invoice->approvalTransaction) {
+                                    $invoice->updateApprovalTransaction();
+                                }
                             })
                             ->headers([
                                 Header::make('Items')->width('15%'),

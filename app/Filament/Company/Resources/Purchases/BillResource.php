@@ -175,7 +175,11 @@ class BillResource extends Resource
 
                                 $bill->refresh();
 
-                                $bill->createInitialTransaction();
+                                if (! $bill->initialTransaction) {
+                                    $bill->createInitialTransaction();
+                                } else {
+                                    $bill->updateInitialTransaction();
+                                }
                             })
                             ->headers([
                                 Header::make('Items')->width('15%'),
