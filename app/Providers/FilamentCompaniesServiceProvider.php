@@ -126,8 +126,8 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         ...OfferingResource::getNavigationItems(),
                     ])
                     ->groups([
-                        NavigationGroup::make('Sales & Payments')
-                            ->label('Sales & Payments')
+                        NavigationGroup::make('Sales')
+                            ->label('Sales')
                             ->icon('heroicon-o-currency-dollar')
                             ->items([
                                 ...InvoiceResource::getNavigationItems(),

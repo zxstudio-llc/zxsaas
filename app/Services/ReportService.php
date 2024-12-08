@@ -12,6 +12,7 @@ use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
@@ -152,7 +153,7 @@ class ReportService
         return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
-    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $basis = 'accrual', ?string $entityId = 'all'): ReportDTO
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $entityId = 'all'): ReportDTO
     {
         $columns ??= [];
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
@@ -164,7 +165,7 @@ class ReportService
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds)
             ->orderByRaw('LENGTH(code), code');
 
-        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $basis, $entityId)])->get();
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $entityId)])->get();
 
         $reportCategories = [];
 
@@ -208,7 +209,7 @@ class ReportService
                     credit: $journalEntry->type->isCredit() ? $formattedAmount : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),
                     type: $transaction->type,
-                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction'
+                    tableAction: $this->determineTableAction($transaction),
                 );
             }
 
@@ -244,6 +245,23 @@ class ReportService
         }
 
         return new ReportDTO(categories: $reportCategories, fields: $columns);
+    }
+
+    private function determineTableAction(Transaction $transaction): array
+    {
+        if ($transaction->transactionable_type === null || $transaction->is_payment) {
+            return [
+                'type' => 'transaction',
+                'action' => $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
+                'id' => $transaction->id,
+            ];
+        }
+
+        return [
+            'type' => 'transactionable',
+            'model' => $transaction->transactionable_type,
+            'id' => $transaction->transactionable_id,
+        ];
     }
 
     public function buildTrialBalanceReport(string $trialBalanceType, string $asOfDate, array $columns = []): ReportDTO

@@ -18,7 +18,6 @@ use App\Models\Common\Offering;
 use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
-use Carbon\CarbonInterface;
 use Closure;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -32,7 +31,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -346,22 +344,7 @@ class InvoiceResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Due')
-                    ->formatStateUsing(function (Tables\Columns\TextColumn $column, mixed $state) {
-                        if (blank($state)) {
-                            return null;
-                        }
-
-                        $date = Carbon::parse($state)
-                            ->setTimezone($timezone ?? $column->getTimezone());
-
-                        if ($date->isToday()) {
-                            return 'Today';
-                        }
-
-                        return $date->diffForHumans([
-                            'options' => CarbonInterface::ONE_DAY_WORDS,
-                        ]);
-                    })
+                    ->asRelativeDay()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date')
                     ->date()

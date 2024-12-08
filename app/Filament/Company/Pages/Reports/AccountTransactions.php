@@ -17,6 +17,7 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
@@ -38,14 +39,15 @@ class AccountTransactions extends BaseReportPage
         $this->exportService = $exportService;
     }
 
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-8xl';
+    }
+
     protected function initializeDefaultFilters(): void
     {
         if (empty($this->getFilterState('selectedAccount'))) {
             $this->setFilterState('selectedAccount', 'all');
-        }
-
-        if (empty($this->getFilterState('basis'))) {
-            $this->setFilterState('basis', 'accrual');
         }
 
         if (empty($this->getFilterState('selectedEntity'))) {
@@ -81,7 +83,7 @@ class AccountTransactions extends BaseReportPage
     public function filtersForm(Form $form): Form
     {
         return $form
-            ->columns(3)
+            ->columns(5)
             ->schema([
                 Select::make('selectedAccount')
                     ->label('Account')
@@ -95,13 +97,6 @@ class AccountTransactions extends BaseReportPage
                 ])->extraFieldWrapperAttributes([
                     'class' => 'report-hidden-label',
                 ]),
-                Select::make('basis')
-                    ->label('Accounting Basis')
-                    ->options([
-                        'accrual' => 'Accrual (Paid & Unpaid)',
-                        'cash' => 'Cash Basis (Paid)',
-                    ])
-                    ->selectablePlaceholder(false),
                 Select::make('selectedEntity')
                     ->label('Entity')
                     ->options($this->getEntityOptions())
@@ -162,7 +157,6 @@ class AccountTransactions extends BaseReportPage
             endDate: $this->getFormattedEndDate(),
             columns: $columns,
             accountId: $this->getFilterState('selectedAccount'),
-            basis: $this->getFilterState('basis'),
             entityId: $this->getFilterState('selectedEntity'),
         );
     }

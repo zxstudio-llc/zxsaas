@@ -113,9 +113,9 @@ class AccountService
         return array_filter($balances, static fn ($value) => $value !== null);
     }
 
-    public function getTransactionDetailsSubquery(string $startDate, string $endDate, string $basis = 'accrual', ?string $entityId = null): Closure
+    public function getTransactionDetailsSubquery(string $startDate, string $endDate, ?string $entityId = null): Closure
     {
-        return static function ($query) use ($startDate, $endDate, $basis, $entityId) {
+        return static function ($query) use ($startDate, $endDate, $entityId) {
             $query->select(
                 'journal_entries.id',
                 'journal_entries.account_id',
@@ -128,14 +128,7 @@ class AccountService
                 ->whereBetween('transactions.posted_at', [$startDate, $endDate])
                 ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
                 ->orderBy('transactions.posted_at')
-                ->with('transaction:id,type,description,posted_at');
-
-            if ($basis === 'cash') {
-                $query->where(function ($query) {
-                    $query->whereNull('transactions.transactionable_id')
-                        ->orWhere('transactions.is_payment', true);
-                });
-            }
+                ->with('transaction:id,type,description,posted_at,is_payment,transactionable_id,transactionable_type');
 
             if ($entityId) {
                 $entityId = (int) $entityId;

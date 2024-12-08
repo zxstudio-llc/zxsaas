@@ -15,7 +15,6 @@ use App\Models\Common\Offering;
 use App\Utilities\Currency\CurrencyConverter;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
-use Carbon\CarbonInterface;
 use Closure;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -28,7 +27,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class BillResource extends Resource
@@ -275,45 +273,35 @@ class BillResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('due_date')
             ->columns([
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Due')
-                    ->formatStateUsing(function (Tables\Columns\TextColumn $column, mixed $state) {
-                        if (blank($state)) {
-                            return null;
-                        }
-
-                        $date = Carbon::parse($state)
-                            ->setTimezone($timezone ?? $column->getTimezone());
-
-                        if ($date->isToday()) {
-                            return 'Today';
-                        }
-
-                        return $date->diffForHumans([
-                            'options' => CarbonInterface::ONE_DAY_WORDS,
-                        ]);
-                    })
+                    ->asRelativeDay()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('bill_number')
                     ->label('Number')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('vendor.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
-                    ->currency(),
+                    ->currency()
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('vendor')
@@ -562,7 +550,7 @@ class BillResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            BillResource\RelationManagers\PaymentsRelationManager::class,
         ];
     }
 
@@ -571,6 +559,7 @@ class BillResource extends Resource
         return [
             'index' => Pages\ListBills::route('/'),
             'create' => Pages\CreateBill::route('/create'),
+            'view' => Pages\ViewBill::route('/{record}'),
             'edit' => Pages\EditBill::route('/{record}/edit'),
         ];
     }

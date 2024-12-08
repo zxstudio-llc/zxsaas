@@ -10,10 +10,12 @@ use App\Models\Setting\Localization;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
+use Carbon\CarbonInterface;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
@@ -173,6 +175,48 @@ class MacroServiceProvider extends ServiceProvider
             $this
                 ->required()
                 ->markAsRequired(false);
+
+            return $this;
+        });
+
+        TextColumn::macro('asRelativeDay', function (?string $timezone = null): static {
+            $this->formatStateUsing(function (TextColumn $column, mixed $state) use ($timezone) {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $date = Carbon::parse($state)
+                    ->setTimezone($timezone ?? $column->getTimezone());
+
+                if ($date->isToday()) {
+                    return 'Today';
+                }
+
+                return $date->diffForHumans([
+                    'options' => CarbonInterface::ONE_DAY_WORDS,
+                ]);
+            });
+
+            return $this;
+        });
+
+        TextEntry::macro('asRelativeDay', function (?string $timezone = null): static {
+            $this->formatStateUsing(function (TextEntry $entry, mixed $state) use ($timezone) {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $date = Carbon::parse($state)
+                    ->setTimezone($timezone ?? $entry->getTimezone());
+
+                if ($date->isToday()) {
+                    return 'Today';
+                }
+
+                return $date->diffForHumans([
+                    'options' => CarbonInterface::ONE_DAY_WORDS,
+                ]);
+            });
 
             return $this;
         });

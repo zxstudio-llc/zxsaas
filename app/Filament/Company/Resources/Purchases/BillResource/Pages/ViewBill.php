@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
+namespace App\Filament\Company\Resources\Purchases\BillResource\Pages;
 
-use App\Filament\Company\Resources\Sales\ClientResource;
-use App\Filament\Company\Resources\Sales\InvoiceResource;
-use App\Models\Accounting\Invoice;
+use App\Filament\Company\Resources\Purchases\BillResource;
+use App\Filament\Company\Resources\Purchases\VendorResource;
+use App\Models\Accounting\Bill;
 use Filament\Actions;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -14,9 +14,9 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 
-class ViewInvoice extends ViewRecord
+class ViewBill extends ViewRecord
 {
-    protected static string $resource = InvoiceResource::class;
+    protected static string $resource = BillResource::class;
 
     protected $listeners = [
         'refresh' => '$refresh',
@@ -28,9 +28,7 @@ class ViewInvoice extends ViewRecord
             Actions\ActionGroup::make([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
-                Invoice::getApproveDraftAction(),
-                Invoice::getMarkAsSentAction(),
-                Invoice::getReplicateAction(),
+                Bill::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -46,18 +44,18 @@ class ViewInvoice extends ViewRecord
     {
         return $infolist
             ->schema([
-                Section::make('Invoice Details')
+                Section::make('Bill Details')
                     ->columns(4)
                     ->schema([
-                        TextEntry::make('invoice_number')
+                        TextEntry::make('bill_number')
                             ->label('Invoice #'),
                         TextEntry::make('status')
                             ->badge(),
-                        TextEntry::make('client.name')
-                            ->label('Client')
+                        TextEntry::make('vendor.name')
+                            ->label('Vendor')
                             ->color('primary')
                             ->weight(FontWeight::SemiBold)
-                            ->url(static fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
+                            ->url(static fn (Bill $record) => VendorResource::getUrl('edit', ['record' => $record->vendor_id])),
                         TextEntry::make('total')
                             ->label('Total')
                             ->money(),
@@ -70,14 +68,6 @@ class ViewInvoice extends ViewRecord
                         TextEntry::make('due_date')
                             ->label('Due')
                             ->asRelativeDay(),
-                        TextEntry::make('approved_at')
-                            ->label('Approved At')
-                            ->placeholder('Not Approved')
-                            ->date(),
-                        TextEntry::make('last_sent')
-                            ->label('Last Sent')
-                            ->placeholder('Never')
-                            ->date(),
                         TextEntry::make('paid_at')
                             ->label('Paid At')
                             ->placeholder('Not Paid')
