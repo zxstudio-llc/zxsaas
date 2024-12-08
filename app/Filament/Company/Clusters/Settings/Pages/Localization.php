@@ -9,6 +9,7 @@ use App\Enums\Setting\WeekStart;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Models\Setting\Localization as LocalizationModel;
+use App\Services\CompanySettingsService;
 use App\Utilities\Localization\Timezone;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -214,6 +215,7 @@ class Localization extends Page
         ];
 
         if ($record->isDirty($keysToWatch)) {
+            CompanySettingsService::invalidateSettings($record->company_id);
             $this->dispatch('localizationUpdated');
         }
 

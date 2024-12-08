@@ -10,10 +10,12 @@ use App\Models\Setting\Localization;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
 use BackedEnum;
+use Carbon\CarbonInterface;
 use Closure;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
@@ -34,23 +36,28 @@ class MacroServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        TextInput::macro('money', function (string | Closure | null $currency = null): static {
-            $this->extraAttributes(['wire:key' => Str::random()])
-                ->prefix(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+        TextInput::macro('money', function (string | Closure | null $currency = null, bool $useAffix = true): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
 
-                    return currency($currency)->getPrefix();
-                })
-                ->suffix(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+            if ($useAffix) {
+                $this
+                    ->prefix(static function (TextInput $component) use ($currency) {
+                        $currency = $component->evaluate($currency);
 
-                    return currency($currency)->getSuffix();
-                })
-                ->mask(static function (TextInput $component) use ($currency) {
-                    $currency = $component->evaluate($currency);
+                        return currency($currency)->getPrefix();
+                    })
+                    ->suffix(static function (TextInput $component) use ($currency) {
+                        $currency = $component->evaluate($currency);
 
-                    return moneyMask($currency);
-                });
+                        return currency($currency)->getSuffix();
+                    });
+            }
+
+            $this->mask(static function (TextInput $component) use ($currency) {
+                $currency = $component->evaluate($currency);
+
+                return moneyMask($currency);
+            });
 
             return $this;
         });
@@ -79,6 +86,9 @@ class MacroServiceProvider extends ServiceProvider
         });
 
         TextColumn::macro('currency', function (string | Closure | null $currency = null, ?bool $convert = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convert ??= true;
+
             $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency, $convert): ?string {
                 if (blank($state)) {
                     return null;
@@ -169,6 +179,48 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
+        TextColumn::macro('asRelativeDay', function (?string $timezone = null): static {
+            $this->formatStateUsing(function (TextColumn $column, mixed $state) use ($timezone) {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $date = Carbon::parse($state)
+                    ->setTimezone($timezone ?? $column->getTimezone());
+
+                if ($date->isToday()) {
+                    return 'Today';
+                }
+
+                return $date->diffForHumans([
+                    'options' => CarbonInterface::ONE_DAY_WORDS,
+                ]);
+            });
+
+            return $this;
+        });
+
+        TextEntry::macro('asRelativeDay', function (?string $timezone = null): static {
+            $this->formatStateUsing(function (TextEntry $entry, mixed $state) use ($timezone) {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $date = Carbon::parse($state)
+                    ->setTimezone($timezone ?? $entry->getTimezone());
+
+                if ($date->isToday()) {
+                    return 'Today';
+                }
+
+                return $date->diffForHumans([
+                    'options' => CarbonInterface::ONE_DAY_WORDS,
+                ]);
+            });
+
+            return $this;
+        });
+
         Money::macro('swapAmountFor', function ($newCurrency) {
             $oldCurrency = $this->currency->getCurrency();
             $balanceInSubunits = $this->getAmount();
@@ -195,10 +247,6 @@ class MacroServiceProvider extends ServiceProvider
             $formatted = $this->format();
 
             $currencyCode = $this->currency->getCurrency();
-
-            if ($currencyCode === CurrencyAccessor::getDefaultCurrency()) {
-                return $formatted;
-            }
 
             if ($codeBefore) {
                 return $currencyCode . ' ' . $formatted;

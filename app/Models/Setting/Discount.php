@@ -10,11 +10,14 @@ use App\Concerns\SyncsWithCompanyDefaults;
 use App\Enums\Setting\DiscountComputation;
 use App\Enums\Setting\DiscountScope;
 use App\Enums\Setting\DiscountType;
+use App\Models\Accounting\Account;
 use Database\Factories\Setting\DiscountFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class Discount extends Model
 {
@@ -28,8 +31,7 @@ class Discount extends Model
 
     protected $fillable = [
         'company_id',
-        'name',
-        'description',
+        'account_id',
         'rate',
         'computation',
         'type',
@@ -53,6 +55,11 @@ class Discount extends Model
 
     protected ?string $evaluatedDefault = 'type';
 
+    public function account(): BelongsTo
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
+
     public function defaultSalesDiscount(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'sales_discount_id');
@@ -61,6 +68,11 @@ class Discount extends Model
     public function defaultPurchaseDiscount(): HasOne
     {
         return $this->hasOne(CompanyDefault::class, 'purchase_discount_id');
+    }
+
+    public function adjustmentables(): MorphTo
+    {
+        return $this->morphTo();
     }
 
     protected static function newFactory(): Factory

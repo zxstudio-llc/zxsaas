@@ -7,6 +7,8 @@ use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\JournalEntry;
+use App\Models\Common\Client;
+use App\Models\Common\Vendor;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
@@ -27,10 +29,6 @@ class AccountTransactions extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.account-transactions';
 
-    protected static ?string $slug = 'reports/account-transactions';
-
-    protected static bool $shouldRegisterNavigation = false;
-
     protected ReportService $reportService;
 
     protected ExportService $exportService;
@@ -43,13 +41,17 @@ class AccountTransactions extends BaseReportPage
 
     public function getMaxContentWidth(): MaxWidth | string | null
     {
-        return 'max-w-[90rem]';
+        return 'max-w-8xl';
     }
 
     protected function initializeDefaultFilters(): void
     {
         if (empty($this->getFilterState('selectedAccount'))) {
             $this->setFilterState('selectedAccount', 'all');
+        }
+
+        if (empty($this->getFilterState('selectedEntity'))) {
+            $this->setFilterState('selectedEntity', 'all');
         }
     }
 
@@ -81,7 +83,7 @@ class AccountTransactions extends BaseReportPage
     public function filtersForm(Form $form): Form
     {
         return $form
-            ->columns(4)
+            ->columns(5)
             ->schema([
                 Select::make('selectedAccount')
                     ->label('Account')
@@ -95,6 +97,11 @@ class AccountTransactions extends BaseReportPage
                 ])->extraFieldWrapperAttributes([
                     'class' => 'report-hidden-label',
                 ]),
+                Select::make('selectedEntity')
+                    ->label('Entity')
+                    ->options($this->getEntityOptions())
+                    ->searchable()
+                    ->selectablePlaceholder(false),
                 Actions::make([
                     Actions\Action::make('applyFilters')
                         ->label('Update Report')
@@ -120,9 +127,38 @@ class AccountTransactions extends BaseReportPage
         return $allAccountsOption + $accounts;
     }
 
+    protected function getEntityOptions(): array
+    {
+        $clients = Client::query()
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $vendors = Vendor::query()
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->mapWithKeys(fn ($name, $id) => [-$id => $name])
+            ->toArray();
+
+        $allEntitiesOption = [
+            'All Entities' => ['all' => 'All Entities'],
+        ];
+
+        return $allEntitiesOption + [
+            'Clients' => $clients,
+            'Vendors' => $vendors,
+        ];
+    }
+
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns, $this->getFilterState('selectedAccount'));
+        return $this->reportService->buildAccountTransactionsReport(
+            startDate: $this->getFormattedStartDate(),
+            endDate: $this->getFormattedEndDate(),
+            columns: $columns,
+            accountId: $this->getFilterState('selectedAccount'),
+            entityId: $this->getFilterState('selectedEntity'),
+        );
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport

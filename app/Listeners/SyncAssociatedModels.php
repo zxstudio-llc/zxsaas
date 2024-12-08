@@ -40,10 +40,6 @@ class SyncAssociatedModels
 
         $keyToMethodMap = [
             'bank_account_id' => 'bankAccount',
-            'sales_tax_id' => 'salesTax',
-            'purchase_tax_id' => 'purchaseTax',
-            'sales_discount_id' => 'salesDiscount',
-            'purchase_discount_id' => 'purchaseDiscount',
         ];
 
         foreach ($diff as $key => $value) {

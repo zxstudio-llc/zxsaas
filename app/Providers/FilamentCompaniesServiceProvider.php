@@ -26,7 +26,11 @@ use App\Filament\Company\Pages\Reports;
 use App\Filament\Company\Pages\Service\ConnectedAccount;
 use App\Filament\Company\Pages\Service\LiveCurrency;
 use App\Filament\Company\Resources\Banking\AccountResource;
-use App\Filament\Company\Resources\Core\DepartmentResource;
+use App\Filament\Company\Resources\Common\OfferingResource;
+use App\Filament\Company\Resources\Purchases\BillResource;
+use App\Filament\Company\Resources\Purchases\VendorResource;
+use App\Filament\Company\Resources\Sales\ClientResource;
+use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
 use App\Http\Middleware\ConfigureCurrentCompany;
@@ -48,6 +52,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -111,7 +116,6 @@ class FilamentCompaniesServiceProvider extends PanelProvider
             )
             ->colors([
                 'primary' => Color::Indigo,
-                'gray' => Color::Gray,
             ])
             ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
                 return $builder
@@ -119,8 +123,23 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                         ...Dashboard::getNavigationItems(),
                         ...Reports::getNavigationItems(),
                         ...Settings::getNavigationItems(),
+                        ...OfferingResource::getNavigationItems(),
                     ])
                     ->groups([
+                        NavigationGroup::make('Sales')
+                            ->label('Sales')
+                            ->icon('heroicon-o-currency-dollar')
+                            ->items([
+                                ...InvoiceResource::getNavigationItems(),
+                                ...ClientResource::getNavigationItems(),
+                            ]),
+                        NavigationGroup::make('Purchases')
+                            ->label('Purchases')
+                            ->icon('heroicon-o-shopping-cart')
+                            ->items([
+                                ...BillResource::getNavigationItems(),
+                                ...VendorResource::getNavigationItems(),
+                            ]),
                         NavigationGroup::make('Accounting')
                             ->localizeLabel()
                             ->icon('heroicon-o-clipboard-document-list')
@@ -133,9 +152,6 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ->localizeLabel()
                             ->icon('heroicon-o-building-library')
                             ->items(AccountResource::getNavigationItems()),
-                        NavigationGroup::make('HR')
-                            ->icon('heroicon-o-user-group')
-                            ->items(DepartmentResource::getNavigationItems()),
                         NavigationGroup::make('Services')
                             ->localizeLabel()
                             ->icon('heroicon-o-wrench-screwdriver')
@@ -145,6 +161,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ]),
                     ]);
             })
+            ->sidebarCollapsibleOnDesktop()
             ->viteTheme('resources/css/filament/company/theme.css')
             ->brandLogo(static fn () => view('components.icons.logo'))
             ->tenant(Company::class)
@@ -240,11 +257,21 @@ class FilamentCompaniesServiceProvider extends PanelProvider
 
         Actions\CreateAction::configureUsing(static fn (Actions\CreateAction $action) => FilamentComponentConfigurator::configureActionModals($action));
         Actions\EditAction::configureUsing(static fn (Actions\EditAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Actions\DeleteAction::configureUsing(static fn (Actions\DeleteAction $action) => FilamentComponentConfigurator::configureDeleteAction($action));
         Tables\Actions\EditAction::configureUsing(static fn (Tables\Actions\EditAction $action) => FilamentComponentConfigurator::configureActionModals($action));
         Tables\Actions\CreateAction::configureUsing(static fn (Tables\Actions\CreateAction $action) => FilamentComponentConfigurator::configureActionModals($action));
+        Tables\Actions\DeleteAction::configureUsing(static fn (Tables\Actions\DeleteAction $action) => FilamentComponentConfigurator::configureDeleteAction($action));
+        Tables\Actions\DeleteBulkAction::configureUsing(static fn (Tables\Actions\DeleteBulkAction $action) => FilamentComponentConfigurator::configureDeleteAction($action));
         Forms\Components\DateTimePicker::configureUsing(static function (Forms\Components\DateTimePicker $component) {
             $component->native(false);
         });
+
+        Tables\Table::configureUsing(static function (Tables\Table $table): void {
+            $table
+                ->paginationPageOptions([5, 10, 25, 50, 100])
+                ->filtersFormWidth(MaxWidth::Small)
+                ->filtersTriggerAction(fn (Tables\Actions\Action $action) => $action->slideOver());
+        }, isImportant: true);
     }
 
     /**

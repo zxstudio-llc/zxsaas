@@ -87,6 +87,11 @@ class Transactions extends Page implements HasTable
         return static::getModel()::query();
     }
 
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-8xl';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -262,7 +267,11 @@ class Transactions extends Page implements HasTable
                     'account',
                     'bankAccount.account',
                     'journalEntries.account',
-                ]);
+                ])
+                    ->where(function (Builder $query) {
+                        $query->whereNull('transactionable_id')
+                            ->orWhere('is_payment', true);
+                    });
             })
             ->columns([
                 Tables\Columns\TextColumn::make('posted_at')
@@ -275,7 +284,7 @@ class Transactions extends Page implements HasTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')
-                    ->limit(30)
+                    ->limit(50)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('bankAccount.account.name')
                     ->label('Account')
@@ -296,7 +305,7 @@ class Transactions extends Page implements HasTable
                         }
                     )
                     ->sortable()
-                    ->currency(static fn (Transaction $transaction) => $transaction->bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(), true),
+                    ->currency(static fn (Transaction $transaction) => $transaction->bankAccount?->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(), true),
             ])
             ->recordClasses(static fn (Transaction $transaction) => $transaction->reviewed ? 'bg-primary-300/10' : null)
             ->defaultSort('posted_at', 'desc')
@@ -320,7 +329,7 @@ class Transactions extends Page implements HasTable
                     ->options(TransactionType::class),
                 $this->buildDateRangeFilter('posted_at', 'Posted', true),
                 $this->buildDateRangeFilter('updated_at', 'Last Modified'),
-            ], layout: Tables\Enums\FiltersLayout::Modal)
+            ])
             ->filtersFormSchema(fn (array $filters): array => [
                 Grid::make()
                     ->schema([
@@ -770,19 +779,17 @@ class Transactions extends Page implements HasTable
 
     protected function getBankAccountOptions(?int $excludedAccountId = null, ?int $currentBankAccountId = null): array
     {
-        return BankAccount::join('accounts', 'accounts.bank_account_id', '=', 'bank_accounts.id')
-            ->where('accounts.archived', false)
-            ->select(['bank_accounts.id', 'accounts.name', 'accounts.subtype_id'])
-            ->with(['account.subtype' => static function ($query) {
+        return BankAccount::query()
+            ->whereHas('account', function (Builder $query) {
+                $query->where('archived', false);
+            })
+            ->with(['account' => function ($query) {
+                $query->where('archived', false);
+            }, 'account.subtype' => function ($query) {
                 $query->select(['id', 'name']);
             }])
-            ->when($excludedAccountId, function (Builder $query) use ($excludedAccountId) {
-                $query->whereNot('accounts.id', $excludedAccountId);
-            })
-            ->when($currentBankAccountId, function (Builder $query) use ($currentBankAccountId) {
-                // Ensure the current bank account is included even if archived
-                $query->orWhere('bank_accounts.id', $currentBankAccountId);
-            })
+            ->when($excludedAccountId, fn (Builder $query) => $query->where('account_id', '!=', $excludedAccountId))
+            ->when($currentBankAccountId, fn (Builder $query) => $query->orWhere('id', $currentBankAccountId))
             ->get()
             ->groupBy('account.subtype.name')
             ->map(fn (Collection $bankAccounts, string $subtype) => $bankAccounts->pluck('account.name', 'id'))

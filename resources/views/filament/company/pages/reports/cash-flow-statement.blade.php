@@ -20,59 +20,13 @@
         </div>
     </x-filament::section>
 
+    <x-report-summary-section
+        :report-loaded="$this->reportLoaded"
+        :summary-data="$this->report?->getSummary()"
+        target-label="Net Cash Flow"
+    />
 
-    <x-filament::section>
-        <!-- Summary Section -->
-        @if($this->reportLoaded)
-            <div
-                class="flex flex-col md:flex-row items-center md:items-end text-center justify-center gap-4 md:gap-8">
-                @foreach($this->report->getSummary() as $summary)
-                    <div class="text-sm">
-                        <div class="text-gray-600 font-medium mb-2">{{ $summary['label'] }}</div>
-
-                        @php
-                            $isNetCashFlow = $summary['label'] === 'Net Cash Flow';
-                            $isPositive = money($summary['value'], \App\Utilities\Currency\CurrencyAccessor::getDefaultCurrency())->isPositive();
-                        @endphp
-
-                        <strong
-                            @class([
-                                'text-lg',
-                                'text-green-700' => $isNetCashFlow && $isPositive,
-                                'text-danger-700' => $isNetCashFlow && ! $isPositive,
-                            ])
-                        >
-                            {{ $summary['value'] }}
-                        </strong>
-                    </div>
-
-                    @if(! $loop->last)
-                        <div class="flex items-center justify-center px-2">
-                            <strong class="text-lg">
-                                {{ $loop->remaining === 1 ? '=' : '-' }}
-                            </strong>
-                        </div>
-                    @endif
-                @endforeach
-            </div>
-        @endif
-    </x-filament::section>
-
-    <x-filament::tabs>
-        <x-filament::tabs.item
-            :active="$activeTab === 'summary'"
-            wire:click="$set('activeTab', 'summary')"
-        >
-            Summary
-        </x-filament::tabs.item>
-
-        <x-filament::tabs.item
-            :active="$activeTab === 'details'"
-            wire:click="$set('activeTab', 'details')"
-        >
-            Details
-        </x-filament::tabs.item>
-    </x-filament::tabs>
+    <x-report-tabs :active-tab="$activeTab" :tabs="$this->getTabs()"/>
 
     <x-company.tables.container :report-loaded="$this->reportLoaded">
         @if($this->report)

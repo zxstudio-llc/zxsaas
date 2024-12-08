@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\Banking\BankAccountType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -36,18 +35,6 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('bank_accounts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('institution_id')->nullable()->constrained('institutions')->nullOnDelete();
-            $table->string('type')->default(BankAccountType::DEFAULT);
-            $table->string('number', 20)->nullable();
-            $table->boolean('enabled')->default(true);
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
-        });
-
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
@@ -61,12 +48,26 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->boolean('archived')->default(false);
             $table->boolean('default')->default(false);
-            $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->cascadeOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
             $table->unique(['company_id', 'code']);
+        });
+
+        Schema::create('bank_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+            $table->foreignId('institution_id')->nullable()->constrained('institutions')->nullOnDelete();
+            $table->string('type')->default('depository');
+            $table->string('number', 20)->nullable();
+            $table->boolean('enabled')->default(true);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+
+            $table->unique(['company_id', 'account_id']);
         });
 
         Schema::create('connected_bank_accounts', function (Blueprint $table) {
@@ -82,7 +83,7 @@ return new class extends Migration
             $table->double('current_balance')->default(0);
             $table->string('name');
             $table->string('mask');
-            $table->string('type')->default(BankAccountType::DEFAULT);
+            $table->string('type')->default('depository');
             $table->string('subtype')->nullable();
             $table->boolean('import_transactions')->default(false);
             $table->timestamp('last_imported_at')->nullable();

@@ -17,10 +17,6 @@ class AccountBalances extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.detailed-report';
 
-    protected static ?string $slug = 'reports/account-balances';
-
-    protected static bool $shouldRegisterNavigation = false;
-
     protected ReportService $reportService;
 
     protected ExportService $exportService;

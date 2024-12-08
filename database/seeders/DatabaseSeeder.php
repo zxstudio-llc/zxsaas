@@ -20,7 +20,12 @@ class DatabaseSeeder extends Seeder
                     ->state([
                         'name' => 'ERPSAAS',
                     ])
-                    ->withTransactions();
+                    ->withTransactions()
+                    ->withOfferings()
+                    ->withClients()
+                    ->withVendors()
+                    ->withInvoices(50)
+                    ->withBills(50);
             })
             ->create([
                 'name' => 'Admin',

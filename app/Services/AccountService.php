@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Enums\Accounting\AccountCategory;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Bill;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Repositories\Accounting\JournalEntryRepository;
 use App\Utilities\Currency\CurrencyAccessor;
@@ -111,21 +113,39 @@ class AccountService
         return array_filter($balances, static fn ($value) => $value !== null);
     }
 
-    public function getTransactionDetailsSubquery(string $startDate, string $endDate): Closure
+    public function getTransactionDetailsSubquery(string $startDate, string $endDate, ?string $entityId = null): Closure
     {
-        return static function ($query) use ($startDate, $endDate) {
+        return static function ($query) use ($startDate, $endDate, $entityId) {
             $query->select(
                 'journal_entries.id',
                 'journal_entries.account_id',
                 'journal_entries.transaction_id',
                 'journal_entries.type',
                 'journal_entries.amount',
+                'journal_entries.description',
                 DB::raw('journal_entries.amount * IF(journal_entries.type = "debit", 1, -1) AS signed_amount')
             )
                 ->whereBetween('transactions.posted_at', [$startDate, $endDate])
                 ->join('transactions', 'transactions.id', '=', 'journal_entries.transaction_id')
                 ->orderBy('transactions.posted_at')
-                ->with('transaction:id,type,description,posted_at');
+                ->with('transaction:id,type,description,posted_at,is_payment,transactionable_id,transactionable_type');
+
+            if ($entityId) {
+                $entityId = (int) $entityId;
+                if ($entityId < 0) {
+                    $query->whereHas('transaction', function ($query) use ($entityId) {
+                        $query->whereHasMorph('transactionable', [Bill::class], function ($query) use ($entityId) {
+                            $query->where('vendor_id', abs($entityId));
+                        });
+                    });
+                } else {
+                    $query->whereHas('transaction', function ($query) use ($entityId) {
+                        $query->whereHasMorph('transactionable', [Invoice::class], function ($query) use ($entityId) {
+                            $query->where('client_id', $entityId);
+                        });
+                    });
+                }
+            }
         };
     }
 
@@ -234,8 +254,8 @@ class AccountService
             ->whereExists(function (\Illuminate\Database\Query\Builder $subQuery) {
                 $subQuery->select(DB::raw(1))
                     ->from('journal_entries as je')
-                    ->join('accounts as bank_accounts', 'bank_accounts.id', '=', 'je.account_id')
-                    ->whereNotNull('bank_accounts.bank_account_id')
+                    ->join('bank_accounts', 'bank_accounts.account_id', '=', 'je.account_id') // Join bank_accounts on account_id
+                    ->whereNotNull('bank_accounts.id') // Ensure there is a linked BankAccount
                     ->whereColumn('je.transaction_id', 'journal_entries.transaction_id');
             })
             ->groupBy([

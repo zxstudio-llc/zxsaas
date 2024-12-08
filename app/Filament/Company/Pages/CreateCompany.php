@@ -11,6 +11,8 @@ use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Support\Enums\MaxWidth;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,25 @@ use Wallo\FilamentCompanies\Pages\Company\CreateCompany as FilamentCreateCompany
 class CreateCompany extends FilamentCreateCompany
 {
     protected bool $hasTopbar = false;
+
+    protected static string $view = 'filament.company.pages.create-company';
+
+    protected static string $layout = 'components.company.layout.custom-simple';
+
+    public function getHeading(): string | Htmlable
+    {
+        return '';
+    }
+
+    public function getMaxWidth(): MaxWidth | string | null
+    {
+        return MaxWidth::FourExtraLarge;
+    }
+
+    public function hasLogo(): bool
+    {
+        return true;
+    }
 
     public function form(Form $form): Form
     {
@@ -58,6 +79,7 @@ class CreateCompany extends FilamentCreateCompany
                     ->optionsLimit(5)
                     ->softRequired(),
             ])
+            ->columns()
             ->model(FilamentCompanies::companyModel())
             ->statePath('data');
     }

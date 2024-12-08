@@ -26,6 +26,20 @@ return [
                     ],
                 ],
             ],
+            'Input Tax Recoverable' => [
+                'description' => 'The amount of sales tax paid on purchases that can be recovered from the government.',
+                'multi_currency' => false,
+                'base_code' => '1150',
+                'inverse_cash_flow' => true,
+                'adjustment_category' => 'tax',
+                'adjustment_type' => 'purchase',
+                'adjustment_recoverable' => true,
+                'accounts' => [
+                    'Input Tax' => [
+                        'description' => null,
+                    ],
+                ],
+            ],
             'Inventory' => [
                 'description' => 'The raw materials, work-in-progress goods and completely finished goods that are considered to be the portion of a business\'s assets that are ready or will be ready for sale.',
                 'multi_currency' => true,
@@ -118,9 +132,18 @@ return [
                 'multi_currency' => false,
                 'base_code' => '2100',
                 'inverse_cash_flow' => false,
+            ],
+            'Sales Taxes' => [
+                'description' => 'The amount of money owed to the government for sales tax collected from customers.',
+                'multi_currency' => false,
+                'base_code' => '2150',
+                'inverse_cash_flow' => false,
+                'adjustment_category' => 'tax',
+                'adjustment_type' => 'sales',
+                'adjustment_recoverable' => false,
                 'accounts' => [
-                    'Sales Tax Payable' => [
-                        'description' => 'The amount of money owed to the government for sales tax collected from customers.',
+                    'Sales Tax' => [
+                        'description' => null,
                     ],
                 ],
             ],
@@ -271,8 +294,19 @@ return [
                     'Sales Returns and Allowances' => [
                         'description' => 'The amount of money returned to customers or deducted from sales due to returned goods or allowances granted.',
                     ],
-                    'Sales Discounts' => [
-                        'description' => 'The amount of money deducted from sales due to discounts offered to customers for early payment or other reasons.',
+                ],
+            ],
+            'Sales Discounts' => [
+                'description' => 'The amount of money deducted from sales due to discounts offered to customers for early payment or other reasons.',
+                'multi_currency' => false,
+                'base_code' => '4925',
+                'inverse_cash_flow' => false,
+                'adjustment_category' => 'discount',
+                'adjustment_type' => 'sales',
+                'adjustment_recoverable' => false,
+                'accounts' => [
+                    'Sales Discount' => [
+                        'description' => null,
                     ],
                 ],
             ],
@@ -434,8 +468,19 @@ return [
                     'Purchase Returns and Allowances' => [
                         'description' => 'The amount of money returned to suppliers or deducted from purchases due to returned goods or allowances granted.',
                     ],
-                    'Purchase Discounts' => [
-                        'description' => 'The amount of money deducted from purchases due to discounts offered by suppliers for early payment or other reasons.',
+                ],
+            ],
+            'Purchase Discounts' => [
+                'description' => 'The amount of money deducted from purchases due to discounts offered by suppliers for early payment or other reasons.',
+                'multi_currency' => false,
+                'base_code' => '5925',
+                'inverse_cash_flow' => true,
+                'adjustment_category' => 'discount',
+                'adjustment_type' => 'purchase',
+                'adjustment_recoverable' => false,
+                'accounts' => [
+                    'Purchase Discount' => [
+                        'description' => null,
                     ],
                 ],
             ],

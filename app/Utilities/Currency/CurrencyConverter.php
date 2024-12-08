@@ -35,6 +35,13 @@ class CurrencyConverter
         return money($amount, $currency, true)->getAmount();
     }
 
+    public static function convertCentsToFormatSimple(int $amount, ?string $currency = null): string
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        return money($amount, $currency)->formatSimple();
+    }
+
     public static function convertToCents(string | float $amount, ?string $currency = null): int
     {
         $currency ??= CurrencyAccessor::getDefaultCurrency();
@@ -42,11 +49,48 @@ class CurrencyConverter
         return money($amount, $currency, true)->getAmount();
     }
 
-    public static function formatCentsToMoney(int $amount, ?string $currency = null): string
+    public static function formatCentsToMoney(int $amount, ?string $currency = null, bool $withCode = false): string
     {
         $currency ??= CurrencyAccessor::getDefaultCurrency();
 
-        return money($amount, $currency)->format();
+        $money = money($amount, $currency);
+
+        if ($withCode) {
+            return $money->formatWithCode();
+        }
+
+        return $money->format();
+    }
+
+    public static function formatToMoney(string | float $amount, ?string $currency = null): string
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        return money($amount, $currency, true)->format();
+    }
+
+    public static function convertCentsToFloat(int $amount, ?string $currency = null): float
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        return money($amount, $currency)->getValue();
+    }
+
+    public static function isValidAmount(?string $amount, ?string $currency = null): bool
+    {
+        $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+        if (blank($amount)) {
+            return false;
+        }
+
+        try {
+            money($amount, $currency);
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        return true;
     }
 
     public static function handleCurrencyChange(Set $set, $state): void

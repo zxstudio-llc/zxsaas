@@ -76,7 +76,7 @@
                                         </td>
                                         <td colspan="1" class="es-table__cell px-4 py-4">
                                             <div>
-                                                @if($account->default === false)
+                                                @if($account->default === false && !$account->adjustment)
                                                     {{ ($this->editChartAction)(['chart' => $account->id]) }}
                                                 @endif
                                             </div>

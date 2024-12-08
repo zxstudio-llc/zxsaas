@@ -108,7 +108,7 @@ class CompanyDefault extends Page
         return $form
             ->schema([
                 $this->getGeneralSection(),
-                $this->getModifiersSection(),
+                // $this->getModifiersSection(),
             ])
             ->model($this->record)
             ->statePath('data')

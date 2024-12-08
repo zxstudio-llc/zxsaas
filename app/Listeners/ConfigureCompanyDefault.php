@@ -2,13 +2,9 @@
 
 namespace App\Listeners;
 
-use App\Enums\Setting\DateFormat;
-use App\Enums\Setting\Font;
 use App\Enums\Setting\PrimaryColor;
-use App\Enums\Setting\RecordsPerPage;
-use App\Enums\Setting\TableSortDirection;
-use App\Enums\Setting\WeekStart;
 use App\Events\CompanyConfigured;
+use App\Services\CompanySettingsService;
 use App\Utilities\Currency\ConfigureCurrencies;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
@@ -16,7 +12,6 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs\Tab;
 use Filament\Resources\Components\Tab as ResourcesTab;
 use Filament\Support\Facades\FilamentColor;
-use Filament\Tables\Table;
 
 class ConfigureCompanyDefault
 {
@@ -26,46 +21,29 @@ class ConfigureCompanyDefault
     public function handle(CompanyConfigured $event): void
     {
         $company = $event->company;
+        $companyId = $company->id;
 
-        session([
-            'current_company_id' => $company->id,
-            'default_language' => $company->locale->language ?? config('transmatic.source_locale'),
-            'default_timezone' => $company->locale->timezone ?? config('app.timezone'),
-            'default_pagination_page_option' => $company->appearance->records_per_page->value ?? RecordsPerPage::DEFAULT,
-            'default_sort' => $company->appearance->table_sort_direction->value ?? TableSortDirection::DEFAULT,
-            'default_primary_color' => $company->appearance->primary_color->value ?? PrimaryColor::DEFAULT,
-            'default_font' => $company->appearance->font->value ?? Font::DEFAULT,
-            'default_date_format' => $company->locale->date_format->value ?? DateFormat::DEFAULT,
-            'default_week_start' => $company->locale->week_start->value ?? WeekStart::DEFAULT,
-        ]);
+        session(['current_company_id' => $companyId]);
 
-        app()->setLocale(session('default_language'));
-        locale_set_default(session('default_language'));
-        config(['app.timezone' => session('default_timezone')]);
-        date_default_timezone_set(session('default_timezone'));
+        $settings = CompanySettingsService::getSettings($companyId);
 
-        $paginationPageOptions = RecordsPerPage::caseValues();
-
-        Table::configureUsing(static function (Table $table) use ($paginationPageOptions): void {
-
-            $table
-                ->paginationPageOptions($paginationPageOptions)
-                ->defaultSort(column: 'id', direction: session('default_sort'))
-                ->defaultPaginationPageOption(session('default_pagination_page_option'));
-        }, isImportant: true);
+        app()->setLocale($settings['default_language']);
+        locale_set_default($settings['default_language']);
+        config(['app.timezone' => $settings['default_timezone']]);
+        date_default_timezone_set($settings['default_timezone']);
 
         FilamentColor::register([
-            'primary' => PrimaryColor::from(session('default_primary_color'))->getColor(),
+            'primary' => PrimaryColor::from($settings['default_primary_color'])->getColor(),
         ]);
 
         Filament::getPanel('company')
-            ->font(session('default_font'))
+            ->font($settings['default_font'])
             ->brandName($company->name);
 
-        DatePicker::configureUsing(static function (DatePicker $component) {
+        DatePicker::configureUsing(static function (DatePicker $component) use ($settings) {
             $component
-                ->displayFormat(session('default_date_format'))
-                ->firstDayOfWeek(session('default_week_start'));
+                ->displayFormat($settings['default_date_format'])
+                ->firstDayOfWeek($settings['default_week_start']);
         });
 
         Tab::configureUsing(static function (Tab $tab) {

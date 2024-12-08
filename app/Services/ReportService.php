@@ -12,6 +12,7 @@ use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Transaction;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
@@ -152,21 +153,28 @@ class ReportService
         return new Money($retainedEarnings, CurrencyAccessor::getDefaultCurrency());
     }
 
-    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all'): ReportDTO
+    public function buildAccountTransactionsReport(string $startDate, string $endDate, ?array $columns = null, ?string $accountId = 'all', ?string $entityId = 'all'): ReportDTO
     {
         $columns ??= [];
         $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
 
         $accountIds = $accountId !== 'all' ? [$accountId] : [];
 
+        $entityId = $entityId !== 'all' ? $entityId : null;
+
         $query = $this->accountService->getAccountBalances($startDate, $endDate, $accountIds)
             ->orderByRaw('LENGTH(code), code');
 
-        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate)])->get();
+        $accounts = $query->with(['journalEntries' => $this->accountService->getTransactionDetailsSubquery($startDate, $endDate, $entityId)])->get();
 
         $reportCategories = [];
 
         foreach ($accounts as $account) {
+            /** @var Account $account */
+            if ($account->journalEntries->isEmpty()) {
+                continue;
+            }
+
             $accountTransactions = [];
             $currentBalance = $account->starting_balance;
 
@@ -181,7 +189,6 @@ class ReportService
                 tableAction: null
             );
 
-            /** @var Account $account */
             foreach ($account->journalEntries as $journalEntry) {
                 $transaction = $journalEntry->transaction;
                 $signedAmount = $journalEntry->signed_amount;
@@ -197,12 +204,12 @@ class ReportService
                 $accountTransactions[] = new AccountTransactionDTO(
                     id: $transaction->id,
                     date: $transaction->posted_at->toDefaultDateFormat(),
-                    description: $transaction->description ?? 'Add a description',
+                    description: $journalEntry->description ?: $transaction->description ?? 'Add a description',
                     debit: $journalEntry->type->isDebit() ? $formattedAmount : '',
                     credit: $journalEntry->type->isCredit() ? $formattedAmount : '',
                     balance: money($currentBalance, $defaultCurrency)->format(),
                     type: $transaction->type,
-                    tableAction: $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction'
+                    tableAction: $this->determineTableAction($transaction),
                 );
             }
 
@@ -238,6 +245,23 @@ class ReportService
         }
 
         return new ReportDTO(categories: $reportCategories, fields: $columns);
+    }
+
+    private function determineTableAction(Transaction $transaction): array
+    {
+        if ($transaction->transactionable_type === null || $transaction->is_payment) {
+            return [
+                'type' => 'transaction',
+                'action' => $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
+                'id' => $transaction->id,
+            ];
+        }
+
+        return [
+            'type' => 'transactionable',
+            'model' => $transaction->transactionable_type,
+            'id' => $transaction->transactionable_id,
+        ];
     }
 
     public function buildTrialBalanceReport(string $trialBalanceType, string $asOfDate, array $columns = []): ReportDTO

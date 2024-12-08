@@ -16,10 +16,6 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('bank_account_id')->nullable()->constrained('bank_accounts')->nullOnDelete();
             $table->string('currency_code')->nullable();
-            $table->foreignId('sales_tax_id')->nullable()->constrained('taxes')->nullOnDelete();
-            $table->foreignId('purchase_tax_id')->nullable()->constrained('taxes')->nullOnDelete();
-            $table->foreignId('sales_discount_id')->nullable()->constrained('discounts')->nullOnDelete();
-            $table->foreignId('purchase_discount_id')->nullable()->constrained('discounts')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

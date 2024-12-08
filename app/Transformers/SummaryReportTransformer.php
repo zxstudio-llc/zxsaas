@@ -31,4 +31,9 @@ abstract class SummaryReportTransformer extends BaseReportTransformer implements
             return $headers;
         });
     }
+
+    public function getSummaryPdfView(): string
+    {
+        return 'components.company.reports.summary-report-pdf';
+    }
 }

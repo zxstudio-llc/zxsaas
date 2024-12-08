@@ -20,4 +20,6 @@ interface HasSummaryReport
     public function getSummaryCategories(): array;
 
     public function getSummaryOverallTotals(): array;
+
+    public function getSummaryPdfView(): string;
 }
