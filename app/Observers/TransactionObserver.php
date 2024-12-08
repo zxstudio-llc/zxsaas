@@ -35,7 +35,7 @@ class TransactionObserver
     {
         $this->transactionService->createJournalEntries($transaction);
 
-        if (! $transaction->is_payment) {
+        if (! $transaction->transactionable) {
             return;
         }
 
@@ -57,7 +57,7 @@ class TransactionObserver
 
         $this->transactionService->updateJournalEntries($transaction);
 
-        if (! $transaction->is_payment) {
+        if (! $transaction->transactionable) {
             return;
         }
 
@@ -78,7 +78,7 @@ class TransactionObserver
         DB::transaction(function () use ($transaction) {
             $this->transactionService->deleteJournalEntries($transaction);
 
-            if (! $transaction->is_payment) {
+            if (! $transaction->transactionable) {
                 return;
             }
 
@@ -103,6 +103,10 @@ class TransactionObserver
 
     protected function updateInvoiceTotals(Invoice $invoice, ?Transaction $excludedTransaction = null): void
     {
+        if (! $invoice->hasPayments()) {
+            return;
+        }
+
         $depositTotal = (int) $invoice->deposits()
             ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
             ->sum('amount');
@@ -138,6 +142,10 @@ class TransactionObserver
 
     protected function updateBillTotals(Bill $bill, ?Transaction $excludedTransaction = null): void
     {
+        if (! $bill->hasPayments()) {
+            return;
+        }
+
         $withdrawalTotal = (int) $bill->withdrawals()
             ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
             ->sum('amount');

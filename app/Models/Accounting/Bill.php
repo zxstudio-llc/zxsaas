@@ -121,6 +121,11 @@ class Bill extends Model
         ]);
     }
 
+    public function hasPayments(): bool
+    {
+        return $this->payments->isNotEmpty();
+    }
+
     public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;

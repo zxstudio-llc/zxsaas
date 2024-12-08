@@ -109,6 +109,9 @@ class InvoiceResource extends Resource
                                     ->label('Invoice Date')
                                     ->live()
                                     ->default(now())
+                                    ->disabled(function (?Invoice $record) {
+                                        return $record?->hasPayments();
+                                    })
                                     ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
                                         $date = $state;
                                         $dueDate = $get('due_date');

@@ -159,6 +159,11 @@ class Invoice extends Model
         return in_array($this->status, InvoiceStatus::canBeOverdue());
     }
 
+    public function hasPayments(): bool
+    {
+        return $this->payments->isNotEmpty();
+    }
+
     public static function getNextDocumentNumber(): string
     {
         $company = auth()->user()->currentCompany;

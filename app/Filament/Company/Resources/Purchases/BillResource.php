@@ -54,17 +54,23 @@ class BillResource extends Resource
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('bill_number')
                                     ->label('Bill Number')
-                                    ->default(fn () => Bill::getNextDocumentNumber()),
+                                    ->default(fn () => Bill::getNextDocumentNumber())
+                                    ->required(),
                                 Forms\Components\TextInput::make('order_number')
                                     ->label('P.O/S.O Number'),
                                 Forms\Components\DatePicker::make('date')
                                     ->label('Bill Date')
-                                    ->default(now()),
+                                    ->default(now())
+                                    ->disabled(function (?Bill $record) {
+                                        return $record?->hasPayments();
+                                    })
+                                    ->required(),
                                 Forms\Components\DatePicker::make('due_date')
                                     ->label('Due Date')
                                     ->default(function () use ($company) {
                                         return now()->addDays($company->defaultBill->payment_terms->getDays());
-                                    }),
+                                    })
+                                    ->required(),
                             ])->grow(true),
                         ])->from('md'),
                         TableRepeater::make('lineItems')
