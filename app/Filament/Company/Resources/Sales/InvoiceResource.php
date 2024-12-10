@@ -3,6 +3,7 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Collections\Accounting\InvoiceCollection;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
@@ -128,6 +129,28 @@ class InvoiceResource extends Resource
                                     ->minDate(static function (Forms\Get $get) {
                                         return $get('date') ?? now();
                                     }),
+                                Forms\Components\Select::make('discount_method')
+                                    ->label('Discount Method')
+                                    ->options([
+                                        'line_items' => 'Per Line Item Discounts',
+                                        'invoice' => 'Invoice Level Discount',
+                                    ])
+                                    ->selectablePlaceholder(false)
+                                    ->default('line_items')
+                                    ->live(),
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\Select::make('discount_computation')
+                                            ->label('Discount Computation')
+                                            ->options(AdjustmentComputation::class)
+                                            ->default(AdjustmentComputation::Percentage)
+                                            ->selectablePlaceholder(false)
+                                            ->live(),
+                                        Forms\Components\TextInput::make('discount_rate')
+                                            ->label('Discount Rate')
+                                            ->live()
+                                            ->rate(static fn (Forms\Get $get) => $get('discount_computation')),
+                                    ])->visible(fn (Forms\Get $get) => $get('discount_method') === 'invoice'),
                             ])->grow(true),
                         ])->from('md'),
                         TableRepeater::make('lineItems')
@@ -238,15 +261,25 @@ class InvoiceResource extends Resource
                                     $invoice->updateApprovalTransaction();
                                 }
                             })
-                            ->headers([
-                                Header::make('Items')->width('15%'),
-                                Header::make('Description')->width('25%'),
-                                Header::make('Quantity')->width('10%'),
-                                Header::make('Price')->width('10%'),
-                                Header::make('Taxes')->width('15%'),
-                                Header::make('Discounts')->width('15%'),
-                                Header::make('Amount')->width('10%')->align('right'),
-                            ])
+                            ->headers(function (Forms\Get $get) {
+                                $hasDiscounts = $get('discount_method') === 'line_items';
+
+                                $headers = [
+                                    Header::make('Items')->width($hasDiscounts ? '15%' : '20%'),
+                                    Header::make('Description')->width($hasDiscounts ? '25%' : '30%'),  // Increase when no discounts
+                                    Header::make('Quantity')->width('10%'),
+                                    Header::make('Price')->width('10%'),
+                                    Header::make('Taxes')->width($hasDiscounts ? '15%' : '20%'),       // Increase when no discounts
+                                ];
+
+                                if ($hasDiscounts) {
+                                    $headers[] = Header::make('Discounts')->width('15%');
+                                }
+
+                                $headers[] = Header::make('Amount')->width('10%')->align('right');
+
+                                return $headers;
+                            })
                             ->schema([
                                 Forms\Components\Select::make('offering_id')
                                     ->relationship('sellableOffering', 'name')
@@ -262,7 +295,11 @@ class InvoiceResource extends Resource
                                             $set('description', $offeringRecord->description);
                                             $set('unit_price', $offeringRecord->price);
                                             $set('salesTaxes', $offeringRecord->salesTaxes->pluck('id')->toArray());
-                                            $set('salesDiscounts', $offeringRecord->salesDiscounts->pluck('id')->toArray());
+
+                                            $discountMethod = $get('../../discount_method');
+                                            if ($discountMethod === 'line_items') {
+                                                $set('salesDiscounts', $offeringRecord->salesDiscounts->pluck('id')->toArray());
+                                            }
                                         }
                                     }),
                                 Forms\Components\TextInput::make('description'),
@@ -287,6 +324,11 @@ class InvoiceResource extends Resource
                                     ->preload()
                                     ->multiple()
                                     ->live()
+                                    ->hidden(function (Forms\Get $get) {
+                                        $discountMethod = $get('../../discount_method');
+
+                                        return $discountMethod === 'invoice';
+                                    })
                                     ->searchable(),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()

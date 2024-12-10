@@ -19,7 +19,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 
 class MacroServiceProvider extends ServiceProvider
 {
@@ -104,7 +103,7 @@ class MacroServiceProvider extends ServiceProvider
         });
 
         TextInput::macro('rate', function (string | Closure | null $computation = null): static {
-            $this->extraAttributes(['wire:key' => Str::random()])
+            $this
                 ->prefix(static function (TextInput $component) use ($computation) {
                     $computation = $component->evaluate($computation);
 

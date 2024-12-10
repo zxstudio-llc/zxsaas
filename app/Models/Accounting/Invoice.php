@@ -3,9 +3,11 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Casts\RateCast;
 use App\Collections\Accounting\InvoiceCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
@@ -51,6 +53,8 @@ class Invoice extends Model
         'last_sent',
         'status',
         'currency_code',
+        'discount_computation',
+        'discount_rate',
         'subtotal',
         'tax_total',
         'discount_total',
@@ -69,6 +73,8 @@ class Invoice extends Model
         'paid_at' => 'datetime',
         'last_sent' => 'datetime',
         'status' => InvoiceStatus::class,
+        'discount_computation' => AdjustmentComputation::class,
+        'discount_rate' => RateCast::class,
         'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
