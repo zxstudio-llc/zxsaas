@@ -18,7 +18,7 @@ class InvoiceTotalViewModel
     {
         $lineItems = collect($this->data['lineItems'] ?? []);
 
-        $subtotal = $lineItems->sum(function ($item) {
+        $subtotal = $lineItems->sum(static function ($item) {
             $quantity = max((float) ($item['quantity'] ?? 0), 0);
             $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
 
@@ -58,7 +58,7 @@ class InvoiceTotalViewModel
             $discountComputation = $this->data['discount_computation'] ?? AdjustmentComputation::Percentage;
             $discountRate = (float) ($this->data['discount_rate'] ?? 0);
 
-            if ($discountComputation === AdjustmentComputation::Percentage) {
+            if (AdjustmentComputation::parse($discountComputation) === AdjustmentComputation::Percentage) {
                 $discountTotal = $subtotal * ($discountRate / 100);
             } else {
                 $discountTotal = $discountRate;

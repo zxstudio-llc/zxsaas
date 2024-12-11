@@ -9,6 +9,7 @@ use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
+use App\Filament\Forms\Components\InvoiceTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
@@ -137,20 +138,14 @@ class InvoiceResource extends Resource
                                     ])
                                     ->selectablePlaceholder(false)
                                     ->default('line_items')
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        $discountMethod = $state;
+
+                                        if ($discountMethod === 'invoice') {
+                                            $set('lineItems.*.salesDiscounts', []);
+                                        }
+                                    })
                                     ->live(),
-                                Forms\Components\Grid::make(2)
-                                    ->schema([
-                                        Forms\Components\Select::make('discount_computation')
-                                            ->label('Discount Computation')
-                                            ->options(AdjustmentComputation::class)
-                                            ->default(AdjustmentComputation::Percentage)
-                                            ->selectablePlaceholder(false)
-                                            ->live(),
-                                        Forms\Components\TextInput::make('discount_rate')
-                                            ->label('Discount Rate')
-                                            ->live()
-                                            ->rate(static fn (Forms\Get $get) => $get('discount_computation')),
-                                    ])->visible(fn (Forms\Get $get) => $get('discount_method') === 'invoice'),
                             ])->grow(true),
                         ])->from('md'),
                         TableRepeater::make('lineItems')
@@ -238,16 +233,29 @@ class InvoiceResource extends Resource
                                 $invoice = $component->getRecord();
 
                                 // Recalculate totals for line items
-                                $invoice->lineItems()->each(function (DocumentLineItem $lineItem) {
+                                // Recalculate totals for line items
+                                $invoice->lineItems()->each(function (DocumentLineItem $lineItem) use ($invoice) {
                                     $lineItem->updateQuietly([
                                         'tax_total' => $lineItem->calculateTaxTotal()->getAmount(),
-                                        'discount_total' => $lineItem->calculateDiscountTotal()->getAmount(),
+                                        'discount_total' => $invoice->discount_method === 'line_items'
+                                            ? $lineItem->calculateDiscountTotal()->getAmount()
+                                            : 0,
                                     ]);
                                 });
 
                                 $subtotal = $invoice->lineItems()->sum('subtotal') / 100;
                                 $taxTotal = $invoice->lineItems()->sum('tax_total') / 100;
-                                $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
+                                if ($invoice->discount_method === 'line_items') {
+                                    $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
+                                } else {
+                                    // Calculate invoice-level discount
+                                    if ($invoice->discount_computation === AdjustmentComputation::Percentage) {
+                                        $discountTotal = $subtotal * ($invoice->discount_rate / 100);
+                                    } else {
+                                        $discountTotal = $invoice->discount_rate;
+                                    }
+                                }
+
                                 $grandTotal = $subtotal + $taxTotal - $discountTotal;
 
                                 $invoice->updateQuietly([
@@ -360,13 +368,7 @@ class InvoiceResource extends Resource
                                         return CurrencyConverter::formatToMoney($total);
                                     }),
                             ]),
-                        Forms\Components\Grid::make(6)
-                            ->schema([
-                                Forms\Components\ViewField::make('totals')
-                                    ->columnStart(5)
-                                    ->columnSpan(2)
-                                    ->view('filament.forms.components.invoice-totals'),
-                            ]),
+                        InvoiceTotals::make(),
                         Forms\Components\Textarea::make('terms')
                             ->columnSpanFull(),
                     ]),

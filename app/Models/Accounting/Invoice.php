@@ -53,6 +53,7 @@ class Invoice extends Model
         'last_sent',
         'status',
         'currency_code',
+        'discount_method',
         'discount_computation',
         'discount_rate',
         'subtotal',

@@ -102,18 +102,22 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextInput::macro('rate', function (string | Closure | null $computation = null): static {
+        TextInput::macro('rate', function (string | Closure | null $computation = null, bool $showAffix = true): static {
             $this
-                ->prefix(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
+                ->when(
+                    $showAffix,
+                    fn (TextInput $component) => $component
+                        ->prefix(static function (TextInput $component) use ($computation) {
+                            $computation = $component->evaluate($computation);
 
-                    return ratePrefix(computation: $computation);
-                })
-                ->suffix(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
+                            return ratePrefix(computation: $computation);
+                        })
+                        ->suffix(static function (TextInput $component) use ($computation) {
+                            $computation = $component->evaluate($computation);
 
-                    return rateSuffix(computation: $computation);
-                })
+                            return rateSuffix(computation: $computation);
+                        })
+                )
                 ->mask(static function (TextInput $component) use ($computation) {
                     $computation = $component->evaluate($computation);
 
