@@ -3,7 +3,6 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Collections\Accounting\InvoiceCollection;
-use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
@@ -13,7 +12,6 @@ use App\Filament\Forms\Components\InvoiceTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
-use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Offering;
@@ -32,7 +30,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -150,125 +147,8 @@ class InvoiceResource extends Resource
                         ])->from('md'),
                         TableRepeater::make('lineItems')
                             ->relationship()
-                            ->saveRelationshipsUsing(function (TableRepeater $component, Forms\Contracts\HasForms $livewire, ?array $state) {
-                                if (! is_array($state)) {
-                                    $state = [];
-                                }
-
-                                $relationship = $component->getRelationship();
-
-                                $existingRecords = $component->getCachedExistingRecords();
-
-                                $recordsToDelete = [];
-
-                                foreach ($existingRecords->pluck($relationship->getRelated()->getKeyName()) as $keyToCheckForDeletion) {
-                                    if (array_key_exists("record-{$keyToCheckForDeletion}", $state)) {
-                                        continue;
-                                    }
-
-                                    $recordsToDelete[] = $keyToCheckForDeletion;
-                                    $existingRecords->forget("record-{$keyToCheckForDeletion}");
-                                }
-
-                                $relationship
-                                    ->whereKey($recordsToDelete)
-                                    ->get()
-                                    ->each(static fn (Model $record) => $record->delete());
-
-                                $childComponentContainers = $component->getChildComponentContainers(
-                                    withHidden: $component->shouldSaveRelationshipsWhenHidden(),
-                                );
-
-                                $itemOrder = 1;
-                                $orderColumn = $component->getOrderColumn();
-
-                                $translatableContentDriver = $livewire->makeFilamentTranslatableContentDriver();
-
-                                foreach ($childComponentContainers as $itemKey => $item) {
-                                    $itemData = $item->getState(shouldCallHooksBefore: false);
-
-                                    if ($orderColumn) {
-                                        $itemData[$orderColumn] = $itemOrder;
-
-                                        $itemOrder++;
-                                    }
-
-                                    if ($record = ($existingRecords[$itemKey] ?? null)) {
-                                        $itemData = $component->mutateRelationshipDataBeforeSave($itemData, record: $record);
-
-                                        if ($itemData === null) {
-                                            continue;
-                                        }
-
-                                        $translatableContentDriver ?
-                                            $translatableContentDriver->updateRecord($record, $itemData) :
-                                            $record->fill($itemData)->save();
-
-                                        continue;
-                                    }
-
-                                    $relatedModel = $component->getRelatedModel();
-
-                                    $itemData = $component->mutateRelationshipDataBeforeCreate($itemData);
-
-                                    if ($itemData === null) {
-                                        continue;
-                                    }
-
-                                    if ($translatableContentDriver) {
-                                        $record = $translatableContentDriver->makeRecord($relatedModel, $itemData);
-                                    } else {
-                                        $record = new $relatedModel;
-                                        $record->fill($itemData);
-                                    }
-
-                                    $record = $relationship->save($record);
-                                    $item->model($record)->saveRelationships();
-                                    $existingRecords->push($record);
-                                }
-
-                                $component->getRecord()->setRelation($component->getRelationshipName(), $existingRecords);
-
-                                /** @var Invoice $invoice */
-                                $invoice = $component->getRecord();
-
-                                // Recalculate totals for line items
-                                // Recalculate totals for line items
-                                $invoice->lineItems()->each(function (DocumentLineItem $lineItem) use ($invoice) {
-                                    $lineItem->updateQuietly([
-                                        'tax_total' => $lineItem->calculateTaxTotal()->getAmount(),
-                                        'discount_total' => $invoice->discount_method === 'line_items'
-                                            ? $lineItem->calculateDiscountTotal()->getAmount()
-                                            : 0,
-                                    ]);
-                                });
-
-                                $subtotal = $invoice->lineItems()->sum('subtotal') / 100;
-                                $taxTotal = $invoice->lineItems()->sum('tax_total') / 100;
-                                if ($invoice->discount_method === 'line_items') {
-                                    $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
-                                } else {
-                                    // Calculate invoice-level discount
-                                    if ($invoice->discount_computation === AdjustmentComputation::Percentage) {
-                                        $discountTotal = $subtotal * ($invoice->discount_rate / 100);
-                                    } else {
-                                        $discountTotal = $invoice->discount_rate;
-                                    }
-                                }
-
-                                $grandTotal = $subtotal + $taxTotal - $discountTotal;
-
-                                $invoice->updateQuietly([
-                                    'subtotal' => $subtotal,
-                                    'tax_total' => $taxTotal,
-                                    'discount_total' => $discountTotal,
-                                    'total' => $grandTotal,
-                                ]);
-
-                                if ($invoice->approved_at && $invoice->approvalTransaction) {
-                                    $invoice->updateApprovalTransaction();
-                                }
-                            })
+                            ->saveRelationshipsUsing(null)
+                            ->dehydrated(true)
                             ->headers(function (Forms\Get $get) {
                                 $hasDiscounts = $get('discount_method') === 'line_items';
 
@@ -323,12 +203,16 @@ class InvoiceResource extends Resource
                                     ->default(0),
                                 Forms\Components\Select::make('salesTaxes')
                                     ->relationship('salesTaxes', 'name')
+                                    ->saveRelationshipsUsing(null)
+                                    ->dehydrated(true)
                                     ->preload()
                                     ->multiple()
                                     ->live()
                                     ->searchable(),
                                 Forms\Components\Select::make('salesDiscounts')
                                     ->relationship('salesDiscounts', 'name')
+                                    ->saveRelationshipsUsing(null)
+                                    ->dehydrated(true)
                                     ->preload()
                                     ->multiple()
                                     ->live()
@@ -386,6 +270,11 @@ class InvoiceResource extends Resource
         return $table
             ->defaultSort('due_date')
             ->columns([
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->searchable(),
