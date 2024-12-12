@@ -45,7 +45,9 @@ class InvoiceOverview extends EnhancedStatsOverviewWidget
 
         $totalValidInvoiceCount = $validInvoices->count();
 
-        $averageInvoiceTotal = $totalValidInvoiceCount > 0 ? $totalValidInvoiceAmount / $totalValidInvoiceCount : 0;
+        $averageInvoiceTotal = $totalValidInvoiceCount > 0
+            ? (int) round($totalValidInvoiceAmount / $totalValidInvoiceCount)
+            : 0;
 
         $averagePaymentTime = $this->getPageTableQuery()
             ->whereNotNull('paid_at')

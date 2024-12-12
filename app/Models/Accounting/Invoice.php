@@ -14,6 +14,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Common\Client;
 use App\Observers\InvoiceObserver;
+use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
@@ -267,7 +268,11 @@ class Invoice extends Model
             'description' => $baseDescription,
         ]);
 
-        foreach ($this->lineItems as $lineItem) {
+        $totalLineItemSubtotal = (int) $this->lineItems()->sum('subtotal');
+        $invoiceDiscountTotalCents = (int) $this->getRawOriginal('discount_total');
+        $remainingDiscountCents = $invoiceDiscountTotalCents;
+
+        foreach ($this->lineItems as $index => $lineItem) {
             $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
 
             $transaction->journalEntries()->create([
@@ -286,6 +291,29 @@ class Invoice extends Model
                     'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
                     'description' => $lineItemDescription,
                 ]);
+            }
+
+            if ($this->discount_method === 'invoice' && $totalLineItemSubtotal > 0) {
+                $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
+
+                if ($index === $this->lineItems->count() - 1) {
+                    $lineItemDiscount = $remainingDiscountCents;
+                } else {
+                    $lineItemDiscount = (int) round(
+                        ($lineItemSubtotalCents / $totalLineItemSubtotal) * $invoiceDiscountTotalCents
+                    );
+                    $remainingDiscountCents -= $lineItemDiscount;
+                }
+
+                if ($lineItemDiscount > 0) {
+                    $transaction->journalEntries()->create([
+                        'company_id' => $this->company_id,
+                        'type' => JournalEntryType::Debit,
+                        'account_id' => Account::getSalesDiscountAccount()->id,
+                        'amount' => CurrencyConverter::convertCentsToFormatSimple($lineItemDiscount),
+                        'description' => "{$lineItemDescription} (Proportional Discount)",
+                    ]);
+                }
             }
         }
     }
