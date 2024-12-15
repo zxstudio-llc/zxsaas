@@ -3,6 +3,7 @@
 namespace App\View\Models;
 
 use App\Enums\Accounting\AdjustmentComputation;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Invoice;
 use App\Utilities\Currency\CurrencyConverter;
@@ -39,9 +40,9 @@ class InvoiceTotalViewModel
         }, 0);
 
         // Calculate discount based on method
-        $discountMethod = $this->data['discount_method'] ?? 'line_items';
+        $discountMethod = DocumentDiscountMethod::parse($this->data['discount_method']) ?? DocumentDiscountMethod::PerLineItem;
 
-        if ($discountMethod === 'line_items') {
+        if ($discountMethod->isPerLineItem()) {
             $discountTotal = $lineItems->reduce(function ($carry, $item) {
                 $quantity = max((float) ($item['quantity'] ?? 0), 0);
                 $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
@@ -55,10 +56,10 @@ class InvoiceTotalViewModel
                 return $carry + $discountAmount;
             }, 0);
         } else {
-            $discountComputation = $this->data['discount_computation'] ?? AdjustmentComputation::Percentage;
+            $discountComputation = AdjustmentComputation::parse($this->data['discount_computation']) ?? AdjustmentComputation::Percentage;
             $discountRate = (float) ($this->data['discount_rate'] ?? 0);
 
-            if (AdjustmentComputation::parse($discountComputation) === AdjustmentComputation::Percentage) {
+            if ($discountComputation->isPercentage()) {
                 $discountTotal = $subtotal * ($discountRate / 100);
             } else {
                 $discountTotal = $discountRate;

@@ -3,9 +3,12 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Casts\RateCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\BillStatus;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
@@ -42,6 +45,9 @@ class Bill extends Model
         'paid_at',
         'status',
         'currency_code',
+        'discount_method',
+        'discount_computation',
+        'discount_rate',
         'subtotal',
         'tax_total',
         'discount_total',
@@ -57,6 +63,9 @@ class Bill extends Model
         'due_date' => 'date',
         'paid_at' => 'datetime',
         'status' => BillStatus::class,
+        'discount_method' => DocumentDiscountMethod::class,
+        'discount_computation' => AdjustmentComputation::class,
+        'discount_rate' => RateCast::class,
         'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,

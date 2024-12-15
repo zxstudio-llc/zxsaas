@@ -8,6 +8,7 @@ use App\Collections\Accounting\InvoiceCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
@@ -75,6 +76,7 @@ class Invoice extends Model
         'paid_at' => 'datetime',
         'last_sent' => 'datetime',
         'status' => InvoiceStatus::class,
+        'discount_method' => DocumentDiscountMethod::class,
         'discount_computation' => AdjustmentComputation::class,
         'discount_rate' => RateCast::class,
         'subtotal' => MoneyCast::class,
@@ -293,7 +295,7 @@ class Invoice extends Model
                 ]);
             }
 
-            if ($this->discount_method === 'invoice' && $totalLineItemSubtotal > 0) {
+            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotal > 0) {
                 $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
 
                 if ($index === $this->lineItems->count() - 1) {

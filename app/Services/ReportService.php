@@ -177,6 +177,8 @@ class ReportService
 
             $accountTransactions = [];
             $currentBalance = $account->starting_balance;
+            $periodDebitTotal = 0;
+            $periodCreditTotal = 0;
 
             $accountTransactions[] = new AccountTransactionDTO(
                 id: null,
@@ -192,6 +194,13 @@ class ReportService
             foreach ($account->journalEntries as $journalEntry) {
                 $transaction = $journalEntry->transaction;
                 $signedAmount = $journalEntry->signed_amount;
+                $amount = $journalEntry->getRawOriginal('amount');
+
+                if ($journalEntry->type->isDebit()) {
+                    $periodDebitTotal += $amount;
+                } else {
+                    $periodCreditTotal += $amount;
+                }
 
                 if ($account->category->isNormalDebitBalance()) {
                     $currentBalance += $signedAmount;
@@ -219,8 +228,8 @@ class ReportService
                 id: null,
                 date: 'Totals and Ending Balance',
                 description: '',
-                debit: money($account->total_debit, $defaultCurrency)->format(),
-                credit: money($account->total_credit, $defaultCurrency)->format(),
+                debit: money($periodDebitTotal, $defaultCurrency)->format(),
+                credit: money($periodCreditTotal, $defaultCurrency)->format(),
                 balance: money($currentBalance, $defaultCurrency)->format(),
                 type: null,
                 tableAction: null

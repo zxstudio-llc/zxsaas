@@ -53,7 +53,7 @@ class AdjustmentResource extends Resource
                         ToggleButton::make('recoverable')
                             ->label('Recoverable')
                             ->default(false)
-                            ->visible(fn (Forms\Get $get) => AdjustmentCategory::parse($get('category')) === AdjustmentCategory::Tax && AdjustmentType::parse($get('type')) === AdjustmentType::Purchase),
+                            ->visible(fn (Forms\Get $get) => AdjustmentCategory::parse($get('category'))->isTax() && AdjustmentType::parse($get('type'))->isPurchase()),
                     ])
                     ->columns()
                     ->visibleOn('create'),
@@ -80,7 +80,7 @@ class AdjustmentResource extends Resource
                         Forms\Components\DateTimePicker::make('end_date'),
                     ])
                     ->columns()
-                    ->visible(fn (Forms\Get $get) => AdjustmentCategory::parse($get('category')) === AdjustmentCategory::Discount),
+                    ->visible(fn (Forms\Get $get) => AdjustmentCategory::parse($get('category'))->isDiscount()),
             ]);
     }
 

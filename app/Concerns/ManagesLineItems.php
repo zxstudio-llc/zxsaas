@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Enums\Accounting\AdjustmentComputation;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Invoice;
 use App\Utilities\Currency\CurrencyConverter;
@@ -49,10 +50,10 @@ trait ManagesLineItems
         }
     }
 
-    protected function handleLineItemAdjustments(DocumentLineItem $lineItem, array $itemData, string $discountMethod): void
+    protected function handleLineItemAdjustments(DocumentLineItem $lineItem, array $itemData, DocumentDiscountMethod $discountMethod): void
     {
         $adjustmentIds = collect($itemData['salesTaxes'] ?? [])
-            ->merge($discountMethod === 'line_items' ? ($itemData['salesDiscounts'] ?? []) : [])
+            ->merge($discountMethod->isPerLineItem() ? ($itemData['salesDiscounts'] ?? []) : [])
             ->filter()
             ->unique();
 
@@ -60,11 +61,11 @@ trait ManagesLineItems
         $lineItem->refresh();
     }
 
-    protected function updateLineItemTotals(DocumentLineItem $lineItem, string $discountMethod): void
+    protected function updateLineItemTotals(DocumentLineItem $lineItem, DocumentDiscountMethod $discountMethod): void
     {
         $lineItem->updateQuietly([
             'tax_total' => $lineItem->calculateTaxTotal()->getAmount(),
-            'discount_total' => $discountMethod === 'line_items'
+            'discount_total' => $discountMethod->isPerLineItem()
                 ? $lineItem->calculateDiscountTotal()->getAmount()
                 : 0,
         ]);
@@ -75,7 +76,7 @@ trait ManagesLineItems
         $subtotalCents = $record->lineItems()->sum('subtotal');
         $taxTotalCents = $record->lineItems()->sum('tax_total');
         $discountTotalCents = $this->calculateDiscountTotal(
-            $data['discount_method'],
+            DocumentDiscountMethod::parse($data['discount_method']),
             AdjustmentComputation::parse($data['discount_computation']),
             $data['discount_rate'] ?? null,
             $subtotalCents,
@@ -93,17 +94,17 @@ trait ManagesLineItems
     }
 
     protected function calculateDiscountTotal(
-        string $discountMethod,
+        DocumentDiscountMethod $discountMethod,
         ?AdjustmentComputation $discountComputation,
         ?string $discountRate,
         int $subtotalCents,
         Invoice $record
     ): int {
-        if ($discountMethod === 'line_items') {
+        if ($discountMethod->isPerLineItem()) {
             return $record->lineItems()->sum('discount_total');
         }
 
-        if ($discountComputation === AdjustmentComputation::Percentage) {
+        if ($discountComputation?->isPercentage()) {
             return (int) ($subtotalCents * ((float) $discountRate / 100));
         }
 

@@ -22,6 +22,9 @@ return new class extends Migration
             $table->timestamp('paid_at')->nullable();
             $table->string('status')->default('unpaid');
             $table->string('currency_code')->nullable();
+            $table->string('discount_method')->default('per_line_item');
+            $table->string('discount_computation')->default('percentage');
+            $table->integer('discount_rate')->default(0);
             $table->integer('subtotal')->default(0);
             $table->integer('tax_total')->default(0);
             $table->integer('discount_total')->default(0);

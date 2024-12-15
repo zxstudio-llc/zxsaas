@@ -1,11 +1,14 @@
-@use('App\Utilities\Currency\CurrencyAccessor')
-
 @php
-    $data = $this->form->getRawState();
-    $viewModel = new \App\View\Models\InvoiceTotalViewModel($this->record, $data);
-    extract($viewModel->buildViewData(), \EXTR_SKIP);
+    use App\Enums\Accounting\DocumentDiscountMethod;
+    use App\Utilities\Currency\CurrencyAccessor;
+    use App\View\Models\InvoiceTotalViewModel;
 
-    $isInvoiceLevelDiscount = $data['discount_method'] === 'invoice';
+    $data = $this->form->getRawState();
+    $viewModel = new InvoiceTotalViewModel($this->record, $data);
+    extract($viewModel->buildViewData(), EXTR_SKIP);
+
+    $discountMethod = DocumentDiscountMethod::parse($data['discount_method']);
+    $isPerDocumentDiscount = $discountMethod->isPerDocument();
 @endphp
 
 <div class="totals-summary w-full pr-14">
@@ -29,7 +32,7 @@
                 <td class="text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Taxes:</td>
                 <td class="text-sm pl-4 py-2 leading-6">{{ $taxTotal }}</td>
             </tr>
-            @if($isInvoiceLevelDiscount)
+            @if($isPerDocumentDiscount)
                 <tr>
                     <td colspan="4" class="text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white text-right">Discount:</td>
                     <td class="text-sm px-4 py-2">

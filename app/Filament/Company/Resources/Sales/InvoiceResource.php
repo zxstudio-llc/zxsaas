@@ -3,6 +3,7 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Collections\Accounting\InvoiceCollection;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
@@ -129,16 +130,13 @@ class InvoiceResource extends Resource
                                     }),
                                 Forms\Components\Select::make('discount_method')
                                     ->label('Discount Method')
-                                    ->options([
-                                        'line_items' => 'Per Line Item Discounts',
-                                        'invoice' => 'Invoice Level Discount',
-                                    ])
+                                    ->options(DocumentDiscountMethod::class)
                                     ->selectablePlaceholder(false)
-                                    ->default('line_items')
+                                    ->default(DocumentDiscountMethod::PerLineItem)
                                     ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                        $discountMethod = $state;
+                                        $discountMethod = DocumentDiscountMethod::parse($state);
 
-                                        if ($discountMethod === 'invoice') {
+                                        if ($discountMethod->isPerDocument()) {
                                             $set('lineItems.*.salesDiscounts', []);
                                         }
                                     })
@@ -150,7 +148,7 @@ class InvoiceResource extends Resource
                             ->saveRelationshipsUsing(null)
                             ->dehydrated(true)
                             ->headers(function (Forms\Get $get) {
-                                $hasDiscounts = $get('discount_method') === 'line_items';
+                                $hasDiscounts = DocumentDiscountMethod::parse($get('discount_method'))->isPerLineItem();
 
                                 $headers = [
                                     Header::make('Items')->width($hasDiscounts ? '15%' : '20%'),
@@ -184,8 +182,8 @@ class InvoiceResource extends Resource
                                             $set('unit_price', $offeringRecord->price);
                                             $set('salesTaxes', $offeringRecord->salesTaxes->pluck('id')->toArray());
 
-                                            $discountMethod = $get('../../discount_method');
-                                            if ($discountMethod === 'line_items') {
+                                            $discountMethod = DocumentDiscountMethod::parse($get('../../discount_method'));
+                                            if ($discountMethod->isPerLineItem()) {
                                                 $set('salesDiscounts', $offeringRecord->salesDiscounts->pluck('id')->toArray());
                                             }
                                         }
@@ -217,9 +215,9 @@ class InvoiceResource extends Resource
                                     ->multiple()
                                     ->live()
                                     ->hidden(function (Forms\Get $get) {
-                                        $discountMethod = $get('../../discount_method');
+                                        $discountMethod = DocumentDiscountMethod::parse($get('../../discount_method'));
 
-                                        return $discountMethod === 'invoice';
+                                        return $discountMethod->isPerDocument();
                                     })
                                     ->searchable(),
                                 Forms\Components\Placeholder::make('total')

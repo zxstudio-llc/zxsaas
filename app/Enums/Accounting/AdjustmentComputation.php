@@ -16,4 +16,14 @@ enum AdjustmentComputation: string implements HasLabel
     {
         return translate($this->name);
     }
+
+    public function isPercentage(): bool
+    {
+        return $this == self::Percentage;
+    }
+
+    public function isFixed(): bool
+    {
+        return $this == self::Fixed;
+    }
 }

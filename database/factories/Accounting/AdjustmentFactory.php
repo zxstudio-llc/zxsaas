@@ -30,9 +30,11 @@ class AdjustmentFactory extends Factory
     {
         $startDate = $this->faker->dateTimeBetween('now', '+1 year');
         $endDate = $this->faker->dateTimeBetween($startDate, Carbon::parse($startDate)->addYear());
+
+        /** @var AdjustmentComputation $computation */
         $computation = $this->faker->randomElement(AdjustmentComputation::class);
 
-        $rate = $computation === AdjustmentComputation::Fixed
+        $rate = $computation->isFixed()
             ? $this->faker->numberBetween(5, 100) * 100 // $5 - $100 for fixed amounts
             : $this->faker->numberBetween(3, 25) * 10000; // 3% - 25% for percentages
 
