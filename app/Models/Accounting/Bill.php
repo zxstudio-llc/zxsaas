@@ -14,6 +14,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
 use App\Models\Common\Vendor;
 use App\Observers\BillObserver;
+use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -224,7 +225,11 @@ class Bill extends Model
             'description' => $baseDescription,
         ]);
 
-        foreach ($this->lineItems as $lineItem) {
+        $totalLineItemSubtotal = (int) $this->lineItems()->sum('subtotal');
+        $billDiscountTotalCents = (int) $this->getRawOriginal('discount_total');
+        $remainingDiscountCents = $billDiscountTotalCents;
+
+        foreach ($this->lineItems as $index => $lineItem) {
             $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
 
             $transaction->journalEntries()->create([
@@ -251,6 +256,29 @@ class Bill extends Model
                         'account_id' => $adjustment->account_id,
                         'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
                         'description' => $lineItemDescription,
+                    ]);
+                }
+            }
+
+            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotal > 0) {
+                $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
+
+                if ($index === $this->lineItems->count() - 1) {
+                    $lineItemDiscount = $remainingDiscountCents;
+                } else {
+                    $lineItemDiscount = (int) round(
+                        ($lineItemSubtotalCents / $totalLineItemSubtotal) * $billDiscountTotalCents
+                    );
+                    $remainingDiscountCents -= $lineItemDiscount;
+                }
+
+                if ($lineItemDiscount > 0) {
+                    $transaction->journalEntries()->create([
+                        'company_id' => $this->company_id,
+                        'type' => JournalEntryType::Credit,
+                        'account_id' => Account::getPurchaseDiscountAccount()->id,
+                        'amount' => CurrencyConverter::convertCentsToFormatSimple($lineItemDiscount),
+                        'description' => "{$lineItemDescription} (Proportional Discount)",
                     ]);
                 }
             }

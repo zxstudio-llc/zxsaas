@@ -39,7 +39,7 @@ class EditInvoice extends EditRecord
 
         $this->handleLineItems($record, $lineItems);
 
-        $totals = $this->updateInvoiceTotals($record, $data);
+        $totals = $this->updateDocumentTotals($record, $data);
 
         $data = array_merge($data, $totals);
 

@@ -29,7 +29,7 @@ class CreateInvoice extends CreateRecord
 
         $this->handleLineItems($record, collect($data['lineItems'] ?? []));
 
-        $totals = $this->updateInvoiceTotals($record, $data);
+        $totals = $this->updateDocumentTotals($record, $data);
 
         $record->updateQuietly($totals);
 

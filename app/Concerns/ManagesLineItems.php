@@ -4,14 +4,15 @@ namespace App\Concerns;
 
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Models\Accounting\Bill;
 use App\Models\Accounting\DocumentLineItem;
-use App\Models\Accounting\Invoice;
 use App\Utilities\Currency\CurrencyConverter;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 trait ManagesLineItems
 {
-    protected function handleLineItems(Invoice $record, Collection $lineItems): void
+    protected function handleLineItems(Model $record, Collection $lineItems): void
     {
         foreach ($lineItems as $itemData) {
             $lineItem = isset($itemData['id'])
@@ -36,7 +37,7 @@ trait ManagesLineItems
         }
     }
 
-    protected function deleteRemovedLineItems(Invoice $record, Collection $lineItems): void
+    protected function deleteRemovedLineItems(Model $record, Collection $lineItems): void
     {
         $existingLineItemIds = $record->lineItems->pluck('id');
         $updatedLineItemIds = $lineItems->pluck('id')->filter();
@@ -52,8 +53,13 @@ trait ManagesLineItems
 
     protected function handleLineItemAdjustments(DocumentLineItem $lineItem, array $itemData, DocumentDiscountMethod $discountMethod): void
     {
-        $adjustmentIds = collect($itemData['salesTaxes'] ?? [])
-            ->merge($discountMethod->isPerLineItem() ? ($itemData['salesDiscounts'] ?? []) : [])
+        $isBill = $lineItem->documentable instanceof Bill;
+
+        $taxType = $isBill ? 'purchaseTaxes' : 'salesTaxes';
+        $discountType = $isBill ? 'purchaseDiscounts' : 'salesDiscounts';
+
+        $adjustmentIds = collect($itemData[$taxType] ?? [])
+            ->merge($discountMethod->isPerLineItem() ? ($itemData[$discountType] ?? []) : [])
             ->filter()
             ->unique();
 
@@ -71,7 +77,7 @@ trait ManagesLineItems
         ]);
     }
 
-    protected function updateInvoiceTotals(Invoice $record, array $data): array
+    protected function updateDocumentTotals(Model $record, array $data): array
     {
         $subtotalCents = $record->lineItems()->sum('subtotal');
         $taxTotalCents = $record->lineItems()->sum('tax_total');
@@ -98,7 +104,7 @@ trait ManagesLineItems
         ?AdjustmentComputation $discountComputation,
         ?string $discountRate,
         int $subtotalCents,
-        Invoice $record
+        Model $record
     ): int {
         if ($discountMethod->isPerLineItem()) {
             return $record->lineItems()->sum('discount_total');
