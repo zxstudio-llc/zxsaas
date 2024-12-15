@@ -3,14 +3,18 @@
 namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
+use App\Casts\RateCast;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\BillStatus;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
 use App\Models\Common\Vendor;
 use App\Observers\BillObserver;
+use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -42,6 +46,9 @@ class Bill extends Model
         'paid_at',
         'status',
         'currency_code',
+        'discount_method',
+        'discount_computation',
+        'discount_rate',
         'subtotal',
         'tax_total',
         'discount_total',
@@ -57,6 +64,9 @@ class Bill extends Model
         'due_date' => 'date',
         'paid_at' => 'datetime',
         'status' => BillStatus::class,
+        'discount_method' => DocumentDiscountMethod::class,
+        'discount_computation' => AdjustmentComputation::class,
+        'discount_rate' => RateCast::class,
         'subtotal' => MoneyCast::class,
         'tax_total' => MoneyCast::class,
         'discount_total' => MoneyCast::class,
@@ -215,7 +225,11 @@ class Bill extends Model
             'description' => $baseDescription,
         ]);
 
-        foreach ($this->lineItems as $lineItem) {
+        $totalLineItemSubtotal = (int) $this->lineItems()->sum('subtotal');
+        $billDiscountTotalCents = (int) $this->getRawOriginal('discount_total');
+        $remainingDiscountCents = $billDiscountTotalCents;
+
+        foreach ($this->lineItems as $index => $lineItem) {
             $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
 
             $transaction->journalEntries()->create([
@@ -242,6 +256,29 @@ class Bill extends Model
                         'account_id' => $adjustment->account_id,
                         'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
                         'description' => $lineItemDescription,
+                    ]);
+                }
+            }
+
+            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotal > 0) {
+                $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
+
+                if ($index === $this->lineItems->count() - 1) {
+                    $lineItemDiscount = $remainingDiscountCents;
+                } else {
+                    $lineItemDiscount = (int) round(
+                        ($lineItemSubtotalCents / $totalLineItemSubtotal) * $billDiscountTotalCents
+                    );
+                    $remainingDiscountCents -= $lineItemDiscount;
+                }
+
+                if ($lineItemDiscount > 0) {
+                    $transaction->journalEntries()->create([
+                        'company_id' => $this->company_id,
+                        'type' => JournalEntryType::Credit,
+                        'account_id' => Account::getPurchaseDiscountAccount()->id,
+                        'amount' => CurrencyConverter::convertCentsToFormatSimple($lineItemDiscount),
+                        'description' => "{$lineItemDescription} (Proportional Discount)",
                     ]);
                 }
             }

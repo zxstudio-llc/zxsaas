@@ -133,6 +133,16 @@ class Account extends Model
         return self::where('name', 'Accounts Payable')->firstOrFail();
     }
 
+    public static function getSalesDiscountAccount(): self
+    {
+        return self::where('name', 'Sales Discount')->firstOrFail();
+    }
+
+    public static function getPurchaseDiscountAccount(): self
+    {
+        return self::where('name', 'Purchase Discount')->firstOrFail();
+    }
+
     protected static function newFactory(): Factory
     {
         return AccountFactory::new();

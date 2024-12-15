@@ -13,7 +13,7 @@
     }
 </style>
 
-<x-company.invoice.container class="classic-template-container">
+<x-company.invoice.container class="classic-template-container" preview>
     <!-- Header Section -->
     <x-company.invoice.header class="default-template-header">
         <div class="w-2/3 text-left ml-6">

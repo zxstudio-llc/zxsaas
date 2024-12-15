@@ -13,7 +13,7 @@
     }
 </style>
 
-<x-company.invoice.container class="modern-template-container">
+<x-company.invoice.container class="modern-template-container" preview>
 
     <!-- Colored Header with Logo -->
     <x-company.invoice.header class="bg-gray-800 h-20">

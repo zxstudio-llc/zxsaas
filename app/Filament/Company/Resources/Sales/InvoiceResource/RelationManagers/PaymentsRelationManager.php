@@ -28,6 +28,8 @@ class PaymentsRelationManager extends RelationManager
 
     protected static ?string $modelLabel = 'Payment';
 
+    protected static bool $isLazy = false;
+
     protected $listeners = [
         'refresh' => '$refresh',
     ];

@@ -19,7 +19,6 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 
 class MacroServiceProvider extends ServiceProvider
 {
@@ -103,18 +102,22 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextInput::macro('rate', function (string | Closure | null $computation = null): static {
-            $this->extraAttributes(['wire:key' => Str::random()])
-                ->prefix(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
+        TextInput::macro('rate', function (string | Closure | null $computation = null, bool $showAffix = true): static {
+            $this
+                ->when(
+                    $showAffix,
+                    fn (TextInput $component) => $component
+                        ->prefix(static function (TextInput $component) use ($computation) {
+                            $computation = $component->evaluate($computation);
 
-                    return ratePrefix(computation: $computation);
-                })
-                ->suffix(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
+                            return ratePrefix(computation: $computation);
+                        })
+                        ->suffix(static function (TextInput $component) use ($computation) {
+                            $computation = $component->evaluate($computation);
 
-                    return rateSuffix(computation: $computation);
-                })
+                            return rateSuffix(computation: $computation);
+                        })
+                )
                 ->mask(static function (TextInput $component) use ($computation) {
                     $computation = $component->evaluate($computation);
 
