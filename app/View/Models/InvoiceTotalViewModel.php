@@ -6,7 +6,9 @@ use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Invoice;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
+use App\Utilities\RateCalculator;
 
 class InvoiceTotalViewModel
 {
@@ -17,62 +19,98 @@ class InvoiceTotalViewModel
 
     public function buildViewData(): array
     {
+        $currencyCode = $this->data['currency_code'] ?? CurrencyAccessor::getDefaultCurrency();
+        $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
+
         $lineItems = collect($this->data['lineItems'] ?? []);
 
-        $subtotal = $lineItems->sum(static function ($item) {
+        $subtotalInCents = $lineItems->sum(static function ($item) use ($currencyCode) {
             $quantity = max((float) ($item['quantity'] ?? 0), 0);
             $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
 
-            return $quantity * $unitPrice;
+            $subtotal = $quantity * $unitPrice;
+
+            return CurrencyConverter::convertToCents($subtotal, $currencyCode);
         });
 
-        $taxTotal = $lineItems->reduce(function ($carry, $item) {
+        $taxTotalInCents = $lineItems->reduce(function ($carry, $item) use ($currencyCode) {
             $quantity = max((float) ($item['quantity'] ?? 0), 0);
             $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
             $salesTaxes = $item['salesTaxes'] ?? [];
             $lineTotal = $quantity * $unitPrice;
 
-            $taxAmount = Adjustment::whereIn('id', $salesTaxes)
-                ->pluck('rate')
-                ->sum(fn ($rate) => $lineTotal * ($rate / 100));
+            $lineTotalInCents = CurrencyConverter::convertToCents($lineTotal, $currencyCode);
 
-            return $carry + $taxAmount;
+            $taxAmountInCents = Adjustment::whereIn('id', $salesTaxes)
+                ->get()
+                ->sum(function (Adjustment $adjustment) use ($lineTotalInCents) {
+                    if ($adjustment->computation->isPercentage()) {
+                        return RateCalculator::calculatePercentage($lineTotalInCents, $adjustment->getRawOriginal('rate'));
+                    } else {
+                        return $adjustment->getRawOriginal('rate');
+                    }
+                });
+
+            return $carry + $taxAmountInCents;
         }, 0);
 
         // Calculate discount based on method
         $discountMethod = DocumentDiscountMethod::parse($this->data['discount_method']) ?? DocumentDiscountMethod::PerLineItem;
 
         if ($discountMethod->isPerLineItem()) {
-            $discountTotal = $lineItems->reduce(function ($carry, $item) {
+            $discountTotalInCents = $lineItems->reduce(function ($carry, $item) use ($currencyCode) {
                 $quantity = max((float) ($item['quantity'] ?? 0), 0);
                 $unitPrice = max((float) ($item['unit_price'] ?? 0), 0);
                 $salesDiscounts = $item['salesDiscounts'] ?? [];
-                $lineTotal = $quantity * $unitPrice;
+                $lineTotalInCents = CurrencyConverter::convertToCents($quantity * $unitPrice, $currencyCode);
 
-                $discountAmount = Adjustment::whereIn('id', $salesDiscounts)
-                    ->pluck('rate')
-                    ->sum(fn ($rate) => $lineTotal * ($rate / 100));
+                $discountAmountInCents = Adjustment::whereIn('id', $salesDiscounts)
+                    ->get()
+                    ->sum(function (Adjustment $adjustment) use ($lineTotalInCents) {
+                        if ($adjustment->computation->isPercentage()) {
+                            return RateCalculator::calculatePercentage($lineTotalInCents, $adjustment->getRawOriginal('rate'));
+                        } else {
+                            return $adjustment->getRawOriginal('rate');
+                        }
+                    });
 
-                return $carry + $discountAmount;
+                return $carry + $discountAmountInCents;
             }, 0);
         } else {
             $discountComputation = AdjustmentComputation::parse($this->data['discount_computation']) ?? AdjustmentComputation::Percentage;
-            $discountRate = (float) ($this->data['discount_rate'] ?? 0);
+            $discountRate = $this->data['discount_rate'] ?? '0';
 
             if ($discountComputation->isPercentage()) {
-                $discountTotal = $subtotal * ($discountRate / 100);
+                $scaledDiscountRate = RateCalculator::parseLocalizedRate($discountRate);
+                $discountTotalInCents = RateCalculator::calculatePercentage($subtotalInCents, $scaledDiscountRate);
             } else {
-                $discountTotal = $discountRate;
+                $discountTotalInCents = CurrencyConverter::convertToCents($discountRate, $currencyCode);
             }
         }
 
-        $grandTotal = $subtotal + ($taxTotal - $discountTotal);
+        $grandTotalInCents = $subtotalInCents + ($taxTotalInCents - $discountTotalInCents);
+
+        $conversionMessage = null;
+
+        if ($currencyCode !== $defaultCurrencyCode) {
+            $rate = currency($currencyCode)->getRate();
+
+            $convertedTotalInCents = CurrencyConverter::convertBalance($grandTotalInCents, $currencyCode, $defaultCurrencyCode);
+
+            $conversionMessage = sprintf(
+                'Currency conversion: %s (%s) at an exchange rate of %s',
+                CurrencyConverter::formatCentsToMoney($convertedTotalInCents, $defaultCurrencyCode),
+                $defaultCurrencyCode,
+                $rate
+            );
+        }
 
         return [
-            'subtotal' => CurrencyConverter::formatToMoney($subtotal),
-            'taxTotal' => CurrencyConverter::formatToMoney($taxTotal),
-            'discountTotal' => CurrencyConverter::formatToMoney($discountTotal),
-            'grandTotal' => CurrencyConverter::formatToMoney($grandTotal),
+            'subtotal' => CurrencyConverter::formatCentsToMoney($subtotalInCents, $currencyCode),
+            'taxTotal' => CurrencyConverter::formatCentsToMoney($taxTotalInCents, $currencyCode),
+            'discountTotal' => CurrencyConverter::formatCentsToMoney($discountTotalInCents, $currencyCode),
+            'grandTotal' => CurrencyConverter::formatCentsToMoney($grandTotalInCents, $currencyCode),
+            'conversionMessage' => $conversionMessage,
         ];
     }
 }

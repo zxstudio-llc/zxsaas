@@ -72,7 +72,7 @@ class ViewInvoice extends ViewRecord
                                     ->url(static fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                                 TextEntry::make('amount_due')
                                     ->label('Amount Due')
-                                    ->money(),
+                                    ->currency(static fn (Invoice $record) => $record->currency_code),
                                 TextEntry::make('due_date')
                                     ->label('Due')
                                     ->asRelativeDay(),

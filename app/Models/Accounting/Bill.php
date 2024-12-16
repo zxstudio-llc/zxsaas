@@ -13,6 +13,7 @@ use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
 use App\Models\Common\Vendor;
+use App\Models\Setting\Currency;
 use App\Observers\BillObserver;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
@@ -74,6 +75,11 @@ class Bill extends Model
         'amount_paid' => MoneyCast::class,
         'amount_due' => MoneyCast::class,
     ];
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency_code', 'code');
+    }
 
     public function vendor(): BelongsTo
     {

@@ -9,14 +9,18 @@ use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
+use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\InvoiceTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Invoice;
 use App\Models\Banking\BankAccount;
+use App\Models\Common\Client;
 use App\Models\Common\Offering;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
+use App\Utilities\RateCalculator;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Closure;
@@ -97,7 +101,20 @@ class InvoiceResource extends Resource
                                     ->relationship('client', 'name')
                                     ->preload()
                                     ->searchable()
-                                    ->required(),
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                        if (! $state) {
+                                            return;
+                                        }
+
+                                        $currencyCode = Client::find($state)?->currency_code;
+
+                                        if ($currencyCode) {
+                                            $set('currency_code', $currencyCode);
+                                        }
+                                    }),
+                                CreateCurrencySelect::make('currency_code'),
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('invoice_number')
@@ -227,27 +244,36 @@ class InvoiceResource extends Resource
                                         $unitPrice = max((float) ($get('unit_price') ?? 0), 0);
                                         $salesTaxes = $get('salesTaxes') ?? [];
                                         $salesDiscounts = $get('salesDiscounts') ?? [];
+                                        $currencyCode = $get('../../currency_code') ?? CurrencyAccessor::getDefaultCurrency();
 
                                         $subtotal = $quantity * $unitPrice;
 
-                                        // Calculate tax amount based on subtotal
-                                        $taxAmount = 0;
-                                        if (! empty($salesTaxes)) {
-                                            $taxRates = Adjustment::whereIn('id', $salesTaxes)->pluck('rate');
-                                            $taxAmount = collect($taxRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $subtotalInCents = CurrencyConverter::convertToCents($subtotal, $currencyCode);
 
-                                        // Calculate discount amount based on subtotal
-                                        $discountAmount = 0;
-                                        if (! empty($salesDiscounts)) {
-                                            $discountRates = Adjustment::whereIn('id', $salesDiscounts)->pluck('rate');
-                                            $discountAmount = collect($discountRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $taxAmountInCents = Adjustment::whereIn('id', $salesTaxes)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
+
+                                        $discountAmountInCents = Adjustment::whereIn('id', $salesDiscounts)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
 
                                         // Final total
-                                        $total = $subtotal + ($taxAmount - $discountAmount);
+                                        $totalInCents = $subtotalInCents + ($taxAmountInCents - $discountAmountInCents);
 
-                                        return CurrencyConverter::formatToMoney($total);
+                                        return CurrencyConverter::formatCentsToMoney($totalInCents, $currencyCode);
                                     }),
                             ]),
                         InvoiceTotals::make(),
@@ -291,15 +317,17 @@ class InvoiceResource extends Resource
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
-                    ->currency()
+                    ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable(),
             ])
             ->filters([

@@ -6,7 +6,9 @@ use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Models\Accounting\Bill;
 use App\Models\Accounting\DocumentLineItem;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
+use App\Utilities\RateCalculator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
@@ -79,6 +81,7 @@ trait ManagesLineItems
 
     protected function updateDocumentTotals(Model $record, array $data): array
     {
+        $currencyCode = $data['currency_code'] ?? CurrencyAccessor::getDefaultCurrency();
         $subtotalCents = $record->lineItems()->sum('subtotal');
         $taxTotalCents = $record->lineItems()->sum('tax_total');
         $discountTotalCents = $this->calculateDiscountTotal(
@@ -86,16 +89,17 @@ trait ManagesLineItems
             AdjustmentComputation::parse($data['discount_computation']),
             $data['discount_rate'] ?? null,
             $subtotalCents,
-            $record
+            $record,
+            $currencyCode,
         );
 
         $grandTotalCents = $subtotalCents + $taxTotalCents - $discountTotalCents;
 
         return [
-            'subtotal' => CurrencyConverter::convertCentsToFormatSimple($subtotalCents),
-            'tax_total' => CurrencyConverter::convertCentsToFormatSimple($taxTotalCents),
-            'discount_total' => CurrencyConverter::convertCentsToFormatSimple($discountTotalCents),
-            'total' => CurrencyConverter::convertCentsToFormatSimple($grandTotalCents),
+            'subtotal' => CurrencyConverter::convertCentsToFormatSimple($subtotalCents, $currencyCode),
+            'tax_total' => CurrencyConverter::convertCentsToFormatSimple($taxTotalCents, $currencyCode),
+            'discount_total' => CurrencyConverter::convertCentsToFormatSimple($discountTotalCents, $currencyCode),
+            'total' => CurrencyConverter::convertCentsToFormatSimple($grandTotalCents, $currencyCode),
         ];
     }
 
@@ -104,16 +108,19 @@ trait ManagesLineItems
         ?AdjustmentComputation $discountComputation,
         ?string $discountRate,
         int $subtotalCents,
-        Model $record
+        Model $record,
+        string $currencyCode
     ): int {
         if ($discountMethod->isPerLineItem()) {
             return $record->lineItems()->sum('discount_total');
         }
 
         if ($discountComputation?->isPercentage()) {
-            return (int) ($subtotalCents * ((float) $discountRate / 100));
+            $scaledRate = RateCalculator::parseLocalizedRate($discountRate);
+
+            return RateCalculator::calculatePercentage($subtotalCents, $scaledRate);
         }
 
-        return CurrencyConverter::convertToCents($discountRate);
+        return CurrencyConverter::convertToCents($discountRate, $currencyCode);
     }
 }

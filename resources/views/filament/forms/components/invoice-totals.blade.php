@@ -56,6 +56,13 @@
                 <td class="text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Total:</td>
                 <td class="text-sm pl-4 py-2 leading-6">{{ $grandTotal }}</td>
             </tr>
+            @if($conversionMessage)
+                <tr>
+                    <td colspan="6" class="text-sm pl-4 py-2 leading-6 text-gray-600">
+                        {{ $conversionMessage }}
+                    </td>
+                </tr>
+            @endif
         </tbody>
     </table>
 </div>

@@ -82,8 +82,7 @@ class AccountResource extends Resource
                                     ->localizeLabel()
                                     ->required(),
                                 CreateCurrencySelect::make('currency_code')
-                                    ->disabledOn('edit')
-                                    ->relationship('currency', 'name'),
+                                    ->disabledOn('edit'),
                             ]),
                         Forms\Components\Group::make()
                             ->columns()

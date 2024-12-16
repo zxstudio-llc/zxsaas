@@ -9,6 +9,7 @@ use App\Models\Accounting\AccountSubtype;
 use App\Models\Setting\Localization;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use BackedEnum;
 use Carbon\CarbonInterface;
 use Closure;
@@ -97,6 +98,93 @@ class MacroServiceProvider extends ServiceProvider
                 $convert = $column->evaluate($convert);
 
                 return money($state, $currency, $convert)->format();
+            });
+
+            return $this;
+        });
+
+        TextEntry::macro('currency', function (string | Closure | null $currency = null, ?bool $convert = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convert ??= true;
+
+            $this->formatStateUsing(static function (TextEntry $entry, $state) use ($currency, $convert): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $currency = $entry->evaluate($currency);
+                $convert = $entry->evaluate($convert);
+
+                return money($state, $currency, $convert)->format();
+            });
+
+            return $this;
+        });
+
+        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $currency = $column->evaluate($currency);
+
+                return CurrencyConverter::formatToMoney($state, $currency);
+            });
+
+            $this->description(static function (TextColumn $column, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $oldCurrency = $column->evaluate($currency);
+                $newCurrency = CurrencyAccessor::getDefaultCurrency();
+
+                if ($oldCurrency === $newCurrency) {
+                    return null;
+                }
+
+                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+
+                $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
+            });
+
+            return $this;
+        });
+
+        TextEntry::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+            $this->formatStateUsing(static function (TextEntry $entry, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $currency = $entry->evaluate($currency);
+
+                return CurrencyConverter::formatToMoney($state, $currency);
+            });
+
+            $this->helperText(static function (TextEntry $entry, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $oldCurrency = $entry->evaluate($currency);
+                $newCurrency = CurrencyAccessor::getDefaultCurrency();
+
+                if ($oldCurrency === $newCurrency) {
+                    return null;
+                }
+
+                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
             });
 
             return $this;
