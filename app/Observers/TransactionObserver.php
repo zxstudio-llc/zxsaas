@@ -107,21 +107,35 @@ class TransactionObserver
             return;
         }
 
-        $depositTotal = (int) $invoice->deposits()
+        $invoiceCurrency = $invoice->currency_code;
+
+        $depositTotalInInvoiceCurrencyCents = (int) $invoice->deposits()
             ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
-            ->sum('amount');
+            ->get()
+            ->sum(function (Transaction $transaction) use ($invoiceCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
 
-        $withdrawalTotal = (int) $invoice->withdrawals()
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $invoiceCurrency);
+            });
+
+        $withdrawalTotalInInvoiceCurrencyCents = (int) $invoice->withdrawals()
             ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
-            ->sum('amount');
+            ->get()
+            ->sum(function (Transaction $transaction) use ($invoiceCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
 
-        $totalPaid = $depositTotal - $withdrawalTotal;
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $invoiceCurrency);
+            });
 
-        $invoiceTotal = (int) $invoice->getRawOriginal('total');
+        $totalPaidInInvoiceCurrencyCents = $depositTotalInInvoiceCurrencyCents - $withdrawalTotalInInvoiceCurrencyCents;
+
+        $invoiceTotalInInvoiceCurrencyCents = (int) $invoice->getRawOriginal('total');
 
         $newStatus = match (true) {
-            $totalPaid > $invoiceTotal => InvoiceStatus::Overpaid,
-            $totalPaid === $invoiceTotal => InvoiceStatus::Paid,
+            $totalPaidInInvoiceCurrencyCents > $invoiceTotalInInvoiceCurrencyCents => InvoiceStatus::Overpaid,
+            $totalPaidInInvoiceCurrencyCents === $invoiceTotalInInvoiceCurrencyCents => InvoiceStatus::Paid,
             default => InvoiceStatus::Partial,
         };
 
@@ -134,7 +148,7 @@ class TransactionObserver
         }
 
         $invoice->update([
-            'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
+            'amount_paid' => CurrencyConverter::convertCentsToFormatSimple($totalPaidInInvoiceCurrencyCents, $invoiceCurrency),
             'status' => $newStatus,
             'paid_at' => $paidAt,
         ]);
@@ -146,15 +160,24 @@ class TransactionObserver
             return;
         }
 
-        $withdrawalTotal = (int) $bill->withdrawals()
-            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
-            ->sum('amount');
+        $billCurrency = $bill->currency_code;
 
-        $totalPaid = $withdrawalTotal;
-        $billTotal = (int) $bill->getRawOriginal('total');
+        $withdrawalTotalInBillCurrencyCents = (int) $bill->withdrawals()
+            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
+            ->get()
+            ->sum(function (Transaction $transaction) use ($billCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
+
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $billCurrency);
+            });
+
+        $totalPaidInBillCurrencyCents = $withdrawalTotalInBillCurrencyCents;
+
+        $billTotalInBillCurrencyCents = (int) $bill->getRawOriginal('total');
 
         $newStatus = match (true) {
-            $totalPaid >= $billTotal => BillStatus::Paid,
+            $totalPaidInBillCurrencyCents >= $billTotalInBillCurrencyCents => BillStatus::Paid,
             default => BillStatus::Partial,
         };
 
@@ -167,7 +190,7 @@ class TransactionObserver
         }
 
         $bill->update([
-            'amount_paid' => CurrencyConverter::convertCentsToFloat($totalPaid),
+            'amount_paid' => CurrencyConverter::convertCentsToFormatSimple($totalPaidInBillCurrencyCents, $billCurrency),
             'status' => $newStatus,
             'paid_at' => $paidAt,
         ]);

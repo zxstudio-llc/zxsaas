@@ -13,6 +13,7 @@ use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
 use App\Models\Setting\Currency;
 use App\Observers\InvoiceObserver;
@@ -226,13 +227,34 @@ class Invoice extends Model
             $transactionDescription = "Invoice #{$this->invoice_number}: Payment from {$this->client->name}";
         }
 
+        $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
+        $bankAccountCurrency = $bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+
+        $invoiceCurrency = $this->currency_code;
+        $requiresConversion = $invoiceCurrency !== $bankAccountCurrency;
+
+        if ($requiresConversion) {
+            $amountInInvoiceCurrencyCents = CurrencyConverter::convertToCents($data['amount'], $invoiceCurrency);
+            $amountInBankCurrencyCents = CurrencyConverter::convertBalance(
+                $amountInInvoiceCurrencyCents,
+                $invoiceCurrency,
+                $bankAccountCurrency
+            );
+            $formattedAmountForBankCurrency = CurrencyConverter::convertCentsToFormatSimple(
+                $amountInBankCurrencyCents,
+                $bankAccountCurrency
+            );
+        } else {
+            $formattedAmountForBankCurrency = $data['amount']; // Already in simple format
+        }
+
         // Create transaction
         $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => $transactionType,
             'is_payment' => true,
             'posted_at' => $data['posted_at'],
-            'amount' => $data['amount'],
+            'amount' => $formattedAmountForBankCurrency,
             'payment_method' => $data['payment_method'],
             'bank_account_id' => $data['bank_account_id'],
             'account_id' => Account::getAccountsReceivableAccount()->id,

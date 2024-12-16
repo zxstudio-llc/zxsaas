@@ -385,16 +385,17 @@ class InvoiceResource extends Resource
                             Forms\Components\TextInput::make('amount')
                                 ->label('Amount')
                                 ->required()
-                                ->money()
+                                ->money(fn (Invoice $record) => $record->currency_code)
                                 ->live(onBlur: true)
                                 ->helperText(function (Invoice $record, $state) {
-                                    if (! CurrencyConverter::isValidAmount($state)) {
+                                    $invoiceCurrency = $record->currency_code;
+                                    if (! CurrencyConverter::isValidAmount($state, $invoiceCurrency)) {
                                         return null;
                                     }
 
                                     $amountDue = $record->getRawOriginal('amount_due');
 
-                                    $amount = CurrencyConverter::convertToCents($state);
+                                    $amount = CurrencyConverter::convertToCents($state, $invoiceCurrency);
 
                                     if ($amount <= 0) {
                                         return 'Please enter a valid positive amount';
@@ -407,14 +408,14 @@ class InvoiceResource extends Resource
                                     }
 
                                     return match (true) {
-                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue),
+                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue, $invoiceCurrency),
                                         $newAmountDue === 0 => 'Invoice will be fully paid',
-                                        default => 'Invoice will be overpaid by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue)),
+                                        default => 'Invoice will be overpaid by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue), $invoiceCurrency),
                                     };
                                 })
                                 ->rules([
-                                    static fn (): Closure => static function (string $attribute, $value, Closure $fail) {
-                                        if (! CurrencyConverter::isValidAmount($value)) {
+                                    static fn (Invoice $record): Closure => static function (string $attribute, $value, Closure $fail) use ($record) {
+                                        if (! CurrencyConverter::isValidAmount($value, $record->currency_code)) {
                                             $fail('Please enter a valid amount');
                                         }
                                     },
