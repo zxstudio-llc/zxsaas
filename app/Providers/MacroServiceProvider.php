@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Akaunting\Money\Currency;
 use Akaunting\Money\Money;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Setting\DateFormat;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Setting\Localization;
@@ -60,6 +61,56 @@ class MacroServiceProvider extends ServiceProvider
             });
 
             return $this;
+        });
+
+        TextInput::macro('rate', function (string | Closure | null $computation = null, string | Closure | null $currency = null, bool $showAffix = true): static {
+            return $this
+                ->when(
+                    $showAffix,
+                    fn (TextInput $component) => $component
+                        ->prefix(function (TextInput $component) use ($computation, $currency) {
+                            $evaluatedComputation = $component->evaluate($computation);
+                            $evaluatedCurrency = $component->evaluate($currency);
+
+                            return ratePrefix($evaluatedComputation, $evaluatedCurrency);
+                        })
+                        ->suffix(function (TextInput $component) use ($computation, $currency) {
+                            $evaluatedComputation = $component->evaluate($computation);
+                            $evaluatedCurrency = $component->evaluate($currency);
+
+                            return rateSuffix($evaluatedComputation, $evaluatedCurrency);
+                        })
+                )
+                ->mask(static function (TextInput $component) use ($computation, $currency) {
+                    $computation = $component->evaluate($computation);
+                    $currency = $component->evaluate($currency);
+
+                    $computationEnum = AdjustmentComputation::parse($computation);
+
+                    if ($computationEnum->isPercentage()) {
+                        return rateMask(computation: $computation);
+                    }
+
+                    return moneyMask($currency);
+                })
+                ->rule(static function (TextInput $component) use ($computation) {
+                    return static function (string $attribute, $value, Closure $fail) use ($computation, $component) {
+                        $computation = $component->evaluate($computation);
+                        $numericValue = (float) $value;
+
+                        if ($computation instanceof BackedEnum) {
+                            $computation = $computation->value;
+                        }
+
+                        if ($computation === 'percentage' || $computation === 'compound') {
+                            if ($numericValue < 0 || $numericValue > 100) {
+                                $fail(translate('The rate must be between 0 and 100.'));
+                            }
+                        } elseif ($computation === 'fixed' && $numericValue < 0) {
+                            $fail(translate('The rate must be greater than 0.'));
+                        }
+                    };
+                });
         });
 
         TextColumn::macro('defaultDateFormat', function (): static {
@@ -186,49 +237,6 @@ class MacroServiceProvider extends ServiceProvider
 
                 return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
             });
-
-            return $this;
-        });
-
-        TextInput::macro('rate', function (string | Closure | null $computation = null, bool $showAffix = true): static {
-            $this
-                ->when(
-                    $showAffix,
-                    fn (TextInput $component) => $component
-                        ->prefix(static function (TextInput $component) use ($computation) {
-                            $computation = $component->evaluate($computation);
-
-                            return ratePrefix(computation: $computation);
-                        })
-                        ->suffix(static function (TextInput $component) use ($computation) {
-                            $computation = $component->evaluate($computation);
-
-                            return rateSuffix(computation: $computation);
-                        })
-                )
-                ->mask(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
-
-                    return rateMask(computation: $computation);
-                })
-                ->rule(static function (TextInput $component) use ($computation) {
-                    return static function (string $attribute, $value, Closure $fail) use ($computation, $component) {
-                        $computation = $component->evaluate($computation);
-                        $numericValue = (float) $value;
-
-                        if ($computation instanceof BackedEnum) {
-                            $computation = $computation->value;
-                        }
-
-                        if ($computation === 'percentage' || $computation === 'compound') {
-                            if ($numericValue < 0 || $numericValue > 100) {
-                                $fail(translate('The rate must be between 0 and 100.'));
-                            }
-                        } elseif ($computation === 'fixed' && $numericValue < 0) {
-                            $fail(translate('The rate must be greater than 0.'));
-                        }
-                    };
-                });
 
             return $this;
         });

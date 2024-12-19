@@ -129,6 +129,7 @@ class BillResource extends Resource
                             })
                             ->schema([
                                 Forms\Components\Select::make('offering_id')
+                                    ->label('Item')
                                     ->relationship('purchasableOffering', 'name')
                                     ->preload()
                                     ->searchable()
@@ -156,11 +157,13 @@ class BillResource extends Resource
                                     ->live()
                                     ->default(1),
                                 Forms\Components\TextInput::make('unit_price')
+                                    ->label('Price')
                                     ->hiddenLabel()
                                     ->numeric()
                                     ->live()
                                     ->default(0),
                                 Forms\Components\Select::make('purchaseTaxes')
+                                    ->label('Taxes')
                                     ->relationship('purchaseTaxes', 'name')
                                     ->saveRelationshipsUsing(null)
                                     ->dehydrated(true)
@@ -169,6 +172,7 @@ class BillResource extends Resource
                                     ->live()
                                     ->searchable(),
                                 Forms\Components\Select::make('purchaseDiscounts')
+                                    ->label('Discounts')
                                     ->relationship('purchaseDiscounts', 'name')
                                     ->saveRelationshipsUsing(null)
                                     ->dehydrated(true)
@@ -183,6 +187,7 @@ class BillResource extends Resource
                                     ->searchable(),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()
+                                    ->extraAttributes(['class' => 'text-left sm:text-right'])
                                     ->content(function (Forms\Get $get) {
                                         $quantity = max((float) ($get('quantity') ?? 0), 0);
                                         $unitPrice = max((float) ($get('unit_price') ?? 0), 0);
@@ -253,15 +258,17 @@ class BillResource extends Resource
                 Tables\Columns\TextColumn::make('vendor.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
-                    ->currency()
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
                     ->sortable(),
             ])
             ->filters([

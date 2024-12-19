@@ -240,6 +240,7 @@ class InvoiceResource extends Resource
                                     ->searchable(),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()
+                                    ->extraAttributes(['class' => 'text-left sm:text-right'])
                                     ->content(function (Forms\Get $get) {
                                         $quantity = max((float) ($get('quantity') ?? 0), 0);
                                         $unitPrice = max((float) ($get('unit_price') ?? 0), 0);

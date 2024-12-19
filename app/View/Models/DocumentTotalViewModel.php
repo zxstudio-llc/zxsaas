@@ -86,12 +86,16 @@ class DocumentTotalViewModel
         }
 
         $discountComputation = AdjustmentComputation::parse($this->data['discount_computation']) ?? AdjustmentComputation::Percentage;
-        $discountRate = $this->data['discount_rate'] ?? '0';
+        $discountRate = blank($this->data['discount_rate']) ? '0' : $this->data['discount_rate'];
 
         if ($discountComputation->isPercentage()) {
             $scaledDiscountRate = RateCalculator::parseLocalizedRate($discountRate);
 
             return RateCalculator::calculatePercentage($subtotalInCents, $scaledDiscountRate);
+        }
+
+        if (! CurrencyConverter::isValidAmount($discountRate)) {
+            $discountRate = '0';
         }
 
         return CurrencyConverter::convertToCents($discountRate, $currencyCode);
