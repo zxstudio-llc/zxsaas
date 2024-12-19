@@ -324,15 +324,16 @@ class BillResource extends Resource
                             Forms\Components\TextInput::make('amount')
                                 ->label('Amount')
                                 ->required()
-                                ->money()
+                                ->money(fn (Bill $record) => $record->currency_code)
                                 ->live(onBlur: true)
                                 ->helperText(function (Bill $record, $state) {
-                                    if (! CurrencyConverter::isValidAmount($state)) {
+                                    $billCurrency = $record->currency_code;
+                                    if (! CurrencyConverter::isValidAmount($state, $billCurrency)) {
                                         return null;
                                     }
 
                                     $amountDue = $record->getRawOriginal('amount_due');
-                                    $amount = CurrencyConverter::convertToCents($state);
+                                    $amount = CurrencyConverter::convertToCents($state, $billCurrency);
 
                                     if ($amount <= 0) {
                                         return 'Please enter a valid positive amount';
@@ -341,14 +342,14 @@ class BillResource extends Resource
                                     $newAmountDue = $amountDue - $amount;
 
                                     return match (true) {
-                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue),
+                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue, $billCurrency),
                                         $newAmountDue === 0 => 'Bill will be fully paid',
-                                        default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue)),
+                                        default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue), $billCurrency),
                                     };
                                 })
                                 ->rules([
-                                    static fn (): Closure => static function (string $attribute, $value, Closure $fail) {
-                                        if (! CurrencyConverter::isValidAmount($value)) {
+                                    static fn (Bill $record): Closure => static function (string $attribute, $value, Closure $fail) use ($record) {
+                                        if (! CurrencyConverter::isValidAmount($value, $record->currency_code)) {
                                             $fail('Please enter a valid amount');
                                         }
                                     },
