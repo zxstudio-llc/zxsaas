@@ -2,7 +2,7 @@
 
 namespace App\Filament\Company\Resources\Sales;
 
-use App\Collections\Accounting\InvoiceCollection;
+use App\Collections\Accounting\DocumentCollection;
 use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
@@ -555,7 +555,7 @@ class InvoiceResource extends Resource
                             if ($cantRecordPayments) {
                                 Notification::make()
                                     ->title('Payment Recording Failed')
-                                    ->body('Invoices that are either draft, paid, overpaid, or voided cannot be processed through bulk payments. Please adjust your selection and try again.')
+                                    ->body('Invoices that are either draft, paid, overpaid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
                                     ->send();
@@ -563,7 +563,7 @@ class InvoiceResource extends Resource
                                 $action->cancel(true);
                             }
                         })
-                        ->mountUsing(function (InvoiceCollection $records, Form $form) {
+                        ->mountUsing(function (DocumentCollection $records, Form $form) {
                             $totalAmountDue = $records->sumMoneyFormattedSimple('amount_due');
 
                             $form->fill([
@@ -599,7 +599,7 @@ class InvoiceResource extends Resource
                             Forms\Components\Textarea::make('notes')
                                 ->label('Notes'),
                         ])
-                        ->before(function (InvoiceCollection $records, Tables\Actions\BulkAction $action, array $data) {
+                        ->before(function (DocumentCollection $records, Tables\Actions\BulkAction $action, array $data) {
                             $totalPaymentAmount = CurrencyConverter::convertToCents($data['amount']);
                             $totalAmountDue = $records->sumMoneyInCents('amount_due');
 
@@ -616,7 +616,7 @@ class InvoiceResource extends Resource
                                 $action->halt(true);
                             }
                         })
-                        ->action(function (InvoiceCollection $records, Tables\Actions\BulkAction $action, array $data) {
+                        ->action(function (DocumentCollection $records, Tables\Actions\BulkAction $action, array $data) {
                             $totalPaymentAmount = CurrencyConverter::convertToCents($data['amount']);
 
                             $remainingAmount = $totalPaymentAmount;

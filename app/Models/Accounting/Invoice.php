@@ -4,7 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
-use App\Collections\Accounting\InvoiceCollection;
+use App\Collections\Accounting\DocumentCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
@@ -34,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(InvoiceObserver::class)]
-#[CollectedBy(InvoiceCollection::class)]
+#[CollectedBy(DocumentCollection::class)]
 class Invoice extends Model
 {
     use Blamable;
@@ -169,7 +169,7 @@ class Invoice extends Model
             InvoiceStatus::Paid,
             InvoiceStatus::Void,
             InvoiceStatus::Overpaid,
-        ]);
+        ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
     }
 
     public function canBeOverdue(): bool

@@ -24,17 +24,19 @@ class BillOverview extends EnhancedStatsOverviewWidget
         $unpaidBills = $this->getPageTableQuery()
             ->whereIn('status', [BillStatus::Unpaid, BillStatus::Partial, BillStatus::Overdue]);
 
-        $amountToPay = $unpaidBills->sum('amount_due');
+        $amountToPay = $unpaidBills->get()->sumMoneyInDefaultCurrency('amount_due');
 
         $amountOverdue = $unpaidBills
             ->clone()
             ->where('status', BillStatus::Overdue)
-            ->sum('amount_due');
+            ->get()
+            ->sumMoneyInDefaultCurrency('amount_due');
 
         $amountDueWithin7Days = $unpaidBills
             ->clone()
             ->whereBetween('due_date', [today(), today()->addWeek()])
-            ->sum('amount_due');
+            ->get()
+            ->sumMoneyInDefaultCurrency('amount_due');
 
         $averagePaymentTime = $this->getPageTableQuery()
             ->whereNotNull('paid_at')
@@ -49,7 +51,8 @@ class BillOverview extends EnhancedStatsOverviewWidget
                 today()->subMonth()->startOfMonth(),
                 today()->subMonth()->endOfMonth(),
             ])
-            ->sum('amount_paid');
+            ->get()
+            ->sumMoneyInDefaultCurrency('amount_paid');
 
         return [
             EnhancedStatsOverviewWidget\EnhancedStat::make('Total To Pay', CurrencyConverter::formatCentsToMoney($amountToPay))

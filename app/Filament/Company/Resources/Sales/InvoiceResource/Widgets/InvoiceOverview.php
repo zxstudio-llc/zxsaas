@@ -23,17 +23,19 @@ class InvoiceOverview extends EnhancedStatsOverviewWidget
     {
         $unpaidInvoices = $this->getPageTableQuery()->unpaid();
 
-        $amountUnpaid = $unpaidInvoices->sum('amount_due');
+        $amountUnpaid = $unpaidInvoices->get()->sumMoneyInDefaultCurrency('amount_due');
 
         $amountOverdue = $unpaidInvoices
             ->clone()
             ->where('status', InvoiceStatus::Overdue)
-            ->sum('amount_due');
+            ->get()
+            ->sumMoneyInDefaultCurrency('amount_due');
 
         $amountDueWithin30Days = $unpaidInvoices
             ->clone()
             ->whereBetween('due_date', [today(), today()->addMonth()])
-            ->sum('amount_due');
+            ->get()
+            ->sumMoneyInDefaultCurrency('amount_due');
 
         $validInvoices = $this->getPageTableQuery()
             ->whereNotIn('status', [
@@ -41,7 +43,7 @@ class InvoiceOverview extends EnhancedStatsOverviewWidget
                 InvoiceStatus::Draft,
             ]);
 
-        $totalValidInvoiceAmount = $validInvoices->sum('total');
+        $totalValidInvoiceAmount = $validInvoices->get()->sumMoneyInDefaultCurrency('total');
 
         $totalValidInvoiceCount = $validInvoices->count();
 

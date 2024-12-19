@@ -431,7 +431,7 @@ class BillResource extends Resource
                             if ($cantRecordPayments) {
                                 Notification::make()
                                     ->title('Payment Recording Failed')
-                                    ->body('Bills that are either paid or voided cannot be processed through bulk payments. Please adjust your selection and try again.')
+                                    ->body('Bills that are either paid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
                                     ->send();

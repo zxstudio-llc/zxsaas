@@ -4,6 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
+use App\Collections\Accounting\DocumentCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
@@ -20,6 +21,7 @@ use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
+use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -31,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(BillObserver::class)]
+#[CollectedBy(DocumentCollection::class)]
 class Bill extends Model
 {
     use Blamable;
@@ -136,7 +139,7 @@ class Bill extends Model
         return ! in_array($this->status, [
             BillStatus::Paid,
             BillStatus::Void,
-        ]);
+        ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
     }
 
     public function hasPayments(): bool
