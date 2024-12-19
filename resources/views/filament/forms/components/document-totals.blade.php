@@ -1,10 +1,11 @@
 @php
     use App\Enums\Accounting\DocumentDiscountMethod;
     use App\Utilities\Currency\CurrencyAccessor;
-    use App\View\Models\BillTotalViewModel;
+    use App\View\Models\DocumentTotalViewModel;
 
     $data = $this->form->getRawState();
-    $viewModel = new BillTotalViewModel($this->record, $data);
+    $type = $getType();
+    $viewModel = new DocumentTotalViewModel($data, $type);
     extract($viewModel->buildViewData(), EXTR_SKIP);
 
     $discountMethod = DocumentDiscountMethod::parse($data['discount_method']);
@@ -56,6 +57,13 @@
                 <td class="text-sm px-4 py-2 font-medium leading-6 text-gray-950 dark:text-white">Total:</td>
                 <td class="text-sm pl-4 py-2 leading-6">{{ $grandTotal }}</td>
             </tr>
+            @if($conversionMessage)
+                <tr>
+                    <td colspan="6" class="text-sm pl-4 py-2 leading-6 text-gray-600">
+                        {{ $conversionMessage }}
+                    </td>
+                </tr>
+            @endif
         </tbody>
     </table>
 </div>

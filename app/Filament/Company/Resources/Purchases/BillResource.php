@@ -4,16 +4,21 @@ namespace App\Filament\Company\Resources\Purchases;
 
 use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Purchases\BillResource\Pages;
-use App\Filament\Forms\Components\BillTotals;
+use App\Filament\Forms\Components\CreateCurrencySelect;
+use App\Filament\Forms\Components\DocumentTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Bill;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Offering;
+use App\Models\Common\Vendor;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
+use App\Utilities\RateCalculator;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Closure;
@@ -49,7 +54,20 @@ class BillResource extends Resource
                                     ->relationship('vendor', 'name')
                                     ->preload()
                                     ->searchable()
-                                    ->required(),
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                        if (! $state) {
+                                            return;
+                                        }
+
+                                        $currencyCode = Vendor::find($state)?->currency_code;
+
+                                        if ($currencyCode) {
+                                            $set('currency_code', $currencyCode);
+                                        }
+                                    }),
+                                CreateCurrencySelect::make('currency_code'),
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('bill_number')
@@ -170,30 +188,40 @@ class BillResource extends Resource
                                         $unitPrice = max((float) ($get('unit_price') ?? 0), 0);
                                         $purchaseTaxes = $get('purchaseTaxes') ?? [];
                                         $purchaseDiscounts = $get('purchaseDiscounts') ?? [];
+                                        $currencyCode = $get('../../currency_code') ?? CurrencyAccessor::getDefaultCurrency();
 
                                         $subtotal = $quantity * $unitPrice;
 
-                                        // Calculate tax amount based on subtotal
-                                        $taxAmount = 0;
-                                        if (! empty($purchaseTaxes)) {
-                                            $taxRates = Adjustment::whereIn('id', $purchaseTaxes)->pluck('rate');
-                                            $taxAmount = collect($taxRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $subtotalInCents = CurrencyConverter::convertToCents($subtotal, $currencyCode);
 
-                                        // Calculate discount amount based on subtotal
-                                        $discountAmount = 0;
-                                        if (! empty($purchaseDiscounts)) {
-                                            $discountRates = Adjustment::whereIn('id', $purchaseDiscounts)->pluck('rate');
-                                            $discountAmount = collect($discountRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $taxAmountInCents = Adjustment::whereIn('id', $purchaseTaxes)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
+
+                                        $discountAmountInCents = Adjustment::whereIn('id', $purchaseDiscounts)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
 
                                         // Final total
-                                        $total = $subtotal + ($taxAmount - $discountAmount);
+                                        $totalInCents = $subtotalInCents + ($taxAmountInCents - $discountAmountInCents);
 
-                                        return CurrencyConverter::formatToMoney($total);
+                                        return CurrencyConverter::formatCentsToMoney($totalInCents, $currencyCode);
                                     }),
                             ]),
-                        BillTotals::make(),
+                        DocumentTotals::make()
+                            ->type(DocumentType::Bill),
                     ]),
             ]);
     }

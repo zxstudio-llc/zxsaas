@@ -4,13 +4,14 @@ namespace App\Filament\Company\Resources\Sales;
 
 use App\Collections\Accounting\InvoiceCollection;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
 use App\Filament\Forms\Components\CreateCurrencySelect;
-use App\Filament\Forms\Components\InvoiceTotals;
+use App\Filament\Forms\Components\DocumentTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
@@ -276,7 +277,8 @@ class InvoiceResource extends Resource
                                         return CurrencyConverter::formatCentsToMoney($totalInCents, $currencyCode);
                                     }),
                             ]),
-                        InvoiceTotals::make(),
+                        DocumentTotals::make()
+                            ->type(DocumentType::Invoice),
                         Forms\Components\Textarea::make('terms')
                             ->columnSpanFull(),
                     ]),
