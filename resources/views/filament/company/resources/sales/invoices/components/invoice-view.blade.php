@@ -113,8 +113,8 @@
                         @endif
                     </td>
                     <td class="text-center py-3">{{ $item->quantity }}</td>
-                    <td class="text-right py-3">{{ CurrencyConverter::formatToMoney($item->unit_price) }}</td>
-                    <td class="text-right pr-6 py-3">{{ CurrencyConverter::formatToMoney($item->subtotal) }}</td>
+                    <td class="text-right py-3">{{ CurrencyConverter::formatToMoney($item->unit_price, $invoice->currency_code) }}</td>
+                    <td class="text-right pr-6 py-3">{{ CurrencyConverter::formatToMoney($item->subtotal, $invoice->currency_code) }}</td>
                 </tr>
             @endforeach
             </tbody>
@@ -122,14 +122,14 @@
             <tr>
                 <td class="pl-6 py-2" colspan="2"></td>
                 <td class="text-right font-semibold py-2">Subtotal:</td>
-                <td class="text-right pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->subtotal) }}</td>
+                <td class="text-right pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->subtotal, $invoice->currency_code) }}</td>
             </tr>
             @if($invoice->discount_total)
                 <tr class="text-success-800 dark:text-success-600">
                     <td class="pl-6 py-2" colspan="2"></td>
                     <td class="text-right py-2">Discount:</td>
                     <td class="text-right pr-6 py-2">
-                        ({{ CurrencyConverter::formatToMoney($invoice->discount_total) }})
+                        ({{ CurrencyConverter::formatToMoney($invoice->discount_total, $invoice->currency_code) }})
                     </td>
                 </tr>
             @endif
@@ -137,20 +137,20 @@
                 <tr>
                     <td class="pl-6 py-2" colspan="2"></td>
                     <td class="text-right py-2">Tax:</td>
-                    <td class="text-right pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->tax_total) }}</td>
+                    <td class="text-right pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->tax_total, $invoice->currency_code) }}</td>
                 </tr>
             @endif
             <tr>
                 <td class="pl-6 py-2" colspan="2"></td>
                 <td class="text-right font-semibold border-t py-2">Total:</td>
-                <td class="text-right border-t pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->total) }}</td>
+                <td class="text-right border-t pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->total, $invoice->currency_code) }}</td>
             </tr>
             <tr>
                 <td class="pl-6 py-2" colspan="2"></td>
                 <td class="text-right font-semibold border-t-4 border-double py-2">Amount Due
                     ({{ $invoice->currency_code }}):
                 </td>
-                <td class="text-right border-t-4 border-double pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->amount_due) }}</td>
+                <td class="text-right border-t-4 border-double pr-6 py-2">{{ CurrencyConverter::formatToMoney($invoice->amount_due, $invoice->currency_code) }}</td>
             </tr>
             </tfoot>
         </table>

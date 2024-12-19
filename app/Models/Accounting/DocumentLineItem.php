@@ -12,6 +12,7 @@ use App\Enums\Accounting\AdjustmentType;
 use App\Models\Common\Offering;
 use App\Observers\DocumentLineItemObserver;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\RateCalculator;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -113,6 +114,21 @@ class DocumentLineItem extends Model
         );
     }
 
+    public function calculateTaxTotalAmount(): int
+    {
+        $subtotalInCents = $this->getRawOriginal('subtotal');
+
+        return $this->taxes->reduce(function (int $carry, Adjustment $tax) use ($subtotalInCents) {
+            if ($tax->computation->isPercentage()) {
+                $scaledRate = $tax->getRawOriginal('rate');
+
+                return $carry + RateCalculator::calculatePercentage($subtotalInCents, $scaledRate);
+            } else {
+                return $carry + $tax->getRawOriginal('rate');
+            }
+        }, 0);
+    }
+
     public function calculateDiscountTotal(): Money
     {
         $subtotal = money($this->subtotal, CurrencyAccessor::getDefaultCurrency());
@@ -123,10 +139,38 @@ class DocumentLineItem extends Model
         );
     }
 
+    public function calculateDiscountTotalAmount(): int
+    {
+        $subtotalInCents = $this->getRawOriginal('subtotal');
+
+        return $this->discounts->reduce(function (int $carry, Adjustment $discount) use ($subtotalInCents) {
+            if ($discount->computation->isPercentage()) {
+                $scaledRate = $discount->getRawOriginal('rate');
+
+                return $carry + RateCalculator::calculatePercentage($subtotalInCents, $scaledRate);
+            } else {
+                return $carry + $discount->getRawOriginal('rate');
+            }
+        }, 0);
+    }
+
     public function calculateAdjustmentTotal(Adjustment $adjustment): Money
     {
         $subtotal = money($this->subtotal, CurrencyAccessor::getDefaultCurrency());
 
         return $subtotal->multiply($adjustment->rate / 100);
+    }
+
+    public function calculateAdjustmentTotalAmount(Adjustment $adjustment): int
+    {
+        $subtotalInCents = $this->getRawOriginal('subtotal');
+
+        if ($adjustment->computation->isPercentage()) {
+            $scaledRate = $adjustment->getRawOriginal('rate');
+
+            return RateCalculator::calculatePercentage($subtotalInCents, $scaledRate);
+        } else {
+            return $adjustment->getRawOriginal('rate');
+        }
     }
 }

@@ -26,6 +26,20 @@ class CreateCurrencySelect extends Select
             ->required()
             ->createOptionForm($this->createCurrencyForm())
             ->createOptionAction(fn (Action $action) => $this->createCurrencyAction($action));
+
+        $this->relationship('currency', 'name');
+
+        $this->createOptionUsing(static function (array $data) {
+            return DB::transaction(static function () use ($data) {
+                $currency = CreateCurrency::create(
+                    $data['code'],
+                    $data['name'],
+                    $data['rate']
+                );
+
+                return $currency->code;
+            });
+        });
     }
 
     protected function createCurrencyForm(): array
@@ -56,15 +70,6 @@ class CreateCurrencySelect extends Select
         return $action
             ->label('Add Currency')
             ->slideOver()
-            ->modalWidth(MaxWidth::Medium)
-            ->action(static function (array $data) {
-                return DB::transaction(static function () use ($data) {
-                    $code = $data['code'];
-                    $name = $data['name'];
-                    $rate = $data['rate'];
-
-                    return CreateCurrency::create($code, $name, $rate);
-                });
-            });
+            ->modalWidth(MaxWidth::Medium);
     }
 }

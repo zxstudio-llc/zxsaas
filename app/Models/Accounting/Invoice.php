@@ -4,7 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
-use App\Collections\Accounting\InvoiceCollection;
+use App\Collections\Accounting\DocumentCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
@@ -13,8 +13,11 @@ use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
+use App\Models\Setting\Currency;
 use App\Observers\InvoiceObserver;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
@@ -31,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(InvoiceObserver::class)]
-#[CollectedBy(InvoiceCollection::class)]
+#[CollectedBy(DocumentCollection::class)]
 class Invoice extends Model
 {
     use Blamable;
@@ -90,6 +93,11 @@ class Invoice extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
     public function lineItems(): MorphMany
@@ -161,7 +169,7 @@ class Invoice extends Model
             InvoiceStatus::Paid,
             InvoiceStatus::Void,
             InvoiceStatus::Overpaid,
-        ]);
+        ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
     }
 
     public function canBeOverdue(): bool
@@ -219,13 +227,34 @@ class Invoice extends Model
             $transactionDescription = "Invoice #{$this->invoice_number}: Payment from {$this->client->name}";
         }
 
+        $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
+        $bankAccountCurrency = $bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+
+        $invoiceCurrency = $this->currency_code;
+        $requiresConversion = $invoiceCurrency !== $bankAccountCurrency;
+
+        if ($requiresConversion) {
+            $amountInInvoiceCurrencyCents = CurrencyConverter::convertToCents($data['amount'], $invoiceCurrency);
+            $amountInBankCurrencyCents = CurrencyConverter::convertBalance(
+                $amountInInvoiceCurrencyCents,
+                $invoiceCurrency,
+                $bankAccountCurrency
+            );
+            $formattedAmountForBankCurrency = CurrencyConverter::convertCentsToFormatSimple(
+                $amountInBankCurrencyCents,
+                $bankAccountCurrency
+            );
+        } else {
+            $formattedAmountForBankCurrency = $data['amount']; // Already in simple format
+        }
+
         // Create transaction
         $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => $transactionType,
             'is_payment' => true,
             'posted_at' => $data['posted_at'],
-            'amount' => $data['amount'],
+            'amount' => $formattedAmountForBankCurrency,
             'payment_method' => $data['payment_method'],
             'bank_account_id' => $data['bank_account_id'],
             'account_id' => Account::getAccountsReceivableAccount()->id,
@@ -252,11 +281,13 @@ class Invoice extends Model
 
     public function createApprovalTransaction(): void
     {
+        $total = $this->formatAmountToDefaultCurrency($this->getRawOriginal('total'));
+
         $transaction = $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => TransactionType::Journal,
             'posted_at' => $this->date,
-            'amount' => $this->total,
+            'amount' => $total,
             'description' => 'Invoice Approval for Invoice #' . $this->invoice_number,
         ]);
 
@@ -266,43 +297,47 @@ class Invoice extends Model
             'company_id' => $this->company_id,
             'type' => JournalEntryType::Debit,
             'account_id' => Account::getAccountsReceivableAccount()->id,
-            'amount' => $this->total,
+            'amount' => $total,
             'description' => $baseDescription,
         ]);
 
-        $totalLineItemSubtotal = (int) $this->lineItems()->sum('subtotal');
-        $invoiceDiscountTotalCents = (int) $this->getRawOriginal('discount_total');
+        $totalLineItemSubtotalCents = $this->convertAmountToDefaultCurrency((int) $this->lineItems()->sum('subtotal'));
+        $invoiceDiscountTotalCents = $this->convertAmountToDefaultCurrency((int) $this->getRawOriginal('discount_total'));
         $remainingDiscountCents = $invoiceDiscountTotalCents;
 
         foreach ($this->lineItems as $index => $lineItem) {
             $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
 
+            $lineItemSubtotal = $this->formatAmountToDefaultCurrency($lineItem->getRawOriginal('subtotal'));
+
             $transaction->journalEntries()->create([
                 'company_id' => $this->company_id,
                 'type' => JournalEntryType::Credit,
                 'account_id' => $lineItem->offering->income_account_id,
-                'amount' => $lineItem->subtotal,
+                'amount' => $lineItemSubtotal,
                 'description' => $lineItemDescription,
             ]);
 
             foreach ($lineItem->adjustments as $adjustment) {
+                $adjustmentAmount = $this->formatAmountToDefaultCurrency($lineItem->calculateAdjustmentTotalAmount($adjustment));
+
                 $transaction->journalEntries()->create([
                     'company_id' => $this->company_id,
                     'type' => $adjustment->category->isDiscount() ? JournalEntryType::Debit : JournalEntryType::Credit,
                     'account_id' => $adjustment->account_id,
-                    'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
+                    'amount' => $adjustmentAmount,
                     'description' => $lineItemDescription,
                 ]);
             }
 
-            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotal > 0) {
-                $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
+            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotalCents > 0) {
+                $lineItemSubtotalCents = $this->convertAmountToDefaultCurrency((int) $lineItem->getRawOriginal('subtotal'));
 
                 if ($index === $this->lineItems->count() - 1) {
                     $lineItemDiscount = $remainingDiscountCents;
                 } else {
                     $lineItemDiscount = (int) round(
-                        ($lineItemSubtotalCents / $totalLineItemSubtotal) * $invoiceDiscountTotalCents
+                        ($lineItemSubtotalCents / $totalLineItemSubtotalCents) * $invoiceDiscountTotalCents
                     );
                     $remainingDiscountCents -= $lineItemDiscount;
                 }
@@ -329,6 +364,25 @@ class Invoice extends Model
         }
 
         $this->createApprovalTransaction();
+    }
+
+    public function convertAmountToDefaultCurrency(int $amountCents): int
+    {
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $needsConversion = $this->currency_code !== $defaultCurrency;
+
+        if ($needsConversion) {
+            return CurrencyConverter::convertBalance($amountCents, $this->currency_code, $defaultCurrency);
+        }
+
+        return $amountCents;
+    }
+
+    public function formatAmountToDefaultCurrency(int $amountCents): string
+    {
+        $convertedCents = $this->convertAmountToDefaultCurrency($amountCents);
+
+        return CurrencyConverter::convertCentsToFormatSimple($convertedCents);
     }
 
     public static function getApproveDraftAction(string $action = Action::class): MountableAction

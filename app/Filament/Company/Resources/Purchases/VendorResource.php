@@ -42,7 +42,6 @@ class VendorResource extends Resource
                                     ->default(VendorType::Regular)
                                     ->columnSpanFull(),
                                 CreateCurrencySelect::make('currency_code')
-                                    ->relationship('currency', 'name')
                                     ->nullable()
                                     ->visible(fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Regular),
                                 Forms\Components\Select::make('contractor_type')

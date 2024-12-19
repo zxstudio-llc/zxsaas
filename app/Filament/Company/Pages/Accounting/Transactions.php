@@ -305,7 +305,7 @@ class Transactions extends Page implements HasTable
                         }
                     )
                     ->sortable()
-                    ->currency(static fn (Transaction $transaction) => $transaction->bankAccount?->account->currency_code ?? CurrencyAccessor::getDefaultCurrency(), true),
+                    ->currency(static fn (Transaction $transaction) => $transaction->bankAccount?->account->currency_code),
             ])
             ->recordClasses(static fn (Transaction $transaction) => $transaction->reviewed ? 'bg-primary-300/10' : null)
             ->defaultSort('posted_at', 'desc')

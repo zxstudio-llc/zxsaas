@@ -167,8 +167,7 @@ class ClientResource extends Resource
                     ])->columns(1),
                 Forms\Components\Section::make('Billing')
                     ->schema([
-                        CreateCurrencySelect::make('currency_code')
-                            ->relationship('currency', 'name'),
+                        CreateCurrencySelect::make('currency_code'),
                         CustomSection::make('Billing Address')
                             ->relationship('billingAddress')
                             ->contained(false)

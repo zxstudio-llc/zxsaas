@@ -4,11 +4,13 @@ namespace App\Providers;
 
 use Akaunting\Money\Currency;
 use Akaunting\Money\Money;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Setting\DateFormat;
 use App\Models\Accounting\AccountSubtype;
 use App\Models\Setting\Localization;
 use App\Utilities\Accounting\AccountCode;
 use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use BackedEnum;
 use Carbon\CarbonInterface;
 use Closure;
@@ -61,6 +63,56 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
+        TextInput::macro('rate', function (string | Closure | null $computation = null, string | Closure | null $currency = null, bool $showAffix = true): static {
+            return $this
+                ->when(
+                    $showAffix,
+                    fn (TextInput $component) => $component
+                        ->prefix(function (TextInput $component) use ($computation, $currency) {
+                            $evaluatedComputation = $component->evaluate($computation);
+                            $evaluatedCurrency = $component->evaluate($currency);
+
+                            return ratePrefix($evaluatedComputation, $evaluatedCurrency);
+                        })
+                        ->suffix(function (TextInput $component) use ($computation, $currency) {
+                            $evaluatedComputation = $component->evaluate($computation);
+                            $evaluatedCurrency = $component->evaluate($currency);
+
+                            return rateSuffix($evaluatedComputation, $evaluatedCurrency);
+                        })
+                )
+                ->mask(static function (TextInput $component) use ($computation, $currency) {
+                    $computation = $component->evaluate($computation);
+                    $currency = $component->evaluate($currency);
+
+                    $computationEnum = AdjustmentComputation::parse($computation);
+
+                    if ($computationEnum->isPercentage()) {
+                        return rateMask(computation: $computation);
+                    }
+
+                    return moneyMask($currency);
+                })
+                ->rule(static function (TextInput $component) use ($computation) {
+                    return static function (string $attribute, $value, Closure $fail) use ($computation, $component) {
+                        $computation = $component->evaluate($computation);
+                        $numericValue = (float) $value;
+
+                        if ($computation instanceof BackedEnum) {
+                            $computation = $computation->value;
+                        }
+
+                        if ($computation === 'percentage' || $computation === 'compound') {
+                            if ($numericValue < 0 || $numericValue > 100) {
+                                $fail(translate('The rate must be between 0 and 100.'));
+                            }
+                        } elseif ($computation === 'fixed' && $numericValue < 0) {
+                            $fail(translate('The rate must be greater than 0.'));
+                        }
+                    };
+                });
+        });
+
         TextColumn::macro('defaultDateFormat', function (): static {
             $localization = Localization::firstOrFail();
 
@@ -102,45 +154,89 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextInput::macro('rate', function (string | Closure | null $computation = null, bool $showAffix = true): static {
-            $this
-                ->when(
-                    $showAffix,
-                    fn (TextInput $component) => $component
-                        ->prefix(static function (TextInput $component) use ($computation) {
-                            $computation = $component->evaluate($computation);
+        TextEntry::macro('currency', function (string | Closure | null $currency = null, ?bool $convert = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convert ??= true;
 
-                            return ratePrefix(computation: $computation);
-                        })
-                        ->suffix(static function (TextInput $component) use ($computation) {
-                            $computation = $component->evaluate($computation);
+            $this->formatStateUsing(static function (TextEntry $entry, $state) use ($currency, $convert): ?string {
+                if (blank($state)) {
+                    return null;
+                }
 
-                            return rateSuffix(computation: $computation);
-                        })
-                )
-                ->mask(static function (TextInput $component) use ($computation) {
-                    $computation = $component->evaluate($computation);
+                $currency = $entry->evaluate($currency);
+                $convert = $entry->evaluate($convert);
 
-                    return rateMask(computation: $computation);
-                })
-                ->rule(static function (TextInput $component) use ($computation) {
-                    return static function (string $attribute, $value, Closure $fail) use ($computation, $component) {
-                        $computation = $component->evaluate($computation);
-                        $numericValue = (float) $value;
+                return money($state, $currency, $convert)->format();
+            });
 
-                        if ($computation instanceof BackedEnum) {
-                            $computation = $computation->value;
-                        }
+            return $this;
+        });
 
-                        if ($computation === 'percentage' || $computation === 'compound') {
-                            if ($numericValue < 0 || $numericValue > 100) {
-                                $fail(translate('The rate must be between 0 and 100.'));
-                            }
-                        } elseif ($computation === 'fixed' && $numericValue < 0) {
-                            $fail(translate('The rate must be greater than 0.'));
-                        }
-                    };
-                });
+        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $currency = $column->evaluate($currency);
+
+                return CurrencyConverter::formatToMoney($state, $currency);
+            });
+
+            $this->description(static function (TextColumn $column, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $oldCurrency = $column->evaluate($currency);
+                $newCurrency = CurrencyAccessor::getDefaultCurrency();
+
+                if ($oldCurrency === $newCurrency) {
+                    return null;
+                }
+
+                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+
+                $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
+            });
+
+            return $this;
+        });
+
+        TextEntry::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+            $currency ??= CurrencyAccessor::getDefaultCurrency();
+
+            $this->formatStateUsing(static function (TextEntry $entry, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $currency = $entry->evaluate($currency);
+
+                return CurrencyConverter::formatToMoney($state, $currency);
+            });
+
+            $this->helperText(static function (TextEntry $entry, $state) use ($currency): ?string {
+                if (blank($state)) {
+                    return null;
+                }
+
+                $oldCurrency = $entry->evaluate($currency);
+                $newCurrency = CurrencyAccessor::getDefaultCurrency();
+
+                if ($oldCurrency === $newCurrency) {
+                    return null;
+                }
+
+                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
+            });
 
             return $this;
         });

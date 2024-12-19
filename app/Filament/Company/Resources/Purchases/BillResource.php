@@ -4,16 +4,21 @@ namespace App\Filament\Company\Resources\Purchases;
 
 use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Purchases\BillResource\Pages;
-use App\Filament\Forms\Components\BillTotals;
+use App\Filament\Forms\Components\CreateCurrencySelect;
+use App\Filament\Forms\Components\DocumentTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Bill;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Offering;
+use App\Models\Common\Vendor;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
+use App\Utilities\RateCalculator;
 use Awcodes\TableRepeater\Components\TableRepeater;
 use Awcodes\TableRepeater\Header;
 use Closure;
@@ -49,7 +54,20 @@ class BillResource extends Resource
                                     ->relationship('vendor', 'name')
                                     ->preload()
                                     ->searchable()
-                                    ->required(),
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                        if (! $state) {
+                                            return;
+                                        }
+
+                                        $currencyCode = Vendor::find($state)?->currency_code;
+
+                                        if ($currencyCode) {
+                                            $set('currency_code', $currencyCode);
+                                        }
+                                    }),
+                                CreateCurrencySelect::make('currency_code'),
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('bill_number')
@@ -111,6 +129,7 @@ class BillResource extends Resource
                             })
                             ->schema([
                                 Forms\Components\Select::make('offering_id')
+                                    ->label('Item')
                                     ->relationship('purchasableOffering', 'name')
                                     ->preload()
                                     ->searchable()
@@ -138,11 +157,13 @@ class BillResource extends Resource
                                     ->live()
                                     ->default(1),
                                 Forms\Components\TextInput::make('unit_price')
+                                    ->label('Price')
                                     ->hiddenLabel()
                                     ->numeric()
                                     ->live()
                                     ->default(0),
                                 Forms\Components\Select::make('purchaseTaxes')
+                                    ->label('Taxes')
                                     ->relationship('purchaseTaxes', 'name')
                                     ->saveRelationshipsUsing(null)
                                     ->dehydrated(true)
@@ -151,6 +172,7 @@ class BillResource extends Resource
                                     ->live()
                                     ->searchable(),
                                 Forms\Components\Select::make('purchaseDiscounts')
+                                    ->label('Discounts')
                                     ->relationship('purchaseDiscounts', 'name')
                                     ->saveRelationshipsUsing(null)
                                     ->dehydrated(true)
@@ -165,35 +187,46 @@ class BillResource extends Resource
                                     ->searchable(),
                                 Forms\Components\Placeholder::make('total')
                                     ->hiddenLabel()
+                                    ->extraAttributes(['class' => 'text-left sm:text-right'])
                                     ->content(function (Forms\Get $get) {
                                         $quantity = max((float) ($get('quantity') ?? 0), 0);
                                         $unitPrice = max((float) ($get('unit_price') ?? 0), 0);
                                         $purchaseTaxes = $get('purchaseTaxes') ?? [];
                                         $purchaseDiscounts = $get('purchaseDiscounts') ?? [];
+                                        $currencyCode = $get('../../currency_code') ?? CurrencyAccessor::getDefaultCurrency();
 
                                         $subtotal = $quantity * $unitPrice;
 
-                                        // Calculate tax amount based on subtotal
-                                        $taxAmount = 0;
-                                        if (! empty($purchaseTaxes)) {
-                                            $taxRates = Adjustment::whereIn('id', $purchaseTaxes)->pluck('rate');
-                                            $taxAmount = collect($taxRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $subtotalInCents = CurrencyConverter::convertToCents($subtotal, $currencyCode);
 
-                                        // Calculate discount amount based on subtotal
-                                        $discountAmount = 0;
-                                        if (! empty($purchaseDiscounts)) {
-                                            $discountRates = Adjustment::whereIn('id', $purchaseDiscounts)->pluck('rate');
-                                            $discountAmount = collect($discountRates)->sum(fn ($rate) => $subtotal * ($rate / 100));
-                                        }
+                                        $taxAmountInCents = Adjustment::whereIn('id', $purchaseTaxes)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
+
+                                        $discountAmountInCents = Adjustment::whereIn('id', $purchaseDiscounts)
+                                            ->get()
+                                            ->sum(function (Adjustment $adjustment) use ($subtotalInCents) {
+                                                if ($adjustment->computation->isPercentage()) {
+                                                    return RateCalculator::calculatePercentage($subtotalInCents, $adjustment->getRawOriginal('rate'));
+                                                } else {
+                                                    return $adjustment->getRawOriginal('rate');
+                                                }
+                                            });
 
                                         // Final total
-                                        $total = $subtotal + ($taxAmount - $discountAmount);
+                                        $totalInCents = $subtotalInCents + ($taxAmountInCents - $discountAmountInCents);
 
-                                        return CurrencyConverter::formatToMoney($total);
+                                        return CurrencyConverter::formatCentsToMoney($totalInCents, $currencyCode);
                                     }),
                             ]),
-                        BillTotals::make(),
+                        DocumentTotals::make()
+                            ->type(DocumentType::Bill),
                     ]),
             ]);
     }
@@ -225,15 +258,17 @@ class BillResource extends Resource
                 Tables\Columns\TextColumn::make('vendor.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('total')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
-                    ->currency()
-                    ->sortable(),
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
-                    ->currency()
+                    ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
                     ->sortable(),
             ])
             ->filters([
@@ -289,15 +324,16 @@ class BillResource extends Resource
                             Forms\Components\TextInput::make('amount')
                                 ->label('Amount')
                                 ->required()
-                                ->money()
+                                ->money(fn (Bill $record) => $record->currency_code)
                                 ->live(onBlur: true)
                                 ->helperText(function (Bill $record, $state) {
-                                    if (! CurrencyConverter::isValidAmount($state)) {
+                                    $billCurrency = $record->currency_code;
+                                    if (! CurrencyConverter::isValidAmount($state, $billCurrency)) {
                                         return null;
                                     }
 
                                     $amountDue = $record->getRawOriginal('amount_due');
-                                    $amount = CurrencyConverter::convertToCents($state);
+                                    $amount = CurrencyConverter::convertToCents($state, $billCurrency);
 
                                     if ($amount <= 0) {
                                         return 'Please enter a valid positive amount';
@@ -306,14 +342,14 @@ class BillResource extends Resource
                                     $newAmountDue = $amountDue - $amount;
 
                                     return match (true) {
-                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue),
+                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue, $billCurrency),
                                         $newAmountDue === 0 => 'Bill will be fully paid',
-                                        default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue)),
+                                        default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue), $billCurrency),
                                     };
                                 })
                                 ->rules([
-                                    static fn (): Closure => static function (string $attribute, $value, Closure $fail) {
-                                        if (! CurrencyConverter::isValidAmount($value)) {
+                                    static fn (Bill $record): Closure => static function (string $attribute, $value, Closure $fail) use ($record) {
+                                        if (! CurrencyConverter::isValidAmount($value, $record->currency_code)) {
                                             $fail('Please enter a valid amount');
                                         }
                                     },
@@ -395,7 +431,7 @@ class BillResource extends Resource
                             if ($cantRecordPayments) {
                                 Notification::make()
                                     ->title('Payment Recording Failed')
-                                    ->body('Bills that are either paid or voided cannot be processed through bulk payments. Please adjust your selection and try again.')
+                                    ->body('Bills that are either paid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
                                     ->send();

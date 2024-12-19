@@ -4,6 +4,7 @@ namespace App\Models\Accounting;
 
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
+use App\Collections\Accounting\DocumentCollection;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
@@ -12,11 +13,15 @@ use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
+use App\Models\Banking\BankAccount;
 use App\Models\Common\Vendor;
+use App\Models\Setting\Currency;
 use App\Observers\BillObserver;
+use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
+use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -28,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(BillObserver::class)]
+#[CollectedBy(DocumentCollection::class)]
 class Bill extends Model
 {
     use Blamable;
@@ -74,6 +80,11 @@ class Bill extends Model
         'amount_paid' => MoneyCast::class,
         'amount_due' => MoneyCast::class,
     ];
+
+    public function currency(): BelongsTo
+    {
+        return $this->belongsTo(Currency::class, 'currency_code', 'code');
+    }
 
     public function vendor(): BelongsTo
     {
@@ -128,7 +139,7 @@ class Bill extends Model
         return ! in_array($this->status, [
             BillStatus::Paid,
             BillStatus::Void,
-        ]);
+        ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
     }
 
     public function hasPayments(): bool
@@ -188,13 +199,35 @@ class Bill extends Model
         $transactionType = TransactionType::Withdrawal;
         $transactionDescription = "Bill #{$this->bill_number}: Payment to {$this->vendor->name}";
 
-        // Create transaction
+        // Add multi-currency handling
+        $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
+        $bankAccountCurrency = $bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+
+        $billCurrency = $this->currency_code;
+        $requiresConversion = $billCurrency !== $bankAccountCurrency;
+
+        if ($requiresConversion) {
+            $amountInBillCurrencyCents = CurrencyConverter::convertToCents($data['amount'], $billCurrency);
+            $amountInBankCurrencyCents = CurrencyConverter::convertBalance(
+                $amountInBillCurrencyCents,
+                $billCurrency,
+                $bankAccountCurrency
+            );
+            $formattedAmountForBankCurrency = CurrencyConverter::convertCentsToFormatSimple(
+                $amountInBankCurrencyCents,
+                $bankAccountCurrency
+            );
+        } else {
+            $formattedAmountForBankCurrency = $data['amount']; // Already in simple format
+        }
+
+        // Create transaction with converted amount
         $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => $transactionType,
             'is_payment' => true,
             'posted_at' => $data['posted_at'],
-            'amount' => $data['amount'],
+            'amount' => $formattedAmountForBankCurrency,
             'payment_method' => $data['payment_method'],
             'bank_account_id' => $data['bank_account_id'],
             'account_id' => Account::getAccountsPayableAccount()->id,
@@ -207,11 +240,13 @@ class Bill extends Model
     {
         $postedAt ??= $this->date;
 
+        $total = $this->formatAmountToDefaultCurrency($this->getRawOriginal('total'));
+
         $transaction = $this->transactions()->create([
             'company_id' => $this->company_id,
             'type' => TransactionType::Journal,
             'posted_at' => $postedAt,
-            'amount' => $this->total,
+            'amount' => $total,
             'description' => 'Bill Creation for Bill #' . $this->bill_number,
         ]);
 
@@ -221,32 +256,36 @@ class Bill extends Model
             'company_id' => $this->company_id,
             'type' => JournalEntryType::Credit,
             'account_id' => Account::getAccountsPayableAccount()->id,
-            'amount' => $this->total,
+            'amount' => $total,
             'description' => $baseDescription,
         ]);
 
-        $totalLineItemSubtotal = (int) $this->lineItems()->sum('subtotal');
-        $billDiscountTotalCents = (int) $this->getRawOriginal('discount_total');
+        $totalLineItemSubtotalCents = $this->convertAmountToDefaultCurrency((int) $this->lineItems()->sum('subtotal'));
+        $billDiscountTotalCents = $this->convertAmountToDefaultCurrency((int) $this->getRawOriginal('discount_total'));
         $remainingDiscountCents = $billDiscountTotalCents;
 
         foreach ($this->lineItems as $index => $lineItem) {
             $lineItemDescription = "{$baseDescription} › {$lineItem->offering->name}";
 
+            $lineItemSubtotal = $this->formatAmountToDefaultCurrency($lineItem->getRawOriginal('subtotal'));
+
             $transaction->journalEntries()->create([
                 'company_id' => $this->company_id,
                 'type' => JournalEntryType::Debit,
                 'account_id' => $lineItem->offering->expense_account_id,
-                'amount' => $lineItem->subtotal,
+                'amount' => $lineItemSubtotal,
                 'description' => $lineItemDescription,
             ]);
 
             foreach ($lineItem->adjustments as $adjustment) {
+                $adjustmentAmount = $this->formatAmountToDefaultCurrency($lineItem->calculateAdjustmentTotalAmount($adjustment));
+
                 if ($adjustment->isNonRecoverablePurchaseTax()) {
                     $transaction->journalEntries()->create([
                         'company_id' => $this->company_id,
                         'type' => JournalEntryType::Debit,
                         'account_id' => $lineItem->offering->expense_account_id,
-                        'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
+                        'amount' => $adjustmentAmount,
                         'description' => "{$lineItemDescription} ({$adjustment->name})",
                     ]);
                 } elseif ($adjustment->account_id) {
@@ -254,20 +293,20 @@ class Bill extends Model
                         'company_id' => $this->company_id,
                         'type' => $adjustment->category->isDiscount() ? JournalEntryType::Credit : JournalEntryType::Debit,
                         'account_id' => $adjustment->account_id,
-                        'amount' => $lineItem->calculateAdjustmentTotal($adjustment)->getAmount(),
+                        'amount' => $adjustmentAmount,
                         'description' => $lineItemDescription,
                     ]);
                 }
             }
 
-            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotal > 0) {
-                $lineItemSubtotalCents = (int) $lineItem->getRawOriginal('subtotal');
+            if ($this->discount_method->isPerDocument() && $totalLineItemSubtotalCents > 0) {
+                $lineItemSubtotalCents = $this->convertAmountToDefaultCurrency((int) $lineItem->getRawOriginal('subtotal'));
 
                 if ($index === $this->lineItems->count() - 1) {
                     $lineItemDiscount = $remainingDiscountCents;
                 } else {
                     $lineItemDiscount = (int) round(
-                        ($lineItemSubtotalCents / $totalLineItemSubtotal) * $billDiscountTotalCents
+                        ($lineItemSubtotalCents / $totalLineItemSubtotalCents) * $billDiscountTotalCents
                     );
                     $remainingDiscountCents -= $lineItemDiscount;
                 }
@@ -294,6 +333,25 @@ class Bill extends Model
         }
 
         $this->createInitialTransaction();
+    }
+
+    public function convertAmountToDefaultCurrency(int $amountCents): int
+    {
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $needsConversion = $this->currency_code !== $defaultCurrency;
+
+        if ($needsConversion) {
+            return CurrencyConverter::convertBalance($amountCents, $this->currency_code, $defaultCurrency);
+        }
+
+        return $amountCents;
+    }
+
+    public function formatAmountToDefaultCurrency(int $amountCents): string
+    {
+        $convertedCents = $this->convertAmountToDefaultCurrency($amountCents);
+
+        return CurrencyConverter::convertCentsToFormatSimple($convertedCents);
     }
 
     public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction
