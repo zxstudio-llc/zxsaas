@@ -2,127 +2,75 @@
 
 namespace App\Models\Accounting;
 
-use App\Casts\MoneyCast;
-use App\Casts\RateCast;
-use App\Collections\Accounting\DocumentCollection;
-use App\Concerns\Blamable;
-use App\Concerns\CompanyOwned;
-use App\Enums\Accounting\AdjustmentComputation;
-use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
-use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
-use App\Models\Setting\Currency;
+use App\Models\Setting\DocumentDefault;
 use App\Observers\InvoiceObserver;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
-use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(InvoiceObserver::class)]
-#[CollectedBy(DocumentCollection::class)]
-class Invoice extends Model
+class Invoice extends Document
 {
-    use Blamable;
-    use CompanyOwned;
-    use HasFactory;
-
     protected $table = 'invoices';
 
     protected $fillable = [
-        'company_id',
+        ...self::COMMON_FILLABLE,
+        ...self::INVOICE_FILLABLE,
+    ];
+
+    protected const INVOICE_FILLABLE = [
         'client_id',
         'logo',
         'header',
         'subheader',
         'invoice_number',
-        'order_number',
-        'date',
-        'due_date',
         'approved_at',
-        'paid_at',
         'last_sent',
-        'status',
-        'currency_code',
-        'discount_method',
-        'discount_computation',
-        'discount_rate',
-        'subtotal',
-        'tax_total',
-        'discount_total',
-        'total',
-        'amount_paid',
         'terms',
         'footer',
-        'created_by',
-        'updated_by',
     ];
 
-    protected $casts = [
-        'date' => 'date',
-        'due_date' => 'date',
-        'approved_at' => 'datetime',
-        'paid_at' => 'datetime',
-        'last_sent' => 'datetime',
-        'status' => InvoiceStatus::class,
-        'discount_method' => DocumentDiscountMethod::class,
-        'discount_computation' => AdjustmentComputation::class,
-        'discount_rate' => RateCast::class,
-        'subtotal' => MoneyCast::class,
-        'tax_total' => MoneyCast::class,
-        'discount_total' => MoneyCast::class,
-        'total' => MoneyCast::class,
-        'amount_paid' => MoneyCast::class,
-        'amount_due' => MoneyCast::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            ...parent::casts(),
+            'approved_at' => 'datetime',
+            'last_sent' => 'datetime',
+            'status' => InvoiceStatus::class,
+        ];
+    }
+
+    public static function documentNumberColumn(): string
+    {
+        return 'invoice_number';
+    }
+
+    public static function documentType(): DocumentType
+    {
+        return DocumentType::Invoice;
+    }
+
+    public static function getDocumentSettings(): DocumentDefault
+    {
+        return auth()->user()->currentCompany->defaultInvoice;
+    }
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
-    }
-
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class, 'currency_code', 'code');
-    }
-
-    public function lineItems(): MorphMany
-    {
-        return $this->morphMany(DocumentLineItem::class, 'documentable');
-    }
-
-    public function transactions(): MorphMany
-    {
-        return $this->morphMany(Transaction::class, 'transactionable');
-    }
-
-    public function payments(): MorphMany
-    {
-        return $this->transactions()->where('is_payment', true);
-    }
-
-    public function deposits(): MorphMany
-    {
-        return $this->transactions()->where('type', TransactionType::Deposit)->where('is_payment', true);
-    }
-
-    public function withdrawals(): MorphMany
-    {
-        return $this->transactions()->where('type', TransactionType::Withdrawal)->where('is_payment', true);
     }
 
     public function approvalTransaction(): MorphOne
@@ -139,13 +87,6 @@ class Invoice extends Model
             InvoiceStatus::Draft,
             InvoiceStatus::Overpaid,
         ]);
-    }
-
-    protected function isCurrentlyOverdue(): Attribute
-    {
-        return Attribute::get(function () {
-            return $this->due_date->isBefore(today()) && $this->canBeOverdue();
-        });
     }
 
     public function isDraft(): bool
@@ -177,90 +118,24 @@ class Invoice extends Model
         return in_array($this->status, InvoiceStatus::canBeOverdue());
     }
 
-    public function hasPayments(): bool
-    {
-        return $this->payments->isNotEmpty();
-    }
-
-    public static function getNextDocumentNumber(): string
-    {
-        $company = auth()->user()->currentCompany;
-
-        if (! $company) {
-            throw new \RuntimeException('No current company is set for the user.');
-        }
-
-        $defaultInvoiceSettings = $company->defaultInvoice;
-
-        $numberPrefix = $defaultInvoiceSettings->number_prefix;
-        $numberDigits = $defaultInvoiceSettings->number_digits;
-
-        $latestDocument = static::query()
-            ->whereNotNull('invoice_number')
-            ->latest('invoice_number')
-            ->first();
-
-        $lastNumberNumericPart = $latestDocument
-            ? (int) substr($latestDocument->invoice_number, strlen($numberPrefix))
-            : 0;
-
-        $numberNext = $lastNumberNumericPart + 1;
-
-        return $defaultInvoiceSettings->getNumberNext(
-            padded: true,
-            format: true,
-            prefix: $numberPrefix,
-            digits: $numberDigits,
-            next: $numberNext
-        );
-    }
-
     public function recordPayment(array $data): void
     {
         $isRefund = $this->status === InvoiceStatus::Overpaid;
 
-        if ($isRefund) {
-            $transactionType = TransactionType::Withdrawal;
-            $transactionDescription = "Invoice #{$this->invoice_number}: Refund to {$this->client->name}";
-        } else {
-            $transactionType = TransactionType::Deposit;
-            $transactionDescription = "Invoice #{$this->invoice_number}: Payment from {$this->client->name}";
-        }
+        $transactionType = $isRefund
+            ? TransactionType::Withdrawal // Refunds are withdrawals
+            : TransactionType::Deposit;  // Payments are deposits
 
-        $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
-        $bankAccountCurrency = $bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+        $transactionDescription = $isRefund
+            ? "Invoice #{$this->invoice_number}: Refund to {$this->client->name}"
+            : "Invoice #{$this->invoice_number}: Payment from {$this->client->name}";
 
-        $invoiceCurrency = $this->currency_code;
-        $requiresConversion = $invoiceCurrency !== $bankAccountCurrency;
-
-        if ($requiresConversion) {
-            $amountInInvoiceCurrencyCents = CurrencyConverter::convertToCents($data['amount'], $invoiceCurrency);
-            $amountInBankCurrencyCents = CurrencyConverter::convertBalance(
-                $amountInInvoiceCurrencyCents,
-                $invoiceCurrency,
-                $bankAccountCurrency
-            );
-            $formattedAmountForBankCurrency = CurrencyConverter::convertCentsToFormatSimple(
-                $amountInBankCurrencyCents,
-                $bankAccountCurrency
-            );
-        } else {
-            $formattedAmountForBankCurrency = $data['amount']; // Already in simple format
-        }
-
-        // Create transaction
-        $this->transactions()->create([
-            'company_id' => $this->company_id,
-            'type' => $transactionType,
-            'is_payment' => true,
-            'posted_at' => $data['posted_at'],
-            'amount' => $formattedAmountForBankCurrency,
-            'payment_method' => $data['payment_method'],
-            'bank_account_id' => $data['bank_account_id'],
-            'account_id' => Account::getAccountsReceivableAccount()->id,
-            'description' => $transactionDescription,
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $this->recordTransaction(
+            $data,
+            $transactionType,
+            $transactionDescription,
+            Account::getAccountsReceivableAccount()->id // Account ID specific to invoices
+        );
     }
 
     public function approveDraft(?Carbon $approvedAt = null): void
@@ -364,25 +239,6 @@ class Invoice extends Model
         }
 
         $this->createApprovalTransaction();
-    }
-
-    public function convertAmountToDefaultCurrency(int $amountCents): int
-    {
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-        $needsConversion = $this->currency_code !== $defaultCurrency;
-
-        if ($needsConversion) {
-            return CurrencyConverter::convertBalance($amountCents, $this->currency_code, $defaultCurrency);
-        }
-
-        return $amountCents;
-    }
-
-    public function formatAmountToDefaultCurrency(int $amountCents): string
-    {
-        $convertedCents = $this->convertAmountToDefaultCurrency($amountCents);
-
-        return CurrencyConverter::convertCentsToFormatSimple($convertedCents);
     }
 
     public static function getApproveDraftAction(string $action = Action::class): MountableAction

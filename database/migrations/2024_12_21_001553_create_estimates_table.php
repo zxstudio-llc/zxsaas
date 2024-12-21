@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoices', function (Blueprint $table) {
+        Schema::create('estimates', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
@@ -19,11 +19,11 @@ return new class extends Migration
             $table->string('header')->nullable();
             $table->string('subheader')->nullable();
             $table->string('number')->nullable();
-            $table->string('order_number')->nullable(); // PO, SO, etc.
+            $table->string('reference_number')->nullable();
             $table->date('date')->nullable();
-            $table->date('due_date')->nullable();
+            $table->date('expiry_date')->nullable();
             $table->timestamp('approved_at')->nullable();
-            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('accepted_at')->nullable();
             $table->timestamp('last_sent')->nullable();
             $table->string('status')->default('draft');
             $table->string('currency_code')->nullable();
@@ -34,8 +34,6 @@ return new class extends Migration
             $table->integer('tax_total')->default(0);
             $table->integer('discount_total')->default(0);
             $table->integer('total')->default(0);
-            $table->integer('amount_paid')->default(0);
-            $table->integer('amount_due')->storedAs('total - amount_paid');
             $table->text('terms')->nullable(); // terms, notes
             $table->text('footer')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
@@ -49,6 +47,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('invoices');
+        Schema::dropIfExists('estimates');
     }
 };
