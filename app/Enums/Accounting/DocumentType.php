@@ -9,8 +9,7 @@ enum DocumentType: string implements HasIcon, HasLabel
 {
     case Invoice = 'invoice';
     case Bill = 'bill';
-    // TODO: Add estimate
-    // case Estimate = 'estimate';
+    case Estimate = 'estimate';
 
     public const DEFAULT = self::Invoice->value;
 
@@ -24,13 +23,14 @@ enum DocumentType: string implements HasIcon, HasLabel
         return match ($this->value) {
             self::Invoice->value => 'heroicon-o-document-duplicate',
             self::Bill->value => 'heroicon-o-clipboard-document-list',
+            self::Estimate->value => 'heroicon-o-document-text',
         };
     }
 
     public function getTaxKey(): string
     {
         return match ($this) {
-            self::Invoice => 'salesTaxes',
+            self::Invoice, self::Estimate => 'salesTaxes',
             self::Bill => 'purchaseTaxes',
         };
     }
@@ -38,7 +38,7 @@ enum DocumentType: string implements HasIcon, HasLabel
     public function getDiscountKey(): string
     {
         return match ($this) {
-            self::Invoice => 'salesDiscounts',
+            self::Invoice, self::Estimate => 'salesDiscounts',
             self::Bill => 'purchaseDiscounts',
         };
     }

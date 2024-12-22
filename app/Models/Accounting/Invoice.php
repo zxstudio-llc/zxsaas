@@ -55,7 +55,7 @@ class Invoice extends Model
         'due_date',
         'approved_at',
         'paid_at',
-        'last_sent',
+        'last_sent_at',
         'status',
         'currency_code',
         'discount_method',
@@ -77,7 +77,7 @@ class Invoice extends Model
         'due_date' => 'date',
         'approved_at' => 'datetime',
         'paid_at' => 'datetime',
-        'last_sent' => 'datetime',
+        'last_sent_at' => 'datetime',
         'status' => InvoiceStatus::class,
         'discount_method' => DocumentDiscountMethod::class,
         'discount_computation' => AdjustmentComputation::class,
@@ -408,13 +408,13 @@ class Invoice extends Model
             ->label('Mark as Sent')
             ->icon('heroicon-o-paper-airplane')
             ->visible(static function (self $record) {
-                return ! $record->last_sent;
+                return ! $record->last_sent_at;
             })
             ->successNotificationTitle('Invoice Sent')
             ->action(function (self $record, MountableAction $action) {
                 $record->update([
                     'status' => InvoiceStatus::Sent,
-                    'last_sent' => now(),
+                    'last_sent_at' => now(),
                 ]);
 
                 $action->success();
@@ -437,7 +437,7 @@ class Invoice extends Model
                 'due_date',
                 'approved_at',
                 'paid_at',
-                'last_sent',
+                'last_sent_at',
             ])
             ->modal(false)
             ->beforeReplicaSaved(function (self $original, self $replica) {

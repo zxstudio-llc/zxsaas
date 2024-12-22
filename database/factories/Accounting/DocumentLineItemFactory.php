@@ -65,6 +65,37 @@ class DocumentLineItemFactory extends Factory
         });
     }
 
+    public function forEstimate(): static
+    {
+        return $this->state(function (array $attributes) {
+            $offering = Offering::where('sellable', true)
+                ->inRandomOrder()
+                ->first();
+
+            return [
+                'offering_id' => $offering->id,
+                'unit_price' => $offering->price,
+            ];
+        })->afterCreating(function (DocumentLineItem $lineItem) {
+            $offering = $lineItem->offering;
+
+            if ($offering) {
+                $lineItem->salesTaxes()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
+                $lineItem->salesDiscounts()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
+            }
+
+            $lineItem->refresh();
+
+            $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
+            $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
+
+            $lineItem->updateQuietly([
+                'tax_total' => $taxTotal,
+                'discount_total' => $discountTotal,
+            ]);
+        });
+    }
+
     public function forBill(): static
     {
         return $this->state(function (array $attributes) {

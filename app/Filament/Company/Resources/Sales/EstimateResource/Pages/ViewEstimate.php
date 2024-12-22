@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
+namespace App\Filament\Company\Resources\Sales\EstimateResource\Pages;
 
 use App\Filament\Company\Resources\Sales\ClientResource;
-use App\Filament\Company\Resources\Sales\InvoiceResource;
-use App\Models\Accounting\Invoice;
+use App\Filament\Company\Resources\Sales\EstimateResource;
+use App\Models\Accounting\Estimate;
 use Filament\Actions;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\Section;
@@ -17,11 +17,11 @@ use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\MaxWidth;
 
-class ViewInvoice extends ViewRecord
+class ViewEstimate extends ViewRecord
 {
     protected static string $view = 'filament.company.resources.sales.invoices.pages.view-invoice';
 
-    protected static string $resource = InvoiceResource::class;
+    protected static string $resource = EstimateResource::class;
 
     protected $listeners = [
         'refresh' => '$refresh',
@@ -38,9 +38,9 @@ class ViewInvoice extends ViewRecord
             Actions\ActionGroup::make([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
-                Invoice::getApproveDraftAction(),
-                Invoice::getMarkAsSentAction(),
-                Invoice::getReplicateAction(),
+                Estimate::getApproveDraftAction(),
+                Estimate::getMarkAsSentAction(),
+                Estimate::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -56,23 +56,23 @@ class ViewInvoice extends ViewRecord
     {
         return $infolist
             ->schema([
-                Section::make('Invoice Details')
+                Section::make('Estimate Details')
                     ->columns(4)
                     ->schema([
                         Grid::make(1)
                             ->schema([
                                 TextEntry::make('invoice_number')
-                                    ->label('Invoice #'),
+                                    ->label('Estimate #'),
                                 TextEntry::make('status')
                                     ->badge(),
                                 TextEntry::make('client.name')
                                     ->label('Client')
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
-                                    ->url(static fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
+                                    ->url(static fn (Estimate $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                                 TextEntry::make('amount_due')
                                     ->label('Amount Due')
-                                    ->currency(static fn (Invoice $record) => $record->currency_code),
+                                    ->currency(static fn (Estimate $record) => $record->currency_code),
                                 TextEntry::make('due_date')
                                     ->label('Due')
                                     ->asRelativeDay(),
@@ -92,7 +92,7 @@ class ViewInvoice extends ViewRecord
                         Grid::make()
                             ->schema([
                                 ViewEntry::make('invoice-view')
-                                    ->label('View Invoice')
+                                    ->label('View Estimate')
                                     ->columnSpan(3)
                                     ->view('filament.company.resources.sales.invoices.components.invoice-view')
                                     ->viewData([

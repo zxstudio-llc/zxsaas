@@ -2,7 +2,7 @@
     use App\Filament\Company\Pages\Accounting\Transactions;
     use App\Models\Accounting\Bill;
     use App\Filament\Company\Resources\Purchases\BillResource\Pages\ViewBill;
-    use App\Filament\Company\Resources\Sales\InvoiceResource\Pages\ViewInvoice;
+    use App\Filament\Company\Resources\Sales\InvoiceResource\Pages\ViewEstimate;
 
     $iconPosition = \Filament\Support\Enums\IconPosition::After;
 @endphp
@@ -68,7 +68,7 @@
                                         <x-filament::link
                                             :href="$cell['tableAction']['model'] === Bill::class
                                                 ? ViewBill::getUrl(['record' => $cell['tableAction']['id']])
-                                                : ViewInvoice::getUrl(['record' => $cell['tableAction']['id']])"
+                                                : ViewEstimate::getUrl(['record' => $cell['tableAction']['id']])"
                                             target="_blank"
                                             color="primary"
                                             icon="heroicon-o-arrow-top-right-on-square"

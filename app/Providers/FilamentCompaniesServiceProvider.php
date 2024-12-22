@@ -30,6 +30,7 @@ use App\Filament\Company\Resources\Common\OfferingResource;
 use App\Filament\Company\Resources\Purchases\BillResource;
 use App\Filament\Company\Resources\Purchases\VendorResource;
 use App\Filament\Company\Resources\Sales\ClientResource;
+use App\Filament\Company\Resources\Sales\EstimateResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Components\PanelShiftDropdown;
 use App\Filament\User\Clusters\Account;
@@ -131,6 +132,7 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                             ->icon('heroicon-o-currency-dollar')
                             ->items([
                                 ...InvoiceResource::getNavigationItems(),
+                                ...EstimateResource::getNavigationItems(),
                                 ...ClientResource::getNavigationItems(),
                             ]),
                         NavigationGroup::make('Purchases')

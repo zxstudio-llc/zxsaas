@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Models\Accounting\Bill;
+use App\Models\Accounting\Estimate;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Models\Common\Client;
@@ -155,6 +156,74 @@ class CompanyFactory extends Factory
                 ->withLineItems()
                 ->approved()
                 ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Overpaid)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+        });
+    }
+
+    public function withEstimates(int $count = 10): self
+    {
+        return $this->afterCreating(function (Company $company) use ($count) {
+            $draftCount = (int) floor($count * 0.2);     // 20% drafts
+            $approvedCount = (int) floor($count * 0.3);   // 30% approved
+            $acceptedCount = (int) floor($count * 0.2);  // 20% accepted
+            $declinedCount = (int) floor($count * 0.2);  // 20% declined
+            $expiredCount = $count - ($draftCount + $approvedCount + $acceptedCount + $declinedCount); // remaining as expired
+
+            // Create draft estimates
+            Estimate::factory()
+                ->count($draftCount)
+                ->withLineItems()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create pending (approved) estimates
+            Estimate::factory()
+                ->count($approvedCount)
+                ->withLineItems()
+                ->approved()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create accepted estimates
+            Estimate::factory()
+                ->count($acceptedCount)
+                ->withLineItems()
+                ->accepted()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create declined estimates
+            Estimate::factory()
+                ->count($declinedCount)
+                ->withLineItems()
+                ->declined()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create expired estimates (approved but past expiration date)
+            Estimate::factory()
+                ->count($expiredCount)
+                ->withLineItems()
+                ->approved()
+                ->state([
+                    'expiration_date' => now()->subDays(rand(1, 30)),
+                ])
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
