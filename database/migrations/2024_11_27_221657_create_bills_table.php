@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('vendor_id')->nullable()->constrained('vendors')->nullOnDelete();
-            $table->string('number')->nullable();
+            $table->string('bill_number')->nullable();
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();

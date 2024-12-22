@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('logo')->nullable();
             $table->string('header')->nullable();
             $table->string('subheader')->nullable();
-            $table->string('number')->nullable();
+            $table->string('invoice_number')->nullable();
             $table->string('order_number')->nullable(); // PO, SO, etc.
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();

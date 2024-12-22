@@ -2,61 +2,88 @@
 
 namespace App\Models\Accounting;
 
+use App\Casts\MoneyCast;
+use App\Casts\RateCast;
+use App\Collections\Accounting\DocumentCollection;
+use App\Concerns\Blamable;
+use App\Concerns\CompanyOwned;
+use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\BillStatus;
-use App\Enums\Accounting\DocumentType;
+use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
+use App\Models\Banking\BankAccount;
 use App\Models\Common\Vendor;
-use App\Models\Setting\DocumentDefault;
+use App\Models\Setting\Currency;
 use App\Observers\BillObserver;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Actions\MountableAction;
 use Filament\Actions\ReplicateAction;
+use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
 #[ObservedBy(BillObserver::class)]
-class Bill extends Document
+#[CollectedBy(DocumentCollection::class)]
+class Bill extends Model
 {
+    use Blamable;
+    use CompanyOwned;
+    use HasFactory;
+
     protected $table = 'bills';
 
     protected $fillable = [
-        ...self::COMMON_FILLABLE,
-        ...self::BILL_FILLABLE,
-    ];
-
-    protected const BILL_FILLABLE = [
+        'company_id',
         'vendor_id',
         'bill_number',
+        'order_number',
+        'date',
+        'due_date',
+        'paid_at',
+        'status',
+        'currency_code',
+        'discount_method',
+        'discount_computation',
+        'discount_rate',
+        'subtotal',
+        'tax_total',
+        'discount_total',
+        'total',
+        'amount_paid',
         'notes',
+        'created_by',
+        'updated_by',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            ...parent::casts(),
-            'status' => BillStatus::class,
-        ];
-    }
+    protected $casts = [
+        'date' => 'date',
+        'due_date' => 'date',
+        'paid_at' => 'datetime',
+        'status' => BillStatus::class,
+        'discount_method' => DocumentDiscountMethod::class,
+        'discount_computation' => AdjustmentComputation::class,
+        'discount_rate' => RateCast::class,
+        'subtotal' => MoneyCast::class,
+        'tax_total' => MoneyCast::class,
+        'discount_total' => MoneyCast::class,
+        'total' => MoneyCast::class,
+        'amount_paid' => MoneyCast::class,
+        'amount_due' => MoneyCast::class,
+    ];
 
-    public static function documentNumberColumn(): string
+    public function currency(): BelongsTo
     {
-        return 'bill_number';
-    }
-
-    public static function documentType(): DocumentType
-    {
-        return DocumentType::Bill;
-    }
-
-    public static function getDocumentSettings(): DocumentDefault
-    {
-        return auth()->user()->currentCompany->defaultBill;
+        return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
     public function vendor(): BelongsTo
@@ -64,10 +91,42 @@ class Bill extends Document
         return $this->belongsTo(Vendor::class);
     }
 
+    public function lineItems(): MorphMany
+    {
+        return $this->morphMany(DocumentLineItem::class, 'documentable');
+    }
+
+    public function transactions(): MorphMany
+    {
+        return $this->morphMany(Transaction::class, 'transactionable');
+    }
+
+    public function payments(): MorphMany
+    {
+        return $this->transactions()->where('is_payment', true);
+    }
+
+    public function deposits(): MorphMany
+    {
+        return $this->transactions()->where('type', TransactionType::Deposit)->where('is_payment', true);
+    }
+
+    public function withdrawals(): MorphMany
+    {
+        return $this->transactions()->where('type', TransactionType::Withdrawal)->where('is_payment', true);
+    }
+
     public function initialTransaction(): MorphOne
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    protected function isCurrentlyOverdue(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->due_date->isBefore(today()) && $this->canBeOverdue();
+        });
     }
 
     public function canBeOverdue(): bool
@@ -81,6 +140,44 @@ class Bill extends Document
             BillStatus::Paid,
             BillStatus::Void,
         ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
+    }
+
+    public function hasPayments(): bool
+    {
+        return $this->payments->isNotEmpty();
+    }
+
+    public static function getNextDocumentNumber(): string
+    {
+        $company = auth()->user()->currentCompany;
+
+        if (! $company) {
+            throw new \RuntimeException('No current company is set for the user.');
+        }
+
+        $defaultBillSettings = $company->defaultBill;
+
+        $numberPrefix = $defaultBillSettings->number_prefix;
+        $numberDigits = $defaultBillSettings->number_digits;
+
+        $latestDocument = static::query()
+            ->whereNotNull('bill_number')
+            ->latest('bill_number')
+            ->first();
+
+        $lastNumberNumericPart = $latestDocument
+            ? (int) substr($latestDocument->bill_number, strlen($numberPrefix))
+            : 0;
+
+        $numberNext = $lastNumberNumericPart + 1;
+
+        return $defaultBillSettings->getNumberNext(
+            padded: true,
+            format: true,
+            prefix: $numberPrefix,
+            digits: $numberDigits,
+            next: $numberNext
+        );
     }
 
     public function hasInitialTransaction(): bool
@@ -99,14 +196,44 @@ class Bill extends Document
 
     public function recordPayment(array $data): void
     {
+        $transactionType = TransactionType::Withdrawal;
         $transactionDescription = "Bill #{$this->bill_number}: Payment to {$this->vendor->name}";
 
-        $this->recordTransaction(
-            $data,
-            TransactionType::Withdrawal, // Always withdrawal for bills
-            $transactionDescription,
-            Account::getAccountsPayableAccount()->id // Account ID specific to bills
-        );
+        // Add multi-currency handling
+        $bankAccount = BankAccount::findOrFail($data['bank_account_id']);
+        $bankAccountCurrency = $bankAccount->account->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+
+        $billCurrency = $this->currency_code;
+        $requiresConversion = $billCurrency !== $bankAccountCurrency;
+
+        if ($requiresConversion) {
+            $amountInBillCurrencyCents = CurrencyConverter::convertToCents($data['amount'], $billCurrency);
+            $amountInBankCurrencyCents = CurrencyConverter::convertBalance(
+                $amountInBillCurrencyCents,
+                $billCurrency,
+                $bankAccountCurrency
+            );
+            $formattedAmountForBankCurrency = CurrencyConverter::convertCentsToFormatSimple(
+                $amountInBankCurrencyCents,
+                $bankAccountCurrency
+            );
+        } else {
+            $formattedAmountForBankCurrency = $data['amount']; // Already in simple format
+        }
+
+        // Create transaction with converted amount
+        $this->transactions()->create([
+            'company_id' => $this->company_id,
+            'type' => $transactionType,
+            'is_payment' => true,
+            'posted_at' => $data['posted_at'],
+            'amount' => $formattedAmountForBankCurrency,
+            'payment_method' => $data['payment_method'],
+            'bank_account_id' => $data['bank_account_id'],
+            'account_id' => Account::getAccountsPayableAccount()->id,
+            'description' => $transactionDescription,
+            'notes' => $data['notes'] ?? null,
+        ]);
     }
 
     public function createInitialTransaction(?Carbon $postedAt = null): void
@@ -206,6 +333,25 @@ class Bill extends Document
         }
 
         $this->createInitialTransaction();
+    }
+
+    public function convertAmountToDefaultCurrency(int $amountCents): int
+    {
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $needsConversion = $this->currency_code !== $defaultCurrency;
+
+        if ($needsConversion) {
+            return CurrencyConverter::convertBalance($amountCents, $this->currency_code, $defaultCurrency);
+        }
+
+        return $amountCents;
+    }
+
+    public function formatAmountToDefaultCurrency(int $amountCents): string
+    {
+        $convertedCents = $this->convertAmountToDefaultCurrency($amountCents);
+
+        return CurrencyConverter::convertCentsToFormatSimple($convertedCents);
     }
 
     public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction
