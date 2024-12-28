@@ -170,8 +170,9 @@ class CompanyFactory extends Factory
             $draftCount = (int) floor($count * 0.2);     // 20% drafts
             $approvedCount = (int) floor($count * 0.3);   // 30% approved
             $acceptedCount = (int) floor($count * 0.2);  // 20% accepted
-            $declinedCount = (int) floor($count * 0.2);  // 20% declined
-            $expiredCount = $count - ($draftCount + $approvedCount + $acceptedCount + $declinedCount); // remaining as expired
+            $declinedCount = (int) floor($count * 0.1);  // 10% declined
+            $convertedCount = (int) floor($count * 0.1); // 10% converted to invoices
+            $expiredCount = $count - ($draftCount + $approvedCount + $acceptedCount + $declinedCount + $convertedCount); // remaining 10%
 
             // Create draft estimates
             Estimate::factory()
@@ -210,6 +211,18 @@ class CompanyFactory extends Factory
                 ->count($declinedCount)
                 ->withLineItems()
                 ->declined()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            // Create converted estimates
+            Estimate::factory()
+                ->count($convertedCount)
+                ->withLineItems()
+                ->accepted()
+                ->converted()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,

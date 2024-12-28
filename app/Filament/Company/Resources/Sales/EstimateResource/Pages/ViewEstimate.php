@@ -2,14 +2,15 @@
 
 namespace App\Filament\Company\Resources\Sales\EstimateResource\Pages;
 
+use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\EstimateResource;
+use App\Filament\Infolists\Components\DocumentPreview;
 use App\Models\Accounting\Estimate;
 use Filament\Actions;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\FontWeight;
@@ -19,8 +20,6 @@ use Filament\Support\Enums\MaxWidth;
 
 class ViewEstimate extends ViewRecord
 {
-    protected static string $view = 'filament.company.resources.sales.invoices.pages.view-invoice';
-
     protected static string $resource = EstimateResource::class;
 
     protected $listeners = [
@@ -40,7 +39,10 @@ class ViewEstimate extends ViewRecord
                 Actions\DeleteAction::make(),
                 Estimate::getApproveDraftAction(),
                 Estimate::getMarkAsSentAction(),
+                Estimate::getMarkAsAcceptedAction(),
+                Estimate::getMarkAsDeclinedAction(),
                 Estimate::getReplicateAction(),
+                Estimate::getConvertToInvoiceAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -61,7 +63,7 @@ class ViewEstimate extends ViewRecord
                     ->schema([
                         Grid::make(1)
                             ->schema([
-                                TextEntry::make('invoice_number')
+                                TextEntry::make('estimate_number')
                                     ->label('Estimate #'),
                                 TextEntry::make('status')
                                     ->badge(),
@@ -70,11 +72,8 @@ class ViewEstimate extends ViewRecord
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
                                     ->url(static fn (Estimate $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
-                                TextEntry::make('amount_due')
-                                    ->label('Amount Due')
-                                    ->currency(static fn (Estimate $record) => $record->currency_code),
-                                TextEntry::make('due_date')
-                                    ->label('Due')
+                                TextEntry::make('expiration_date')
+                                    ->label('Expiration Date')
                                     ->asRelativeDay(),
                                 TextEntry::make('approved_at')
                                     ->label('Approved At')
@@ -84,22 +83,13 @@ class ViewEstimate extends ViewRecord
                                     ->label('Last Sent')
                                     ->placeholder('Never')
                                     ->date(),
-                                TextEntry::make('paid_at')
-                                    ->label('Paid At')
-                                    ->placeholder('Not Paid')
+                                TextEntry::make('accepted_at')
+                                    ->label('Accepted At')
+                                    ->placeholder('Not Accepted')
                                     ->date(),
                             ])->columnSpan(1),
-                        Grid::make()
-                            ->schema([
-                                ViewEntry::make('invoice-view')
-                                    ->label('View Estimate')
-                                    ->columnSpan(3)
-                                    ->view('filament.company.resources.sales.invoices.components.invoice-view')
-                                    ->viewData([
-                                        'invoice' => $this->record,
-                                    ]),
-                            ])
-                            ->columnSpan(3),
+                        DocumentPreview::make()
+                            ->type(DocumentType::Estimate),
                     ]),
             ]);
     }

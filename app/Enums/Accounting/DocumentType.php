@@ -42,4 +42,31 @@ enum DocumentType: string implements HasIcon, HasLabel
             self::Bill => 'purchaseDiscounts',
         };
     }
+
+    public function getLabels(): array
+    {
+        return match ($this) {
+            self::Invoice => [
+                'title' => 'Invoice',
+                'number' => 'Invoice Number',
+                'reference_number' => 'P.O/S.O Number',
+                'date' => 'Invoice Date',
+                'due_date' => 'Payment Due',
+            ],
+            self::Estimate => [
+                'title' => 'Estimate',
+                'number' => 'Estimate Number',
+                'reference_number' => 'Reference Number',
+                'date' => 'Estimate Date',
+                'due_date' => 'Expiration Date',
+            ],
+            self::Bill => [
+                'title' => 'Bill',
+                'number' => 'Bill Number',
+                'reference_number' => 'P.O/S.O Number',
+                'date' => 'Bill Date',
+                'due_date' => 'Payment Due',
+            ],
+        };
+    }
 }

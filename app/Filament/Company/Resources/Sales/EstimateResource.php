@@ -46,6 +46,7 @@ class EstimateResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Estimate Header')
                     ->collapsible()
+                    ->collapsed()
                     ->schema([
                         Forms\Components\Split::make([
                             Forms\Components\Group::make([
@@ -114,26 +115,23 @@ class EstimateResource extends Resource
                                     ->label('Estimate Number')
                                     ->default(fn () => Estimate::getNextDocumentNumber()),
                                 Forms\Components\TextInput::make('reference_number')
-                                    ->label('P.O/S.O Number'),
+                                    ->label('Reference Number'),
                                 Forms\Components\DatePicker::make('date')
                                     ->label('Estimate Date')
                                     ->live()
                                     ->default(now())
-                                    ->disabled(function (?Estimate $record) {
-                                        return $record?->hasPayments();
-                                    })
                                     ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
                                         $date = $state;
-                                        $dueDate = $get('expiration_date');
+                                        $expirationDate = $get('expiration_date');
 
-                                        if ($date && $dueDate && $date > $dueDate) {
+                                        if ($date && $expirationDate && $date > $expirationDate) {
                                             $set('expiration_date', $date);
                                         }
                                     }),
                                 Forms\Components\DatePicker::make('expiration_date')
-                                    ->label('Payment Due')
+                                    ->label('Expiration Date')
                                     ->default(function () use ($company) {
-                                        return now()->addDays($company->defaultEstimate->payment_terms->getDays());
+                                        return now()->addDays($company->defaultInvoice->payment_terms->getDays());
                                     })
                                     ->minDate(static function (Forms\Get $get) {
                                         return $get('date') ?? now();
@@ -277,6 +275,7 @@ class EstimateResource extends Resource
                     ]),
                 Forms\Components\Section::make('Estimate Footer')
                     ->collapsible()
+                    ->collapsed()
                     ->schema([
                         Forms\Components\Textarea::make('footer')
                             ->columnSpanFull(),
@@ -298,7 +297,7 @@ class EstimateResource extends Resource
                     ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('expiration_date')
-                    ->label('Due')
+                    ->label('Expiration Date')
                     ->asRelativeDay()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date')
@@ -338,9 +337,12 @@ class EstimateResource extends Resource
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\DeleteAction::make(),
-                    //                    Estimate::getReplicateAction(Tables\Actions\ReplicateAction::class),
-                    //                    Estimate::getApproveDraftAction(Tables\Actions\Action::class),
-                    //                    Estimate::getMarkAsSentAction(Tables\Actions\Action::class),
+                    Estimate::getReplicateAction(Tables\Actions\ReplicateAction::class),
+                    Estimate::getApproveDraftAction(Tables\Actions\Action::class),
+                    Estimate::getMarkAsSentAction(Tables\Actions\Action::class),
+                    Estimate::getMarkAsAcceptedAction(Tables\Actions\Action::class),
+                    Estimate::getMarkAsDeclinedAction(Tables\Actions\Action::class),
+                    Estimate::getConvertToInvoiceAction(Tables\Actions\Action::class),
                 ]),
             ])
             ->bulkActions([
@@ -355,22 +357,25 @@ class EstimateResource extends Resource
                         ->databaseTransaction()
                         ->deselectRecordsAfterCompletion()
                         ->excludeAttributes([
+                            'estimate_number',
+                            'date',
+                            'expiration_date',
+                            'approved_at',
+                            'accepted_at',
+                            'declined_at',
+                            'last_sent_at',
+                            'last_viewed_at',
                             'status',
-                            'amount_paid',
-                            'amount_due',
                             'created_by',
                             'updated_by',
                             'created_at',
                             'updated_at',
-                            'estimate_number',
-                            'date',
-                            'expiration_date',
                         ])
                         ->beforeReplicaSaved(function (Estimate $replica) {
                             $replica->status = EstimateStatus::Draft;
                             $replica->estimate_number = Estimate::getNextDocumentNumber();
                             $replica->date = now();
-                            $replica->expiration_date = now()->addDays($replica->company->defaultEstimate->payment_terms->getDays());
+                            $replica->expiration_date = now()->addDays($replica->company->defaultInvoice->payment_terms->getDays());
                         })
                         ->withReplicatedRelationships(['lineItems'])
                         ->withExcludedRelationshipAttributes('lineItems', [
@@ -433,6 +438,64 @@ class EstimateResource extends Resource
                                 $record->updateQuietly([
                                     'status' => EstimateStatus::Sent,
                                 ]);
+                            });
+
+                            $action->success();
+                        }),
+                    Tables\Actions\BulkAction::make('markAsAccepted')
+                        ->label('Mark as Accepted')
+                        ->icon('heroicon-o-check-badge')
+                        ->databaseTransaction()
+                        ->successNotificationTitle('Estimates Accepted')
+                        ->failureNotificationTitle('Failed to Mark Estimates as Accepted')
+                        ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->isAccepted());
+
+                            if ($doesntContainSent) {
+                                Notification::make()
+                                    ->title('Acceptance Failed')
+                                    ->body('Only sent estimates that haven\'t been accepted can be marked as accepted. Please adjust your selection and try again.')
+                                    ->persistent()
+                                    ->danger()
+                                    ->send();
+
+                                $action->cancel(true);
+                            }
+                        })
+                        ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $records->each(function (Estimate $record) {
+                                $record->markAsAccepted();
+                            });
+
+                            $action->success();
+                        }),
+                    Tables\Actions\BulkAction::make('markAsDeclined')
+                        ->label('Mark as Declined')
+                        ->icon('heroicon-o-x-circle')
+                        ->requiresConfirmation()
+                        ->databaseTransaction()
+                        ->color('danger')
+                        ->modalHeading('Mark Estimates as Declined')
+                        ->modalDescription('Are you sure you want to mark the selected estimates as declined? This action cannot be undone.')
+                        ->successNotificationTitle('Estimates Declined')
+                        ->failureNotificationTitle('Failed to Mark Estimates as Declined')
+                        ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->isDeclined());
+
+                            if ($doesntContainSent) {
+                                Notification::make()
+                                    ->title('Declination Failed')
+                                    ->body('Only sent estimates that haven\'t been declined can be marked as declined. Please adjust your selection and try again.')
+                                    ->persistent()
+                                    ->danger()
+                                    ->send();
+
+                                $action->cancel(true);
+                            }
+                        })
+                        ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
+                            $records->each(function (Estimate $record) {
+                                $record->markAsDeclined();
                             });
 
                             $action->success();

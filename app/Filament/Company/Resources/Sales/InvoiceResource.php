@@ -53,6 +53,7 @@ class InvoiceResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Invoice Header')
                     ->collapsible()
+                    ->collapsed()
                     ->schema([
                         Forms\Components\Split::make([
                             Forms\Components\Group::make([
@@ -285,6 +286,7 @@ class InvoiceResource extends Resource
                     ]),
                 Forms\Components\Section::make('Invoice Footer')
                     ->collapsible()
+                    ->collapsed()
                     ->schema([
                         Forms\Components\Textarea::make('footer')
                             ->columnSpanFull(),
@@ -531,9 +533,7 @@ class InvoiceResource extends Resource
                         })
                         ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $records->each(function (Invoice $record) {
-                                $record->updateQuietly([
-                                    'status' => InvoiceStatus::Sent,
-                                ]);
+                                $record->markAsSent();
                             });
 
                             $action->success();

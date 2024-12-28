@@ -15,6 +15,7 @@ use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
+use App\Models\Company;
 use App\Models\Setting\Currency;
 use App\Observers\InvoiceObserver;
 use App\Utilities\Currency\CurrencyAccessor;
@@ -33,8 +34,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
-#[ObservedBy(InvoiceObserver::class)]
 #[CollectedBy(DocumentCollection::class)]
+#[ObservedBy(InvoiceObserver::class)]
 class Invoice extends Model
 {
     use Blamable;
@@ -46,6 +47,7 @@ class Invoice extends Model
     protected $fillable = [
         'company_id',
         'client_id',
+        'estimate_id',
         'logo',
         'header',
         'subheader',
@@ -98,6 +100,11 @@ class Invoice extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
+    }
+
+    public function estimate(): BelongsTo
+    {
+        return $this->belongsTo(Estimate::class);
     }
 
     public function lineItems(): MorphMany
@@ -182,9 +189,9 @@ class Invoice extends Model
         return $this->payments->isNotEmpty();
     }
 
-    public static function getNextDocumentNumber(): string
+    public static function getNextDocumentNumber(?Company $company = null): string
     {
-        $company = auth()->user()->currentCompany;
+        $company ??= auth()->user()?->currentCompany;
 
         if (! $company) {
             throw new \RuntimeException('No current company is set for the user.');
@@ -412,13 +419,20 @@ class Invoice extends Model
             })
             ->successNotificationTitle('Invoice Sent')
             ->action(function (self $record, MountableAction $action) {
-                $record->update([
-                    'status' => InvoiceStatus::Sent,
-                    'last_sent_at' => now(),
-                ]);
+                $record->markAsSent();
 
                 $action->success();
             });
+    }
+
+    public function markAsSent(?Carbon $sentAt = null): void
+    {
+        $sentAt ??= now();
+
+        $this->update([
+            'status' => InvoiceStatus::Sent,
+            'last_sent_at' => $sentAt,
+        ]);
     }
 
     public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction

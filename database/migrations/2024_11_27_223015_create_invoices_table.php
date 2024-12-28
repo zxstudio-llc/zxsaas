@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('client_id')->nullable()->constrained('clients')->nullOnDelete();
+            $table->foreignId('estimate_id')->nullable()->constrained('estimates')->nullOnDelete();
             $table->string('logo')->nullable();
             $table->string('header')->nullable();
             $table->string('subheader')->nullable();

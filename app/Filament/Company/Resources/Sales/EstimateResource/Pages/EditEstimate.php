@@ -43,12 +43,6 @@ class EditEstimate extends EditRecord
 
         $data = array_merge($data, $totals);
 
-        $record = parent::handleRecordUpdate($record, $data);
-
-        if ($record->approved_at && $record->approvalTransaction) {
-            $record->updateApprovalTransaction();
-        }
-
-        return $record;
+        return parent::handleRecordUpdate($record, $data);
     }
 }

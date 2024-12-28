@@ -10,18 +10,28 @@ use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\EstimateStatus;
+use App\Enums\Accounting\InvoiceStatus;
+use App\Filament\Company\Resources\Sales\EstimateResource;
+use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Common\Client;
 use App\Models\Setting\Currency;
+use App\Observers\EstimateObserver;
+use Filament\Actions\Action;
+use Filament\Actions\MountableAction;
+use Filament\Actions\ReplicateAction;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 #[CollectedBy(DocumentCollection::class)]
+#[ObservedBy(EstimateObserver::class)]
 class Estimate extends Model
 {
     use Blamable;
@@ -40,6 +50,7 @@ class Estimate extends Model
         'expiration_date',
         'approved_at',
         'accepted_at',
+        'converted_at',
         'declined_at',
         'last_sent_at',
         'last_viewed_at',
@@ -84,6 +95,11 @@ class Estimate extends Model
     public function currency(): BelongsTo
     {
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
+    }
+
+    public function invoice(): HasOne
+    {
+        return $this->hasOne(Invoice::class);
     }
 
     public function lineItems(): MorphMany
@@ -179,7 +195,7 @@ class Estimate extends Model
     public function approveDraft(?Carbon $approvedAt = null): void
     {
         if (! $this->isDraft()) {
-            throw new \RuntimeException('Invoice is not in draft status.');
+            throw new \RuntimeException('Estimate is not in draft status.');
         }
 
         $approvedAt ??= now();
@@ -188,5 +204,220 @@ class Estimate extends Model
             'approved_at' => $approvedAt,
             'status' => EstimateStatus::Unsent,
         ]);
+    }
+
+    public static function getApproveDraftAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('approveDraft')
+            ->label('Approve')
+            ->icon('heroicon-o-check-circle')
+            ->visible(function (self $record) {
+                return $record->isDraft();
+            })
+            ->databaseTransaction()
+            ->successNotificationTitle('Estimate Approved')
+            ->action(function (self $record, MountableAction $action) {
+                $record->approveDraft();
+
+                $action->success();
+            });
+    }
+
+    public static function getMarkAsSentAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('markAsSent')
+            ->label('Mark as Sent')
+            ->icon('heroicon-o-paper-airplane')
+            ->visible(static function (self $record) {
+                return ! $record->isSent();
+            })
+            ->successNotificationTitle('Estimate Sent')
+            ->action(function (self $record, MountableAction $action) {
+                $record->markAsSent();
+
+                $action->success();
+            });
+    }
+
+    public function markAsSent(?Carbon $sentAt = null): void
+    {
+        $sentAt ??= now();
+
+        $this->update([
+            'status' => EstimateStatus::Sent,
+            'last_sent_at' => $sentAt,
+        ]);
+    }
+
+    public static function getReplicateAction(string $action = ReplicateAction::class): MountableAction
+    {
+        return $action::make()
+            ->excludeAttributes([
+                'estimate_number',
+                'date',
+                'expiration_date',
+                'approved_at',
+                'accepted_at',
+                'declined_at',
+                'last_sent_at',
+                'last_viewed_at',
+                'status',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ])
+            ->modal(false)
+            ->beforeReplicaSaved(function (self $original, self $replica) {
+                $replica->status = EstimateStatus::Draft;
+                $replica->estimate_number = self::getNextDocumentNumber();
+                $replica->date = now();
+                $replica->expiration_date = now()->addDays($original->company->defaultInvoice->payment_terms->getDays());
+            })
+            ->databaseTransaction()
+            ->after(function (self $original, self $replica) {
+                $original->replicateLineItems($replica);
+            })
+            ->successRedirectUrl(static function (self $replica) {
+                return EstimateResource::getUrl('edit', ['record' => $replica]);
+            });
+    }
+
+    public static function getMarkAsAcceptedAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('markAsAccepted')
+            ->label('Mark as Accepted')
+            ->icon('heroicon-o-check-badge')
+            ->visible(static function (self $record) {
+                return $record->isSent() && ! $record->isAccepted();
+            })
+            ->databaseTransaction()
+            ->successNotificationTitle('Estimate Accepted')
+            ->action(function (self $record, MountableAction $action) {
+                $record->markAsAccepted();
+
+                $action->success();
+            });
+    }
+
+    public function markAsAccepted(?Carbon $acceptedAt = null): void
+    {
+        $acceptedAt ??= now();
+
+        $this->update([
+            'status' => EstimateStatus::Accepted,
+            'accepted_at' => $acceptedAt,
+        ]);
+    }
+
+    public static function getMarkAsDeclinedAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('markAsDeclined')
+            ->label('Mark as Declined')
+            ->icon('heroicon-o-x-circle')
+            ->visible(static function (self $record) {
+                return $record->isSent() && ! $record->isDeclined();
+            })
+            ->color('danger')
+            ->requiresConfirmation()
+            ->databaseTransaction()
+            ->successNotificationTitle('Estimate Declined')
+            ->action(function (self $record, MountableAction $action) {
+                $record->markAsDeclined();
+
+                $action->success();
+            });
+    }
+
+    public function markAsDeclined(?Carbon $declinedAt = null): void
+    {
+        $declinedAt ??= now();
+
+        $this->update([
+            'status' => EstimateStatus::Declined,
+            'declined_at' => $declinedAt,
+        ]);
+    }
+
+    public static function getConvertToInvoiceAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('convertToInvoice')
+            ->label('Convert to Invoice')
+            ->icon('heroicon-o-arrow-right-on-rectangle')
+            ->visible(static function (self $record) {
+                return $record->status === EstimateStatus::Accepted && ! $record->invoice;
+            })
+            ->databaseTransaction()
+            ->successNotificationTitle('Estimate Converted to Invoice')
+            ->action(function (self $record, MountableAction $action) {
+                $record->convertToInvoice();
+
+                $action->success();
+            })
+            ->successRedirectUrl(static function (self $record) {
+                return InvoiceResource::getUrl('edit', ['record' => $record->refresh()->invoice]);
+            });
+    }
+
+    public function convertToInvoice(?Carbon $convertedAt = null): void
+    {
+        if ($this->invoice) {
+            throw new \RuntimeException('Estimate has already been converted to an invoice.');
+        }
+
+        $invoice = $this->invoice()->create([
+            'company_id' => $this->company_id,
+            'client_id' => $this->client_id,
+            'logo' => $this->logo,
+            'header' => $this->company->defaultInvoice->header,
+            'subheader' => $this->company->defaultInvoice->subheader,
+            'invoice_number' => Invoice::getNextDocumentNumber($this->company),
+            'date' => now(),
+            'due_date' => now()->addDays($this->company->defaultInvoice->payment_terms->getDays()),
+            'status' => InvoiceStatus::Draft,
+            'currency_code' => $this->currency_code,
+            'discount_method' => $this->discount_method,
+            'discount_computation' => $this->discount_computation,
+            'discount_rate' => $this->discount_rate,
+            'subtotal' => $this->subtotal,
+            'tax_total' => $this->tax_total,
+            'discount_total' => $this->discount_total,
+            'total' => $this->total,
+            'terms' => $this->terms,
+            'footer' => $this->footer,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->replicateLineItems($invoice);
+
+        $convertedAt ??= now();
+
+        $this->update([
+            'status' => EstimateStatus::Converted,
+            'converted_at' => $convertedAt,
+        ]);
+    }
+
+    public function replicateLineItems(Model $target): void
+    {
+        $this->lineItems->each(function (DocumentLineItem $lineItem) use ($target) {
+            $replica = $lineItem->replicate([
+                'documentable_id',
+                'documentable_type',
+                'subtotal',
+                'total',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+            $replica->documentable_id = $target->id;
+            $replica->documentable_type = $target->getMorphClass();
+            $replica->save();
+
+            $replica->adjustments()->sync($lineItem->adjustments->pluck('id'));
+        });
     }
 }

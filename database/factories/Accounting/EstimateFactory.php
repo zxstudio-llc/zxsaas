@@ -62,10 +62,7 @@ class EstimateFactory extends Factory
 
             $approvedAt = Carbon::parse($estimate->date)->addHours($this->faker->numberBetween(1, 24));
 
-            $estimate->update([
-                'status' => EstimateStatus::Unsent,
-                'approved_at' => $approvedAt,
-            ]);
+            $estimate->approveDraft($approvedAt);
         });
     }
 
@@ -79,10 +76,21 @@ class EstimateFactory extends Factory
             $acceptedAt = Carbon::parse($estimate->approved_at)
                 ->addDays($this->faker->numberBetween(1, 7));
 
-            $estimate->update([
-                'status' => EstimateStatus::Accepted,
-                'accepted_at' => $acceptedAt,
-            ]);
+            $estimate->markAsAccepted($acceptedAt);
+        });
+    }
+
+    public function converted(): static
+    {
+        return $this->afterCreating(function (Estimate $estimate) {
+            if (! $estimate->isAccepted()) {
+                $this->accepted()->create();
+            }
+
+            $convertedAt = Carbon::parse($estimate->accepted_at)
+                ->addDays($this->faker->numberBetween(1, 7));
+
+            $estimate->convertToInvoice($convertedAt);
         });
     }
 
@@ -114,10 +122,7 @@ class EstimateFactory extends Factory
 
             $sentAt = Carbon::parse($estimate->date)->addHours($this->faker->numberBetween(1, 24));
 
-            $estimate->update([
-                'status' => EstimateStatus::Sent,
-                'last_sent_at' => $sentAt,
-            ]);
+            $estimate->markAsSent($sentAt);
         });
     }
 

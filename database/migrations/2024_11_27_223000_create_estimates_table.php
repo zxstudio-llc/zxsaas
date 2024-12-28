@@ -24,6 +24,7 @@ return new class extends Migration
             $table->date('expiration_date')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('accepted_at')->nullable();
+            $table->timestamp('converted_at')->nullable();
             $table->timestamp('declined_at')->nullable();
             $table->timestamp('last_sent_at')->nullable();
             $table->timestamp('last_viewed_at')->nullable();

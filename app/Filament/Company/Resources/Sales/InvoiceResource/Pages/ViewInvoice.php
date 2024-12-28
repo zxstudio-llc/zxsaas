@@ -2,14 +2,15 @@
 
 namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 
+use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Filament\Infolists\Components\DocumentPreview;
 use App\Models\Accounting\Invoice;
 use Filament\Actions;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Support\Enums\FontWeight;
@@ -19,8 +20,6 @@ use Filament\Support\Enums\MaxWidth;
 
 class ViewInvoice extends ViewRecord
 {
-    protected static string $view = 'filament.company.resources.sales.invoices.pages.view-invoice';
-
     protected static string $resource = InvoiceResource::class;
 
     protected $listeners = [
@@ -89,17 +88,8 @@ class ViewInvoice extends ViewRecord
                                     ->placeholder('Not Paid')
                                     ->date(),
                             ])->columnSpan(1),
-                        Grid::make()
-                            ->schema([
-                                ViewEntry::make('invoice-view')
-                                    ->label('View Invoice')
-                                    ->columnSpan(3)
-                                    ->view('filament.company.resources.sales.invoices.components.invoice-view')
-                                    ->viewData([
-                                        'invoice' => $this->record,
-                                    ]),
-                            ])
-                            ->columnSpan(3),
+                        DocumentPreview::make()
+                            ->type(DocumentType::Invoice),
                     ]),
             ]);
     }
