@@ -426,9 +426,9 @@ class BillResource extends Resource
                         ->failureNotificationTitle('Failed to Record Payments')
                         ->deselectRecordsAfterCompletion()
                         ->beforeFormFilled(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $cantRecordPayments = $records->contains(fn (Bill $bill) => ! $bill->canRecordPayment());
+                            $isInvalid = $records->contains(fn (Bill $bill) => ! $bill->canRecordPayment());
 
-                            if ($cantRecordPayments) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Payment Recording Failed')
                                     ->body('Bills that are either paid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')

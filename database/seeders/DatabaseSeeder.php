@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
                     ->withClients()
                     ->withVendors()
                     ->withInvoices(50)
+                    ->withEstimates(50)
                     ->withBills(50);
             })
             ->create([

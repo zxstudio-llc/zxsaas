@@ -213,5 +213,8 @@
     "Footer": "Footer",
     "Invoice Footer": "Invoice Footer",
     "Bill Details": "Bill Details",
-    "Create": "Create"
+    "Create": "Create",
+    "Estimate Header": "Estimate Header",
+    "Estimate Details": "Estimate Details",
+    "Estimate Footer": "Estimate Footer"
 }

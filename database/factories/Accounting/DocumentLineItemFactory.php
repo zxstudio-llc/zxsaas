@@ -2,7 +2,10 @@
 
 namespace Database\Factories\Accounting;
 
+use App\Models\Accounting\Bill;
 use App\Models\Accounting\DocumentLineItem;
+use App\Models\Accounting\Estimate;
+use App\Models\Accounting\Invoice;
 use App\Models\Common\Offering;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -34,65 +37,105 @@ class DocumentLineItemFactory extends Factory
         ];
     }
 
-    public function forInvoice(): static
+    public function forInvoice(Invoice $invoice): static
     {
-        return $this->state(function (array $attributes) {
-            $offering = Offering::where('sellable', true)
-                ->inRandomOrder()
-                ->first();
+        return $this
+            ->for($invoice, 'documentable')
+            ->state(function (array $attributes) {
+                $offering = Offering::where('sellable', true)
+                    ->inRandomOrder()
+                    ->first();
 
-            return [
-                'offering_id' => $offering->id,
-                'unit_price' => $offering->price,
-            ];
-        })->afterCreating(function (DocumentLineItem $lineItem) {
-            $offering = $lineItem->offering;
+                return [
+                    'offering_id' => $offering->id,
+                    'unit_price' => $offering->price,
+                ];
+            })
+            ->afterCreating(function (DocumentLineItem $lineItem) {
+                $offering = $lineItem->offering;
 
-            if ($offering) {
-                $lineItem->salesTaxes()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
-                $lineItem->salesDiscounts()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
-            }
+                if ($offering) {
+                    $lineItem->salesTaxes()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
+                    $lineItem->salesDiscounts()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
+                }
 
-            $lineItem->refresh();
+                $lineItem->refresh();
 
-            $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
-            $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
+                $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
+                $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
 
-            $lineItem->updateQuietly([
-                'tax_total' => $taxTotal,
-                'discount_total' => $discountTotal,
-            ]);
-        });
+                $lineItem->updateQuietly([
+                    'tax_total' => $taxTotal,
+                    'discount_total' => $discountTotal,
+                ]);
+            });
     }
 
-    public function forBill(): static
+    public function forEstimate(Estimate $estimate): static
     {
-        return $this->state(function (array $attributes) {
-            $offering = Offering::where('purchasable', true)
-                ->inRandomOrder()
-                ->first();
+        return $this
+            ->for($estimate, 'documentable')
+            ->state(function (array $attributes) {
+                $offering = Offering::where('sellable', true)
+                    ->inRandomOrder()
+                    ->first();
 
-            return [
-                'offering_id' => $offering->id,
-                'unit_price' => $offering->price,
-            ];
-        })->afterCreating(function (DocumentLineItem $lineItem) {
-            $offering = $lineItem->offering;
+                return [
+                    'offering_id' => $offering->id,
+                    'unit_price' => $offering->price,
+                ];
+            })
+            ->afterCreating(function (DocumentLineItem $lineItem) {
+                $offering = $lineItem->offering;
 
-            if ($offering) {
-                $lineItem->purchaseTaxes()->syncWithoutDetaching($offering->purchaseTaxes->pluck('id')->toArray());
-                $lineItem->purchaseDiscounts()->syncWithoutDetaching($offering->purchaseDiscounts->pluck('id')->toArray());
-            }
+                if ($offering) {
+                    $lineItem->salesTaxes()->syncWithoutDetaching($offering->salesTaxes->pluck('id')->toArray());
+                    $lineItem->salesDiscounts()->syncWithoutDetaching($offering->salesDiscounts->pluck('id')->toArray());
+                }
 
-            $lineItem->refresh();
+                $lineItem->refresh();
 
-            $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
-            $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
+                $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
+                $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
 
-            $lineItem->updateQuietly([
-                'tax_total' => $taxTotal,
-                'discount_total' => $discountTotal,
-            ]);
-        });
+                $lineItem->updateQuietly([
+                    'tax_total' => $taxTotal,
+                    'discount_total' => $discountTotal,
+                ]);
+            });
+    }
+
+    public function forBill(Bill $bill): static
+    {
+        return $this
+            ->for($bill, 'documentable')
+            ->state(function (array $attributes) {
+                $offering = Offering::where('purchasable', true)
+                    ->inRandomOrder()
+                    ->first();
+
+                return [
+                    'offering_id' => $offering->id,
+                    'unit_price' => $offering->price,
+                ];
+            })
+            ->afterCreating(function (DocumentLineItem $lineItem) {
+                $offering = $lineItem->offering;
+
+                if ($offering) {
+                    $lineItem->purchaseTaxes()->syncWithoutDetaching($offering->purchaseTaxes->pluck('id')->toArray());
+                    $lineItem->purchaseDiscounts()->syncWithoutDetaching($offering->purchaseDiscounts->pluck('id')->toArray());
+                }
+
+                $lineItem->refresh();
+
+                $taxTotal = $lineItem->calculateTaxTotal()->getAmount();
+                $discountTotal = $lineItem->calculateDiscountTotal()->getAmount();
+
+                $lineItem->updateQuietly([
+                    'tax_total' => $taxTotal,
+                    'discount_total' => $discountTotal,
+                ]);
+            });
     }
 }

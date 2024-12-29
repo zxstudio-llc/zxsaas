@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
+namespace App\Filament\Company\Resources\Sales\EstimateResource\Pages;
 
 use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
-use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Filament\Company\Resources\Sales\EstimateResource;
 use App\Filament\Infolists\Components\DocumentPreview;
-use App\Models\Accounting\Invoice;
+use App\Models\Accounting\Estimate;
 use Filament\Actions;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Components\Section;
@@ -18,9 +18,9 @@ use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\MaxWidth;
 
-class ViewInvoice extends ViewRecord
+class ViewEstimate extends ViewRecord
 {
-    protected static string $resource = InvoiceResource::class;
+    protected static string $resource = EstimateResource::class;
 
     protected $listeners = [
         'refresh' => '$refresh',
@@ -37,9 +37,12 @@ class ViewInvoice extends ViewRecord
             Actions\ActionGroup::make([
                 Actions\EditAction::make(),
                 Actions\DeleteAction::make(),
-                Invoice::getApproveDraftAction(),
-                Invoice::getMarkAsSentAction(),
-                Invoice::getReplicateAction(),
+                Estimate::getApproveDraftAction(),
+                Estimate::getMarkAsSentAction(),
+                Estimate::getMarkAsAcceptedAction(),
+                Estimate::getMarkAsDeclinedAction(),
+                Estimate::getReplicateAction(),
+                Estimate::getConvertToInvoiceAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -55,25 +58,22 @@ class ViewInvoice extends ViewRecord
     {
         return $infolist
             ->schema([
-                Section::make('Invoice Details')
+                Section::make('Estimate Details')
                     ->columns(4)
                     ->schema([
                         Grid::make(1)
                             ->schema([
-                                TextEntry::make('invoice_number')
-                                    ->label('Invoice #'),
+                                TextEntry::make('estimate_number')
+                                    ->label('Estimate #'),
                                 TextEntry::make('status')
                                     ->badge(),
                                 TextEntry::make('client.name')
                                     ->label('Client')
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
-                                    ->url(static fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
-                                TextEntry::make('amount_due')
-                                    ->label('Amount Due')
-                                    ->currency(static fn (Invoice $record) => $record->currency_code),
-                                TextEntry::make('due_date')
-                                    ->label('Due')
+                                    ->url(static fn (Estimate $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
+                                TextEntry::make('expiration_date')
+                                    ->label('Expiration Date')
                                     ->asRelativeDay(),
                                 TextEntry::make('approved_at')
                                     ->label('Approved At')
@@ -83,13 +83,13 @@ class ViewInvoice extends ViewRecord
                                     ->label('Last Sent')
                                     ->placeholder('Never')
                                     ->date(),
-                                TextEntry::make('paid_at')
-                                    ->label('Paid At')
-                                    ->placeholder('Not Paid')
+                                TextEntry::make('accepted_at')
+                                    ->label('Accepted At')
+                                    ->placeholder('Not Accepted')
                                     ->date(),
                             ])->columnSpan(1),
                         DocumentPreview::make()
-                            ->type(DocumentType::Invoice),
+                            ->type(DocumentType::Estimate),
                     ]),
             ]);
     }

@@ -2,9 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\Accounting\BillStatus;
-use App\Enums\Accounting\InvoiceStatus;
 use App\Models\Accounting\Bill;
+use App\Models\Accounting\Estimate;
 use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Models\Common\Client;
@@ -106,12 +105,12 @@ class CompanyFactory extends Factory
             $draftCount = (int) floor($count * 0.2);
             $approvedCount = (int) floor($count * 0.2);
             $paidCount = (int) floor($count * 0.3);
-            $partialCount = (int) floor($count * 0.2);
-            $overpaidCount = $count - ($draftCount + $approvedCount + $paidCount + $partialCount);
+            $partialCount = (int) floor($count * 0.1);
+            $overpaidCount = (int) floor($count * 0.1);
+            $overdueCount = $count - ($draftCount + $approvedCount + $paidCount + $partialCount + $overpaidCount);
 
             Invoice::factory()
                 ->count($draftCount)
-                ->withLineItems()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
@@ -120,7 +119,6 @@ class CompanyFactory extends Factory
 
             Invoice::factory()
                 ->count($approvedCount)
-                ->withLineItems()
                 ->approved()
                 ->create([
                     'company_id' => $company->id,
@@ -130,9 +128,7 @@ class CompanyFactory extends Factory
 
             Invoice::factory()
                 ->count($paidCount)
-                ->withLineItems()
-                ->approved()
-                ->withPayments(max: 4)
+                ->paid()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
@@ -141,9 +137,7 @@ class CompanyFactory extends Factory
 
             Invoice::factory()
                 ->count($partialCount)
-                ->withLineItems()
-                ->approved()
-                ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Partial)
+                ->partial()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
@@ -152,9 +146,81 @@ class CompanyFactory extends Factory
 
             Invoice::factory()
                 ->count($overpaidCount)
-                ->withLineItems()
+                ->overpaid()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Invoice::factory()
+                ->count($overdueCount)
+                ->overdue()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+        });
+    }
+
+    public function withEstimates(int $count = 10): self
+    {
+        return $this->afterCreating(function (Company $company) use ($count) {
+            $draftCount = (int) floor($count * 0.2);     // 20% drafts
+            $approvedCount = (int) floor($count * 0.3);   // 30% approved
+            $acceptedCount = (int) floor($count * 0.2);  // 20% accepted
+            $declinedCount = (int) floor($count * 0.1);  // 10% declined
+            $convertedCount = (int) floor($count * 0.1); // 10% converted to invoices
+            $expiredCount = $count - ($draftCount + $approvedCount + $acceptedCount + $declinedCount + $convertedCount); // remaining 10%
+
+            Estimate::factory()
+                ->count($draftCount)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Estimate::factory()
+                ->count($approvedCount)
                 ->approved()
-                ->withPayments(max: 4, invoiceStatus: InvoiceStatus::Overpaid)
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Estimate::factory()
+                ->count($acceptedCount)
+                ->accepted()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Estimate::factory()
+                ->count($declinedCount)
+                ->declined()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Estimate::factory()
+                ->count($convertedCount)
+                ->converted()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Estimate::factory()
+                ->count($expiredCount)
+                ->expired()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
@@ -167,38 +233,39 @@ class CompanyFactory extends Factory
     {
         return $this->afterCreating(function (Company $company) use ($count) {
             $unpaidCount = (int) floor($count * 0.4);
-            $paidCount = (int) floor($count * 0.4);
-            $partialCount = $count - ($unpaidCount + $paidCount);
+            $paidCount = (int) floor($count * 0.3);
+            $partialCount = (int) floor($count * 0.2);
+            $overdueCount = $count - ($unpaidCount + $paidCount + $partialCount);
 
-            // Create unpaid bills
             Bill::factory()
                 ->count($unpaidCount)
-                ->withLineItems()
-                ->initialized()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
                     'updated_by' => $company->user_id,
                 ]);
 
-            // Create paid bills
             Bill::factory()
                 ->count($paidCount)
-                ->withLineItems()
-                ->initialized()
-                ->withPayments(max: 4)
+                ->paid()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,
                     'updated_by' => $company->user_id,
                 ]);
 
-            // Create partially paid bills
             Bill::factory()
                 ->count($partialCount)
-                ->withLineItems()
-                ->initialized()
-                ->withPayments(max: 4, billStatus: BillStatus::Partial)
+                ->partial()
+                ->create([
+                    'company_id' => $company->id,
+                    'created_by' => $company->user_id,
+                    'updated_by' => $company->user_id,
+                ]);
+
+            Bill::factory()
+                ->count($overdueCount)
+                ->overdue()
                 ->create([
                     'company_id' => $company->id,
                     'created_by' => $company->user_id,

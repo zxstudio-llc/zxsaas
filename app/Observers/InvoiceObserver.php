@@ -17,9 +17,6 @@ class InvoiceObserver
         }
     }
 
-    /**
-     * Handle the Invoice "deleted" event.
-     */
     public function deleted(Invoice $invoice): void
     {
         DB::transaction(function () use ($invoice) {
