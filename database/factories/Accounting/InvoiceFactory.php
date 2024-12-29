@@ -49,45 +49,103 @@ class InvoiceFactory extends Factory
         ];
     }
 
-    public function withLineItems(int $count = 3): self
+    public function withLineItems(int $count = 3): static
     {
-        return $this->has(DocumentLineItem::factory()->forInvoice()->count($count), 'lineItems');
+        return $this->afterCreating(function (Invoice $invoice) use ($count) {
+            DocumentLineItem::factory()
+                ->count($count)
+                ->forInvoice($invoice)
+                ->create();
+
+            $this->recalculateTotals($invoice);
+        });
     }
 
     public function approved(): static
     {
         return $this->afterCreating(function (Invoice $invoice) {
-            if (! $invoice->isDraft()) {
+            $this->ensureLineItems($invoice);
+
+            if (! $invoice->canBeApproved()) {
                 return;
             }
 
-            $this->recalculateTotals($invoice);
-
-            $approvedAt = Carbon::parse($invoice->date)->addHours($this->faker->numberBetween(1, 24));
+            $approvedAt = Carbon::parse($invoice->date)
+                ->addHours($this->faker->numberBetween(1, 24));
 
             $invoice->approveDraft($approvedAt);
         });
     }
 
-    public function withPayments(?int $min = 1, ?int $max = null, InvoiceStatus $invoiceStatus = InvoiceStatus::Paid): static
+    public function sent(): static
     {
-        return $this->afterCreating(function (Invoice $invoice) use ($invoiceStatus, $max, $min) {
-            if ($invoice->isDraft()) {
-                $this->recalculateTotals($invoice);
+        return $this->afterCreating(function (Invoice $invoice) {
+            $this->ensureApproved($invoice);
 
-                $approvedAt = Carbon::parse($invoice->date)->addHours($this->faker->numberBetween(1, 24));
-                $invoice->approveDraft($approvedAt);
-            }
+            $sentAt = Carbon::parse($invoice->approved_at)
+                ->addHours($this->faker->numberBetween(1, 24));
+
+            $invoice->markAsSent($sentAt);
+        });
+    }
+
+    public function partial(int $maxPayments = 4): static
+    {
+        return $this->afterCreating(function (Invoice $invoice) use ($maxPayments) {
+            $this->ensureSent($invoice);
+
+            $this->withPayments(max: $maxPayments, invoiceStatus: InvoiceStatus::Partial)
+                ->callAfterCreating(collect([$invoice]));
+        });
+    }
+
+    public function paid(int $maxPayments = 4): static
+    {
+        return $this->afterCreating(function (Invoice $invoice) use ($maxPayments) {
+            $this->ensureSent($invoice);
+
+            $this->withPayments(max: $maxPayments)
+                ->callAfterCreating(collect([$invoice]));
+        });
+    }
+
+    public function overpaid(int $maxPayments = 4): static
+    {
+        return $this->afterCreating(function (Invoice $invoice) use ($maxPayments) {
+            $this->ensureSent($invoice);
+
+            $this->withPayments(max: $maxPayments, invoiceStatus: InvoiceStatus::Overpaid)
+                ->callAfterCreating(collect([$invoice]));
+        });
+    }
+
+    public function overdue(): static
+    {
+        return $this
+            ->state([
+                'due_date' => now()->subDays($this->faker->numberBetween(1, 30)),
+            ])
+            ->afterCreating(function (Invoice $invoice) {
+                $this->ensureApproved($invoice);
+            });
+    }
+
+    public function withPayments(?int $min = null, ?int $max = null, InvoiceStatus $invoiceStatus = InvoiceStatus::Paid): static
+    {
+        $min ??= 1;
+
+        return $this->afterCreating(function (Invoice $invoice) use ($invoiceStatus, $max, $min) {
+            $this->ensureSent($invoice);
 
             $invoice->refresh();
 
-            $totalAmountDue = $invoice->getRawOriginal('amount_due');
+            $amountDue = $invoice->getRawOriginal('amount_due');
 
-            if ($invoiceStatus === InvoiceStatus::Overpaid) {
-                $totalAmountDue += random_int(1000, 10000);
-            } elseif ($invoiceStatus === InvoiceStatus::Partial) {
-                $totalAmountDue = (int) floor($totalAmountDue * 0.5);
-            }
+            $totalAmountDue = match ($invoiceStatus) {
+                InvoiceStatus::Overpaid => $amountDue + random_int(1000, 10000),
+                InvoiceStatus::Partial => (int) floor($amountDue * 0.5),
+                default => $amountDue,
+            };
 
             if ($totalAmountDue <= 0 || empty($totalAmountDue)) {
                 return;
@@ -122,21 +180,23 @@ class InvoiceFactory extends Factory
                 $remainingAmount -= $amount;
             }
 
-            // If it's a paid invoice, use the latest payment date as paid_at
-            if ($invoiceStatus === InvoiceStatus::Paid) {
-                $latestPaymentDate = max($paymentDates);
-                $invoice->updateQuietly([
-                    'status' => $invoiceStatus,
-                    'paid_at' => $latestPaymentDate,
-                ]);
+            if ($invoiceStatus !== InvoiceStatus::Paid) {
+                return;
             }
+
+            $latestPaymentDate = max($paymentDates);
+            $invoice->updateQuietly([
+                'status' => $invoiceStatus,
+                'paid_at' => $latestPaymentDate,
+            ]);
         });
     }
 
     public function configure(): static
     {
         return $this->afterCreating(function (Invoice $invoice) {
-            // Use the invoice's ID to generate invoice and order numbers
+            $this->ensureLineItems($invoice);
+
             $paddedId = str_pad((string) $invoice->id, 5, '0', STR_PAD_LEFT);
 
             $invoice->updateQuietly([
@@ -144,9 +204,7 @@ class InvoiceFactory extends Factory
                 'order_number' => "ORD-{$paddedId}",
             ]);
 
-            $this->recalculateTotals($invoice);
-
-            if ($invoice->approved_at && $invoice->is_currently_overdue) {
+            if ($invoice->wasApproved() && $invoice->is_currently_overdue) {
                 $invoice->updateQuietly([
                     'status' => InvoiceStatus::Overdue,
                 ]);
@@ -154,21 +212,45 @@ class InvoiceFactory extends Factory
         });
     }
 
+    protected function ensureLineItems(Invoice $invoice): void
+    {
+        if (! $invoice->hasLineItems()) {
+            $this->withLineItems()->callAfterCreating(collect([$invoice]));
+        }
+    }
+
+    protected function ensureApproved(Invoice $invoice): void
+    {
+        if (! $invoice->wasApproved()) {
+            $this->approved()->callAfterCreating(collect([$invoice]));
+        }
+    }
+
+    protected function ensureSent(Invoice $invoice): void
+    {
+        if (! $invoice->hasBeenSent()) {
+            $this->sent()->callAfterCreating(collect([$invoice]));
+        }
+    }
+
     protected function recalculateTotals(Invoice $invoice): void
     {
-        if ($invoice->lineItems()->exists()) {
-            $invoice->refresh();
-            $subtotal = $invoice->lineItems()->sum('subtotal') / 100;
-            $taxTotal = $invoice->lineItems()->sum('tax_total') / 100;
-            $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
-            $grandTotal = $subtotal + $taxTotal - $discountTotal;
+        $invoice->refresh();
 
-            $invoice->update([
-                'subtotal' => $subtotal,
-                'tax_total' => $taxTotal,
-                'discount_total' => $discountTotal,
-                'total' => $grandTotal,
-            ]);
+        if (! $invoice->hasLineItems()) {
+            return;
         }
+
+        $subtotal = $invoice->lineItems()->sum('subtotal') / 100;
+        $taxTotal = $invoice->lineItems()->sum('tax_total') / 100;
+        $discountTotal = $invoice->lineItems()->sum('discount_total') / 100;
+        $grandTotal = $subtotal + $taxTotal - $discountTotal;
+
+        $invoice->update([
+            'subtotal' => $subtotal,
+            'tax_total' => $taxTotal,
+            'discount_total' => $discountTotal,
+            'total' => $grandTotal,
+        ]);
     }
 }

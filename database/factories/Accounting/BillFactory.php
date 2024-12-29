@@ -29,14 +29,11 @@ class BillFactory extends Factory
      */
     public function definition(): array
     {
-        // 50% chance of being a future bill
         $isFutureBill = $this->faker->boolean();
 
         if ($isFutureBill) {
-            // For future bills, date is recent and due date is in near future
             $billDate = $this->faker->dateTimeBetween('-10 days', '+10 days');
         } else {
-            // For past bills, both date and due date are in the past
             $billDate = $this->faker->dateTimeBetween('-1 year', '-30 days');
         }
 
@@ -57,44 +54,80 @@ class BillFactory extends Factory
         ];
     }
 
-    public function withLineItems(int $count = 3): self
+    public function withLineItems(int $count = 3): static
     {
-        return $this->has(DocumentLineItem::factory()->forBill()->count($count), 'lineItems');
+        return $this->afterCreating(function (Bill $bill) use ($count) {
+            DocumentLineItem::factory()
+                ->count($count)
+                ->forBill($bill)
+                ->create();
+
+            $this->recalculateTotals($bill);
+        });
     }
 
     public function initialized(): static
     {
         return $this->afterCreating(function (Bill $bill) {
-            if ($bill->hasInitialTransaction()) {
+            $this->ensureLineItems($bill);
+
+            if ($bill->wasInitialized()) {
                 return;
             }
 
-            $this->recalculateTotals($bill);
-
-            $postedAt = Carbon::parse($bill->date)->addHours($this->faker->numberBetween(1, 24));
+            $postedAt = Carbon::parse($bill->date)
+                ->addHours($this->faker->numberBetween(1, 24));
 
             $bill->createInitialTransaction($postedAt);
         });
     }
 
-    public function withPayments(?int $min = 1, ?int $max = null, BillStatus $billStatus = BillStatus::Paid): static
+    public function partial(int $maxPayments = 4): static
     {
+        return $this->afterCreating(function (Bill $bill) use ($maxPayments) {
+            $this->ensureInitialized($bill);
+
+            $this->withPayments(max: $maxPayments, billStatus: BillStatus::Partial)
+                ->callAfterCreating(collect([$bill]));
+        });
+    }
+
+    public function paid(int $maxPayments = 4): static
+    {
+        return $this->afterCreating(function (Bill $bill) use ($maxPayments) {
+            $this->ensureInitialized($bill);
+
+            $this->withPayments(max: $maxPayments)
+                ->callAfterCreating(collect([$bill]));
+        });
+    }
+
+    public function overdue(): static
+    {
+        return $this
+            ->state([
+                'due_date' => now()->subDays($this->faker->numberBetween(1, 30)),
+            ])
+            ->afterCreating(function (Bill $bill) {
+                $this->ensureInitialized($bill);
+            });
+    }
+
+    public function withPayments(?int $min = null, ?int $max = null, BillStatus $billStatus = BillStatus::Paid): static
+    {
+        $min ??= 1;
+
         return $this->afterCreating(function (Bill $bill) use ($billStatus, $max, $min) {
-            if (! $bill->hasInitialTransaction()) {
-                $this->recalculateTotals($bill);
-
-                $postedAt = Carbon::parse($bill->date)->addHours($this->faker->numberBetween(1, 24));
-
-                $bill->createInitialTransaction($postedAt);
-            }
+            $this->ensureInitialized($bill);
 
             $bill->refresh();
 
-            $totalAmountDue = $bill->getRawOriginal('amount_due');
+            $amountDue = $bill->getRawOriginal('amount_due');
 
-            if ($billStatus === BillStatus::Partial) {
-                $totalAmountDue = (int) floor($totalAmountDue * 0.5);
-            }
+            $totalAmountDue = match ($billStatus) {
+                BillStatus::Partial => (int) floor($amountDue * 0.5),
+                default => $amountDue,
+            };
 
             if ($totalAmountDue <= 0 || empty($totalAmountDue)) {
                 return;
@@ -129,19 +162,23 @@ class BillFactory extends Factory
                 $remainingAmount -= $amount;
             }
 
-            if ($billStatus === BillStatus::Paid) {
-                $latestPaymentDate = max($paymentDates);
-                $bill->updateQuietly([
-                    'status' => $billStatus,
-                    'paid_at' => $latestPaymentDate,
-                ]);
+            if ($billStatus !== BillStatus::Paid) {
+                return;
             }
+
+            $latestPaymentDate = max($paymentDates);
+            $bill->updateQuietly([
+                'status' => $billStatus,
+                'paid_at' => $latestPaymentDate,
+            ]);
         });
     }
 
     public function configure(): static
     {
         return $this->afterCreating(function (Bill $bill) {
+            $this->ensureInitialized($bill);
+
             $paddedId = str_pad((string) $bill->id, 5, '0', STR_PAD_LEFT);
 
             $bill->updateQuietly([
@@ -149,10 +186,7 @@ class BillFactory extends Factory
                 'order_number' => "PO-{$paddedId}",
             ]);
 
-            $this->recalculateTotals($bill);
-
-            // Check for overdue status
-            if ($bill->due_date < today() && $bill->status !== BillStatus::Paid) {
+            if ($bill->wasInitialized() && $bill->is_currently_overdue) {
                 $bill->updateQuietly([
                     'status' => BillStatus::Overdue,
                 ]);
@@ -160,21 +194,38 @@ class BillFactory extends Factory
         });
     }
 
+    protected function ensureLineItems(Bill $bill): void
+    {
+        if (! $bill->hasLineItems()) {
+            $this->withLineItems()->callAfterCreating(collect([$bill]));
+        }
+    }
+
+    protected function ensureInitialized(Bill $bill): void
+    {
+        if (! $bill->wasInitialized()) {
+            $this->initialized()->callAfterCreating(collect([$bill]));
+        }
+    }
+
     protected function recalculateTotals(Bill $bill): void
     {
-        if ($bill->lineItems()->exists()) {
-            $bill->refresh();
-            $subtotal = $bill->lineItems()->sum('subtotal') / 100;
-            $taxTotal = $bill->lineItems()->sum('tax_total') / 100;
-            $discountTotal = $bill->lineItems()->sum('discount_total') / 100;
-            $grandTotal = $subtotal + $taxTotal - $discountTotal;
+        $bill->refresh();
 
-            $bill->update([
-                'subtotal' => $subtotal,
-                'tax_total' => $taxTotal,
-                'discount_total' => $discountTotal,
-                'total' => $grandTotal,
-            ]);
+        if (! $bill->hasLineItems()) {
+            return;
         }
+
+        $subtotal = $bill->lineItems()->sum('subtotal') / 100;
+        $taxTotal = $bill->lineItems()->sum('tax_total') / 100;
+        $discountTotal = $bill->lineItems()->sum('discount_total') / 100;
+        $grandTotal = $subtotal + $taxTotal - $discountTotal;
+
+        $bill->update([
+            'subtotal' => $subtotal,
+            'tax_total' => $taxTotal,
+            'discount_total' => $discountTotal,
+            'total' => $grandTotal,
+        ]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Policies;
 
-use App\Enums\Accounting\EstimateStatus;
 use App\Models\Accounting\Estimate;
 use App\Models\User;
 
@@ -37,7 +36,7 @@ class EstimatePolicy
      */
     public function update(User $user, Estimate $estimate): bool
     {
-        if ($estimate->status === EstimateStatus::Converted) {
+        if ($estimate->wasConverted()) {
             return false;
         }
 

@@ -32,8 +32,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Carbon;
 
-#[ObservedBy(BillObserver::class)]
 #[CollectedBy(DocumentCollection::class)]
+#[ObservedBy(BillObserver::class)]
 class Bill extends Model
 {
     use Blamable;
@@ -129,6 +129,16 @@ class Bill extends Model
         });
     }
 
+    public function wasInitialized(): bool
+    {
+        return $this->hasInitialTransaction();
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->paid_at !== null;
+    }
+
     public function canBeOverdue(): bool
     {
         return in_array($this->status, BillStatus::canBeOverdue());
@@ -140,6 +150,11 @@ class Bill extends Model
             BillStatus::Paid,
             BillStatus::Void,
         ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
+    }
+
+    public function hasLineItems(): bool
+    {
+        return $this->lineItems()->exists();
     }
 
     public function hasPayments(): bool

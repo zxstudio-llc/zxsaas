@@ -449,7 +449,7 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Accepted')
                         ->failureNotificationTitle('Failed to Mark Estimates as Accepted')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->isAccepted());
+                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->wasAccepted());
 
                             if ($doesntContainSent) {
                                 Notification::make()
@@ -480,7 +480,7 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Declined')
                         ->failureNotificationTitle('Failed to Mark Estimates as Declined')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->isDeclined());
+                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->wasDeclined());
 
                             if ($doesntContainSent) {
                                 Notification::make()

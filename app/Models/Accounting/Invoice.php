@@ -58,6 +58,7 @@ class Invoice extends Model
         'approved_at',
         'paid_at',
         'last_sent_at',
+        'last_viewed_at',
         'status',
         'currency_code',
         'discount_method',
@@ -80,6 +81,7 @@ class Invoice extends Model
         'approved_at' => 'datetime',
         'paid_at' => 'datetime',
         'last_sent_at' => 'datetime',
+        'last_viewed_at' => 'datetime',
         'status' => InvoiceStatus::class,
         'discount_method' => DocumentDiscountMethod::class,
         'discount_computation' => AdjustmentComputation::class,
@@ -160,6 +162,26 @@ class Invoice extends Model
         return $this->status === InvoiceStatus::Draft;
     }
 
+    public function wasApproved(): bool
+    {
+        return $this->approved_at !== null;
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->paid_at !== null;
+    }
+
+    public function hasBeenSent(): bool
+    {
+        return $this->last_sent_at !== null;
+    }
+
+    public function hasBeenViewed(): bool
+    {
+        return $this->last_viewed_at !== null;
+    }
+
     public function canRecordPayment(): bool
     {
         return ! in_array($this->status, [
@@ -184,9 +206,24 @@ class Invoice extends Model
         return in_array($this->status, InvoiceStatus::canBeOverdue());
     }
 
+    public function canBeApproved(): bool
+    {
+        return $this->isDraft() && ! $this->wasApproved();
+    }
+
+    public function canBeMarkedAsSent(): bool
+    {
+        return ! $this->hasBeenSent();
+    }
+
+    public function hasLineItems(): bool
+    {
+        return $this->lineItems()->exists();
+    }
+
     public function hasPayments(): bool
     {
-        return $this->payments->isNotEmpty();
+        return $this->payments()->exists();
     }
 
     public static function getNextDocumentNumber(?Company $company = null): string
@@ -398,7 +435,7 @@ class Invoice extends Model
             ->label('Approve')
             ->icon('heroicon-o-check-circle')
             ->visible(function (self $record) {
-                return $record->isDraft();
+                return $record->canBeApproved();
             })
             ->databaseTransaction()
             ->successNotificationTitle('Invoice Approved')
@@ -415,7 +452,7 @@ class Invoice extends Model
             ->label('Mark as Sent')
             ->icon('heroicon-o-paper-airplane')
             ->visible(static function (self $record) {
-                return ! $record->last_sent_at;
+                return $record->canBeMarkedAsSent();
             })
             ->successNotificationTitle('Invoice Sent')
             ->action(function (self $record, MountableAction $action) {
@@ -432,6 +469,16 @@ class Invoice extends Model
         $this->update([
             'status' => InvoiceStatus::Sent,
             'last_sent_at' => $sentAt,
+        ]);
+    }
+
+    public function markAsViewed(?Carbon $viewedAt = null): void
+    {
+        $viewedAt ??= now();
+
+        $this->update([
+            'status' => InvoiceStatus::Viewed,
+            'last_viewed_at' => $viewedAt,
         ]);
     }
 
@@ -462,28 +509,32 @@ class Invoice extends Model
             })
             ->databaseTransaction()
             ->after(function (self $original, self $replica) {
-                $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
-                    $replicaLineItem = $lineItem->replicate([
-                        'documentable_id',
-                        'documentable_type',
-                        'subtotal',
-                        'total',
-                        'created_by',
-                        'updated_by',
-                        'created_at',
-                        'updated_at',
-                    ]);
-
-                    $replicaLineItem->documentable_id = $replica->id;
-                    $replicaLineItem->documentable_type = $replica->getMorphClass();
-
-                    $replicaLineItem->save();
-
-                    $replicaLineItem->adjustments()->sync($lineItem->adjustments->pluck('id'));
-                });
+                $original->replicateLineItems($replica);
             })
             ->successRedirectUrl(static function (self $replica) {
                 return InvoiceResource::getUrl('edit', ['record' => $replica]);
             });
+    }
+
+    public function replicateLineItems(Model $target): void
+    {
+        $this->lineItems->each(function (DocumentLineItem $lineItem) use ($target) {
+            $replica = $lineItem->replicate([
+                'documentable_id',
+                'documentable_type',
+                'subtotal',
+                'total',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+            $replica->documentable_id = $target->id;
+            $replica->documentable_type = $target->getMorphClass();
+            $replica->save();
+
+            $replica->adjustments()->sync($lineItem->adjustments->pluck('id'));
+        });
     }
 }

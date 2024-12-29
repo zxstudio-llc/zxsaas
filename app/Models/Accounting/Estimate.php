@@ -119,24 +119,34 @@ class Estimate extends Model
         return $this->status === EstimateStatus::Draft;
     }
 
-    public function isApproved(): bool
+    public function wasApproved(): bool
     {
         return $this->approved_at !== null;
     }
 
-    public function isAccepted(): bool
+    public function wasAccepted(): bool
     {
         return $this->accepted_at !== null;
     }
 
-    public function isDeclined(): bool
+    public function wasDeclined(): bool
     {
         return $this->declined_at !== null;
     }
 
-    public function isSent(): bool
+    public function wasConverted(): bool
+    {
+        return $this->converted_at !== null;
+    }
+
+    public function hasBeenSent(): bool
     {
         return $this->last_sent_at !== null;
+    }
+
+    public function hasBeenViewed(): bool
+    {
+        return $this->last_viewed_at !== null;
     }
 
     public function canBeExpired(): bool
@@ -147,6 +157,36 @@ class Estimate extends Model
             EstimateStatus::Declined,
             EstimateStatus::Converted,
         ]);
+    }
+
+    public function canBeApproved(): bool
+    {
+        return $this->isDraft() && ! $this->wasApproved();
+    }
+
+    public function canBeConverted(): bool
+    {
+        return $this->wasAccepted() && ! $this->wasConverted();
+    }
+
+    public function canBeMarkedAsDeclined(): bool
+    {
+        return $this->hasBeenSent() && ! $this->wasDeclined();
+    }
+
+    public function canBeMarkedAsSent(): bool
+    {
+        return ! $this->hasBeenSent();
+    }
+
+    public function canBeMarkedAsAccepted(): bool
+    {
+        return $this->hasBeenSent() && ! $this->wasAccepted();
+    }
+
+    public function hasLineItems(): bool
+    {
+        return $this->lineItems()->exists();
     }
 
     public function scopeActive(Builder $query): Builder
@@ -212,7 +252,7 @@ class Estimate extends Model
             ->label('Approve')
             ->icon('heroicon-o-check-circle')
             ->visible(function (self $record) {
-                return $record->isDraft();
+                return $record->canBeApproved();
             })
             ->databaseTransaction()
             ->successNotificationTitle('Estimate Approved')
@@ -229,7 +269,7 @@ class Estimate extends Model
             ->label('Mark as Sent')
             ->icon('heroicon-o-paper-airplane')
             ->visible(static function (self $record) {
-                return ! $record->isSent();
+                return $record->canBeMarkedAsSent();
             })
             ->successNotificationTitle('Estimate Sent')
             ->action(function (self $record, MountableAction $action) {
@@ -246,6 +286,16 @@ class Estimate extends Model
         $this->update([
             'status' => EstimateStatus::Sent,
             'last_sent_at' => $sentAt,
+        ]);
+    }
+
+    public function markAsViewed(?Carbon $viewedAt = null): void
+    {
+        $viewedAt ??= now();
+
+        $this->update([
+            'status' => EstimateStatus::Viewed,
+            'last_viewed_at' => $viewedAt,
         ]);
     }
 
@@ -289,7 +339,7 @@ class Estimate extends Model
             ->label('Mark as Accepted')
             ->icon('heroicon-o-check-badge')
             ->visible(static function (self $record) {
-                return $record->isSent() && ! $record->isAccepted();
+                return $record->canBeMarkedAsAccepted();
             })
             ->databaseTransaction()
             ->successNotificationTitle('Estimate Accepted')
@@ -316,7 +366,7 @@ class Estimate extends Model
             ->label('Mark as Declined')
             ->icon('heroicon-o-x-circle')
             ->visible(static function (self $record) {
-                return $record->isSent() && ! $record->isDeclined();
+                return $record->canBeMarkedAsDeclined();
             })
             ->color('danger')
             ->requiresConfirmation()
@@ -345,7 +395,7 @@ class Estimate extends Model
             ->label('Convert to Invoice')
             ->icon('heroicon-o-arrow-right-on-rectangle')
             ->visible(static function (self $record) {
-                return $record->status === EstimateStatus::Accepted && ! $record->invoice;
+                return $record->canBeConverted();
             })
             ->databaseTransaction()
             ->successNotificationTitle('Estimate Converted to Invoice')

@@ -26,6 +26,7 @@ return new class extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamp('last_sent_at')->nullable();
+            $table->timestamp('last_viewed_at')->nullable();
             $table->string('status')->default('draft');
             $table->string('currency_code')->nullable();
             $table->string('discount_method')->default('per_line_item');
