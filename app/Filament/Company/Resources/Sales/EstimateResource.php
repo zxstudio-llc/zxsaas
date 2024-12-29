@@ -362,6 +362,7 @@ class EstimateResource extends Resource
                             'expiration_date',
                             'approved_at',
                             'accepted_at',
+                            'converted_at',
                             'declined_at',
                             'last_sent_at',
                             'last_viewed_at',
@@ -393,9 +394,9 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Approved')
                         ->failureNotificationTitle('Failed to Approve Estimates')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $containsNonDrafts = $records->contains(fn (Estimate $record) => ! $record->isDraft());
+                            $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeApproved());
 
-                            if ($containsNonDrafts) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Approval Failed')
                                     ->body('Only draft estimates can be approved. Please adjust your selection and try again.')
@@ -420,9 +421,9 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Sent')
                         ->failureNotificationTitle('Failed to Mark Estimates as Sent')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainUnsent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Unsent);
+                            $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsSent());
 
-                            if ($doesntContainUnsent) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Sending Failed')
                                     ->body('Only unsent estimates can be marked as sent. Please adjust your selection and try again.')
@@ -435,9 +436,7 @@ class EstimateResource extends Resource
                         })
                         ->action(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $records->each(function (Estimate $record) {
-                                $record->updateQuietly([
-                                    'status' => EstimateStatus::Sent,
-                                ]);
+                                $record->markAsSent();
                             });
 
                             $action->success();
@@ -449,9 +448,9 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Accepted')
                         ->failureNotificationTitle('Failed to Mark Estimates as Accepted')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->wasAccepted());
+                            $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsAccepted());
 
-                            if ($doesntContainSent) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Acceptance Failed')
                                     ->body('Only sent estimates that haven\'t been accepted can be marked as accepted. Please adjust your selection and try again.')
@@ -480,9 +479,9 @@ class EstimateResource extends Resource
                         ->successNotificationTitle('Estimates Declined')
                         ->failureNotificationTitle('Failed to Mark Estimates as Declined')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainSent = $records->contains(fn (Estimate $record) => $record->status !== EstimateStatus::Sent || $record->wasDeclined());
+                            $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsDeclined());
 
-                            if ($doesntContainSent) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Declination Failed')
                                     ->body('Only sent estimates that haven\'t been declined can be marked as declined. Please adjust your selection and try again.')

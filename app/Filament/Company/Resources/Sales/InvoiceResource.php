@@ -468,6 +468,10 @@ class InvoiceResource extends Resource
                             'invoice_number',
                             'date',
                             'due_date',
+                            'approved_at',
+                            'paid_at',
+                            'last_sent_at',
+                            'last_viewed_at',
                         ])
                         ->beforeReplicaSaved(function (Invoice $replica) {
                             $replica->status = InvoiceStatus::Draft;
@@ -491,9 +495,9 @@ class InvoiceResource extends Resource
                         ->successNotificationTitle('Invoices Approved')
                         ->failureNotificationTitle('Failed to Approve Invoices')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $containsNonDrafts = $records->contains(fn (Invoice $record) => ! $record->isDraft());
+                            $isInvalid = $records->contains(fn (Invoice $record) => ! $record->canBeApproved());
 
-                            if ($containsNonDrafts) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Approval Failed')
                                     ->body('Only draft invoices can be approved. Please adjust your selection and try again.')
@@ -518,9 +522,9 @@ class InvoiceResource extends Resource
                         ->successNotificationTitle('Invoices Sent')
                         ->failureNotificationTitle('Failed to Mark Invoices as Sent')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $doesntContainUnsent = $records->contains(fn (Invoice $record) => $record->status !== InvoiceStatus::Unsent);
+                            $isInvalid = $records->contains(fn (Invoice $record) => ! $record->canBeMarkedAsSent());
 
-                            if ($doesntContainUnsent) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Sending Failed')
                                     ->body('Only unsent invoices can be marked as sent. Please adjust your selection and try again.')
@@ -550,9 +554,9 @@ class InvoiceResource extends Resource
                         ->failureNotificationTitle('Failed to Record Payments')
                         ->deselectRecordsAfterCompletion()
                         ->beforeFormFilled(function (Collection $records, Tables\Actions\BulkAction $action) {
-                            $cantRecordPayments = $records->contains(fn (Invoice $record) => ! $record->canBulkRecordPayment());
+                            $isInvalid = $records->contains(fn (Invoice $record) => ! $record->canBulkRecordPayment());
 
-                            if ($cantRecordPayments) {
+                            if ($isInvalid) {
                                 Notification::make()
                                     ->title('Payment Recording Failed')
                                     ->body('Invoices that are either draft, paid, overpaid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')

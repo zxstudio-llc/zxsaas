@@ -499,6 +499,7 @@ class Invoice extends Model
                 'approved_at',
                 'paid_at',
                 'last_sent_at',
+                'last_viewed_at',
             ])
             ->modal(false)
             ->beforeReplicaSaved(function (self $original, self $replica) {

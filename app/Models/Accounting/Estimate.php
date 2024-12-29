@@ -171,7 +171,10 @@ class Estimate extends Model
 
     public function canBeMarkedAsDeclined(): bool
     {
-        return $this->hasBeenSent() && ! $this->wasDeclined();
+        return $this->hasBeenSent()
+            && ! $this->wasDeclined()
+            && ! $this->wasConverted()
+            && ! $this->wasAccepted();
     }
 
     public function canBeMarkedAsSent(): bool
@@ -181,7 +184,10 @@ class Estimate extends Model
 
     public function canBeMarkedAsAccepted(): bool
     {
-        return $this->hasBeenSent() && ! $this->wasAccepted();
+        return $this->hasBeenSent()
+            && ! $this->wasAccepted()
+            && ! $this->wasDeclined()
+            && ! $this->wasConverted();
     }
 
     public function hasLineItems(): bool
@@ -308,6 +314,7 @@ class Estimate extends Model
                 'expiration_date',
                 'approved_at',
                 'accepted_at',
+                'converted_at',
                 'declined_at',
                 'last_sent_at',
                 'last_viewed_at',

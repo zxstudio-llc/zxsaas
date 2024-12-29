@@ -394,28 +394,32 @@ class Bill extends Model
             })
             ->databaseTransaction()
             ->after(function (self $original, self $replica) {
-                $original->lineItems->each(function (DocumentLineItem $lineItem) use ($replica) {
-                    $replicaLineItem = $lineItem->replicate([
-                        'documentable_id',
-                        'documentable_type',
-                        'subtotal',
-                        'total',
-                        'created_by',
-                        'updated_by',
-                        'created_at',
-                        'updated_at',
-                    ]);
-
-                    $replicaLineItem->documentable_id = $replica->id;
-                    $replicaLineItem->documentable_type = $replica->getMorphClass();
-
-                    $replicaLineItem->save();
-
-                    $replicaLineItem->adjustments()->sync($lineItem->adjustments->pluck('id'));
-                });
+                $original->replicateLineItems($replica);
             })
             ->successRedirectUrl(static function (self $replica) {
                 return BillResource::getUrl('edit', ['record' => $replica]);
             });
+    }
+
+    public function replicateLineItems(Model $target): void
+    {
+        $this->lineItems->each(function (DocumentLineItem $lineItem) use ($target) {
+            $replica = $lineItem->replicate([
+                'documentable_id',
+                'documentable_type',
+                'subtotal',
+                'total',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+            $replica->documentable_id = $target->id;
+            $replica->documentable_type = $target->getMorphClass();
+            $replica->save();
+
+            $replica->adjustments()->sync($lineItem->adjustments->pluck('id'));
+        });
     }
 }
