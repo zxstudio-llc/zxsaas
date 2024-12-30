@@ -48,6 +48,7 @@ class Invoice extends Model
         'company_id',
         'client_id',
         'estimate_id',
+        'recurring_invoice_id',
         'logo',
         'header',
         'subheader',
@@ -107,6 +108,11 @@ class Invoice extends Model
     public function estimate(): BelongsTo
     {
         return $this->belongsTo(Estimate::class);
+    }
+
+    public function recurringInvoice(): BelongsTo
+    {
+        return $this->belongsTo(RecurringInvoice::class);
     }
 
     public function lineItems(): MorphMany

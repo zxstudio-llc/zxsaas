@@ -152,6 +152,11 @@ class Company extends FilamentCompaniesCompany implements HasAvatar
         return $this->hasMany(Accounting\Invoice::class, 'company_id');
     }
 
+    public function recurringInvoices(): HasMany
+    {
+        return $this->hasMany(Accounting\RecurringInvoice::class, 'company_id');
+    }
+
     public function locale(): HasOne
     {
         return $this->hasOne(Localization::class, 'company_id');

@@ -38,8 +38,6 @@ class BillResource extends Resource
 {
     protected static ?string $model = Bill::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
     public static function form(Form $form): Form
     {
         $company = Auth::user()->currentCompany;
