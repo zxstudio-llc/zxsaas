@@ -293,7 +293,25 @@ class ViewRecurringInvoice extends ViewRecord
                                 ])
                                 ->columns(1),
                         ])->columns(2),
+                    ])
+                    ->headerActions([
+                        Forms\Components\Actions\Action::make('save')
+                            ->label('Save')
+                            ->button()
+                            ->successNotificationTitle('Scheduling saved')
+                            ->action(function (Forms\Components\Actions\Action $action) {
+                                $this->save();
+
+                                $action->success();
+                            }),
                     ]),
             ]);
+    }
+
+    public function save(): void
+    {
+        $state = $this->form->getState();
+
+        $this->getRecord()->update($state);
     }
 }
