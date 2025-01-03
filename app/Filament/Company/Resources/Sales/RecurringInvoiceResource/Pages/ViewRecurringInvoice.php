@@ -296,7 +296,7 @@ class ViewRecurringInvoice extends ViewRecord
                     ])
                     ->headerActions([
                         Forms\Components\Actions\Action::make('save')
-                            ->label('Save')
+                            ->label('Submit and Approve')
                             ->button()
                             ->successNotificationTitle('Scheduling saved')
                             ->action(function (Forms\Components\Actions\Action $action) {
@@ -313,5 +313,7 @@ class ViewRecurringInvoice extends ViewRecord
         $state = $this->form->getState();
 
         $this->getRecord()->update($state);
+
+        $this->getRecord()->markAsApproved();
     }
 }

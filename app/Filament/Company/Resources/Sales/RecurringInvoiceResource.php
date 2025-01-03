@@ -283,12 +283,22 @@ class RecurringInvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('client.name')
                     ->sortable()
                     ->searchable(),
+                Tables\Columns\TextColumn::make('schedule')
+                    ->label('Schedule')
+                    ->getStateUsing(function (RecurringInvoice $record) {
+                        return $record->getScheduleDescription();
+                    })
+                    ->description(function (RecurringInvoice $record) {
+                        return $record->getTimelineDescription();
+                    }),
                 Tables\Columns\TextColumn::make('last_date')
                     ->label('Last Invoice')
+                    ->date()
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('next_date')
                     ->label('Next Invoice')
+                    ->date()
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('total')

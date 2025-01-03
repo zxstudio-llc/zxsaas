@@ -24,6 +24,26 @@ enum IntervalType: string implements HasLabel
         };
     }
 
+    public function getSingularLabel(): ?string
+    {
+        return match ($this) {
+            self::Day => 'Day',
+            self::Week => 'Week',
+            self::Month => 'Month',
+            self::Year => 'Year',
+        };
+    }
+
+    public function getPluralLabel(): ?string
+    {
+        return match ($this) {
+            self::Day => 'Days',
+            self::Week => 'Weeks',
+            self::Month => 'Months',
+            self::Year => 'Years',
+        };
+    }
+
     public function isDay(): bool
     {
         return $this === self::Day;
