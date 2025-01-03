@@ -4,6 +4,7 @@ namespace App\Filament\Company\Resources\Sales;
 
 use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\DocumentType;
+use App\Enums\Accounting\RecurringInvoiceStatus;
 use App\Enums\Setting\PaymentTerms;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
@@ -269,14 +270,47 @@ class RecurringInvoiceResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('next_date')
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('id')
+                    ->label('ID')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('client.name')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('last_date')
+                    ->label('Last Invoice')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('next_date')
+                    ->label('Next Invoice')
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('total')
+                    ->currencyWithConversion(static fn (RecurringInvoice $record) => $record->currency_code)
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('client')
+                    ->relationship('client', 'name')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('status')
+                    ->options(RecurringInvoiceStatus::class)
+                    ->native(false),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
