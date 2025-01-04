@@ -10,18 +10,22 @@ enum DocumentType: string implements HasIcon, HasLabel
     case Invoice = 'invoice';
     case Bill = 'bill';
     case Estimate = 'estimate';
+    case RecurringInvoice = 'recurring_invoice';
 
     public const DEFAULT = self::Invoice->value;
 
     public function getLabel(): ?string
     {
-        return $this->name;
+        return match ($this) {
+            self::Invoice, self::Bill, self::Estimate => $this->name,
+            self::RecurringInvoice => 'Recurring Invoice',
+        };
     }
 
     public function getIcon(): ?string
     {
         return match ($this->value) {
-            self::Invoice->value => 'heroicon-o-document-duplicate',
+            self::Invoice->value, self::RecurringInvoice->value => 'heroicon-o-document-duplicate',
             self::Bill->value => 'heroicon-o-clipboard-document-list',
             self::Estimate->value => 'heroicon-o-document-text',
         };
@@ -30,7 +34,7 @@ enum DocumentType: string implements HasIcon, HasLabel
     public function getTaxKey(): string
     {
         return match ($this) {
-            self::Invoice, self::Estimate => 'salesTaxes',
+            self::Invoice, self::RecurringInvoice, self::Estimate => 'salesTaxes',
             self::Bill => 'purchaseTaxes',
         };
     }
@@ -38,7 +42,7 @@ enum DocumentType: string implements HasIcon, HasLabel
     public function getDiscountKey(): string
     {
         return match ($this) {
-            self::Invoice, self::Estimate => 'salesDiscounts',
+            self::Invoice, self::RecurringInvoice, self::Estimate => 'salesDiscounts',
             self::Bill => 'purchaseDiscounts',
         };
     }
@@ -52,6 +56,15 @@ enum DocumentType: string implements HasIcon, HasLabel
                 'reference_number' => 'P.O/S.O Number',
                 'date' => 'Invoice Date',
                 'due_date' => 'Payment Due',
+                'amount_due' => 'Amount Due',
+            ],
+            self::RecurringInvoice => [
+                'title' => 'Recurring Invoice',
+                'number' => 'Invoice Number',
+                'reference_number' => 'P.O/S.O Number',
+                'date' => 'Invoice Date',
+                'due_date' => 'Payment Due',
+                'amount_due' => 'Amount Due',
             ],
             self::Estimate => [
                 'title' => 'Estimate',
@@ -59,6 +72,7 @@ enum DocumentType: string implements HasIcon, HasLabel
                 'reference_number' => 'Reference Number',
                 'date' => 'Estimate Date',
                 'due_date' => 'Expiration Date',
+                'amount_due' => 'Grand Total',
             ],
             self::Bill => [
                 'title' => 'Bill',
@@ -66,6 +80,7 @@ enum DocumentType: string implements HasIcon, HasLabel
                 'reference_number' => 'P.O/S.O Number',
                 'date' => 'Bill Date',
                 'due_date' => 'Payment Due',
+                'amount_due' => 'Amount Due',
             ],
         };
     }

@@ -70,11 +70,18 @@ class DocumentPreviewViewModel
 
     private function getDocumentMetadata(): array
     {
+        $number = match ($this->documentType) {
+            DocumentType::Invoice => $this->document->invoice_number,
+            DocumentType::RecurringInvoice => 'Auto-generated',
+            DocumentType::Bill => $this->document->bill_number,
+            DocumentType::Estimate => $this->document->estimate_number,
+        };
+
         return [
-            'number' => $this->document->invoice_number ?? $this->document->estimate_number,
+            'number' => $number,
             'reference_number' => $this->document->order_number ?? $this->document->reference_number,
-            'date' => $this->document->date?->toDefaultDateFormat(),
-            'due_date' => $this->document->due_date?->toDefaultDateFormat() ?? $this->document->expiration_date?->toDefaultDateFormat(),
+            'date' => $this->document->date?->toDefaultDateFormat() ?? $this->document->calculateNextDate()?->toDefaultDateFormat(),
+            'due_date' => $this->document->due_date?->toDefaultDateFormat() ?? $this->document->expiration_date?->toDefaultDateFormat() ?? $this->document->calculateNextDueDate()?->toDefaultDateFormat(),
             'currency_code' => $this->document->currency_code ?? CurrencyAccessor::getDefaultCurrency(),
         ];
     }
@@ -101,7 +108,7 @@ class DocumentPreviewViewModel
             'discount' => CurrencyConverter::formatToMoney($this->document->discount_total, $currencyCode),
             'tax' => CurrencyConverter::formatToMoney($this->document->tax_total, $currencyCode),
             'total' => CurrencyConverter::formatToMoney($this->document->total, $currencyCode),
-            'amount_due' => $this->document->amount_due ? CurrencyConverter::formatToMoney($this->document->amount_due, $currencyCode) : null,
+            'amount_due' => $this->document->amount_due ? CurrencyConverter::formatToMoney($this->document->amount_due, $currencyCode) : CurrencyConverter::formatToMoney($this->document->total, $currencyCode),
         ];
     }
 

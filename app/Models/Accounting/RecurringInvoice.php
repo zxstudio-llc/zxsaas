@@ -17,9 +17,18 @@ use App\Enums\Accounting\IntervalType;
 use App\Enums\Accounting\Month;
 use App\Enums\Accounting\RecurringInvoiceStatus;
 use App\Enums\Setting\PaymentTerms;
+use App\Filament\Forms\Components\CustomSection;
 use App\Models\Common\Client;
+use App\Models\Setting\CompanyProfile;
 use App\Models\Setting\Currency;
 use App\Observers\RecurringInvoiceObserver;
+use App\Utilities\Localization\Timezone;
+use Filament\Actions\Action;
+use Filament\Actions\MountableAction;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Support\Enums\MaxWidth;
+use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -153,7 +162,7 @@ class RecurringInvoice extends Model
 
     public function canBeApproved(): bool
     {
-        return $this->isDraft() && ! $this->wasApproved();
+        return $this->isDraft() && $this->hasSchedule() && ! $this->wasApproved();
     }
 
     public function canBeEnded(): bool
@@ -164,6 +173,11 @@ class RecurringInvoice extends Model
     public function hasLineItems(): bool
     {
         return $this->lineItems()->exists();
+    }
+
+    public function hasSchedule(): bool
+    {
+        return $this->start_date !== null;
     }
 
     public function getScheduleDescription(): string
@@ -181,7 +195,7 @@ class RecurringInvoice extends Model
 
             $frequency->isCustom() => $this->getCustomScheduleDescription(),
 
-            default => 'Schedule not configured'
+            default => 'Not Configured',
         };
     }
 
@@ -245,7 +259,7 @@ class RecurringInvoice extends Model
     /**
      * Get next occurrence date based on the schedule.
      */
-    public function calculateNextDate(): ?\Carbon\Carbon
+    public function calculateNextDate(): ?Carbon
     {
         $lastDate = $this->last_date ?? $this->start_date;
         if (! $lastDate) {
@@ -272,6 +286,21 @@ class RecurringInvoice extends Model
         }
 
         return $nextDate;
+    }
+
+    public function calculateNextDueDate(): ?Carbon
+    {
+        $nextDate = $this->calculateNextDate();
+        if (! $nextDate) {
+            return null;
+        }
+
+        $terms = $this->payment_terms;
+        if (! $terms) {
+            return $nextDate;
+        }
+
+        return $nextDate->addDays($terms->getDays());
     }
 
     /**
@@ -310,10 +339,253 @@ class RecurringInvoice extends Model
         };
     }
 
-    public function markAsApproved(): void
+    public static function getUpdateScheduleAction(string $action = Action::class): MountableAction
     {
+        return $action::make('updateSchedule')
+            ->label(fn (self $record) => $record->hasSchedule() ? 'Update Schedule' : 'Set Schedule')
+            ->icon('heroicon-o-calendar-date-range')
+            ->slideOver()
+            ->modalWidth(MaxWidth::FiveExtraLarge)
+            ->successNotificationTitle('Schedule Updated')
+            ->mountUsing(function (self $record, Form $form) {
+                $data = $record->attributesToArray();
+
+                $data['day_of_month'] ??= DayOfMonth::First;
+                $data['start_date'] ??= now()->addMonth()->startOfMonth();
+
+                $form->fill($data);
+            })
+            ->form([
+                CustomSection::make('Frequency')
+                    ->contained(false)
+                    ->schema([
+                        Forms\Components\Select::make('frequency')
+                            ->label('Repeats')
+                            ->options(Frequency::class)
+                            ->softRequired()
+                            ->live()
+                            ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                $frequency = Frequency::parse($state);
+
+                                if ($frequency->isDaily()) {
+                                    $set('interval_value', null);
+                                    $set('interval_type', null);
+                                }
+
+                                if ($frequency->isWeekly()) {
+                                    $currentDayOfWeek = now()->dayOfWeek;
+                                    $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
+                                    $set('day_of_week', $currentDayOfWeek);
+                                    $set('interval_value', null);
+                                    $set('interval_type', null);
+                                }
+
+                                if ($frequency->isMonthly()) {
+                                    $set('day_of_month', DayOfMonth::First);
+                                    $set('interval_value', null);
+                                    $set('interval_type', null);
+                                }
+
+                                if ($frequency->isYearly()) {
+                                    $currentMonth = now()->month;
+                                    $currentMonth = Month::parse($currentMonth);
+                                    $set('month', $currentMonth);
+
+                                    $currentDay = now()->dayOfMonth;
+                                    $currentDay = DayOfMonth::parse($currentDay);
+                                    $set('day_of_month', $currentDay);
+
+                                    $set('interval_value', null);
+                                    $set('interval_type', null);
+                                }
+
+                                if ($frequency->isCustom()) {
+                                    $set('interval_value', 1);
+                                    $set('interval_type', IntervalType::Month);
+
+                                    $currentDay = now()->dayOfMonth;
+                                    $currentDay = DayOfMonth::parse($currentDay);
+                                    $set('day_of_month', $currentDay);
+                                }
+                            }),
+
+                        // Custom frequency fields in a nested grid
+                        Cluster::make([
+                            Forms\Components\TextInput::make('interval_value')
+                                ->label('every')
+                                ->softRequired()
+                                ->numeric()
+                                ->default(1),
+                            Forms\Components\Select::make('interval_type')
+                                ->label('Interval Type')
+                                ->options(IntervalType::class)
+                                ->softRequired()
+                                ->default(IntervalType::Month)
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    $intervalType = IntervalType::parse($state);
+
+                                    if ($intervalType->isWeek()) {
+                                        $currentDayOfWeek = now()->dayOfWeek;
+                                        $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
+                                        $set('day_of_week', $currentDayOfWeek);
+                                    }
+
+                                    if ($intervalType->isMonth()) {
+                                        $currentDay = now()->dayOfMonth;
+                                        $currentDay = DayOfMonth::parse($currentDay);
+                                        $set('day_of_month', $currentDay);
+                                    }
+
+                                    if ($intervalType->isYear()) {
+                                        $currentMonth = now()->month;
+                                        $currentMonth = Month::parse($currentMonth);
+                                        $set('month', $currentMonth);
+
+                                        $currentDay = now()->dayOfMonth;
+                                        $currentDay = DayOfMonth::parse($currentDay);
+                                        $set('day_of_month', $currentDay);
+                                    }
+                                }),
+                        ])
+                            ->live()
+                            ->label('Interval')
+                            ->required()
+                            ->markAsRequired(false)
+                            ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isCustom()),
+
+                        // Specific schedule details
+                        Forms\Components\Select::make('month')
+                            ->label('Month')
+                            ->options(Month::class)
+                            ->softRequired()
+                            ->visible(
+                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))->isYearly() ||
+                                IntervalType::parse($get('interval_type'))?->isYear()
+                            ),
+
+                        Forms\Components\Select::make('day_of_month')
+                            ->label('Day of Month')
+                            ->options(DayOfMonth::class)
+                            ->softRequired()
+                            ->visible(
+                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isMonthly() ||
+                                Frequency::parse($get('frequency'))?->isYearly() ||
+                                IntervalType::parse($get('interval_type'))?->isMonth() ||
+                                IntervalType::parse($get('interval_type'))?->isYear()
+                            ),
+
+                        Forms\Components\Select::make('day_of_week')
+                            ->label('Day of Week')
+                            ->options(DayOfWeek::class)
+                            ->softRequired()
+                            ->visible(
+                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isWeekly() ||
+                                IntervalType::parse($get('interval_type'))?->isWeek()
+                            ),
+                    ])->columns(2),
+
+                CustomSection::make('Dates')
+                    ->contained(false)
+                    ->schema([
+                        Forms\Components\DatePicker::make('start_date')
+                            ->label('Create First Invoice')
+                            ->softRequired(),
+
+                        Forms\Components\Group::make(function (Forms\Get $get) {
+                            $components = [];
+
+                            $components[] = Forms\Components\Select::make('end_type')
+                                ->label('End Schedule')
+                                ->options(EndType::class)
+                                ->softRequired()
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    $endType = EndType::parse($state);
+
+                                    if ($endType?->isNever()) {
+                                        $set('max_occurrences', null);
+                                        $set('end_date', null);
+                                    }
+
+                                    if ($endType?->isAfter()) {
+                                        $set('max_occurrences', 1);
+                                        $set('end_date', null);
+                                    }
+
+                                    if ($endType?->isOn()) {
+                                        $set('max_occurrences', null);
+                                        $set('end_date', now()->addMonth()->startOfMonth());
+                                    }
+                                });
+
+                            $endType = EndType::parse($get('end_type'));
+
+                            if ($endType?->isAfter()) {
+                                $components[] = Forms\Components\TextInput::make('max_occurrences')
+                                    ->numeric()
+                                    ->live();
+                            }
+
+                            if ($endType?->isOn()) {
+                                $components[] = Forms\Components\DatePicker::make('end_date')
+                                    ->live();
+                            }
+
+                            return [
+                                Cluster::make($components)
+                                    ->label('Ends')
+                                    ->required()
+                                    ->markAsRequired(false),
+                            ];
+                        }),
+                    ])
+                    ->columns(2),
+
+                CustomSection::make('Time Zone')
+                    ->contained(false)
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\Select::make('timezone')
+                            ->options(Timezone::getTimezoneOptions(CompanyProfile::first()->country))
+                            ->searchable()
+                            ->softRequired(),
+                    ]),
+            ])
+            ->action(function (self $record, array $data, MountableAction $action) {
+                $record->update($data);
+
+                $action->success();
+            });
+    }
+
+    public static function getApproveDraftAction(string $action = Action::class): MountableAction
+    {
+        return $action::make('approveDraft')
+            ->label('Approve')
+            ->icon('heroicon-o-check-circle')
+            ->visible(function (self $record) {
+                return $record->canBeApproved();
+            })
+            ->databaseTransaction()
+            ->successNotificationTitle('Recurring Invoice Approved')
+            ->action(function (self $record, MountableAction $action) {
+                $record->approveDraft();
+
+                $action->success();
+            });
+    }
+
+    public function approveDraft(?Carbon $approvedAt = null): void
+    {
+        if (! $this->isDraft()) {
+            throw new \RuntimeException('Invoice is not in draft status.');
+        }
+
+        $approvedAt ??= now();
+
         $this->update([
-            'approved_at' => now(),
+            'approved_at' => $approvedAt,
             'status' => RecurringInvoiceStatus::Active,
         ]);
     }

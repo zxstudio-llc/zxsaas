@@ -13,6 +13,7 @@ export default {
         './vendor/andrewdwallo/filament-selectify/resources/views/**/*.blade.php',
         './vendor/awcodes/filament-table-repeater/resources/**/*.blade.php',
         './vendor/jaocero/radio-deck/resources/views/**/*.blade.php',
+        './vendor/codewithdennis/filament-simple-alert/resources/**/*.blade.php',
     ],
     theme: {
         extend: {

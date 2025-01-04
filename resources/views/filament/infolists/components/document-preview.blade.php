@@ -145,18 +145,10 @@
                 @if($totals['amount_due'])
                     <tr>
                         <td class="pl-6 py-2" colspan="2"></td>
-                        <td class="text-right font-semibold border-t-4 border-double py-2">Amount Due
+                        <td class="text-right font-semibold border-t-4 border-double py-2">{{ $labels['amount_due'] }}
                             ({{ $metadata['currency_code'] }}):
                         </td>
                         <td class="text-right border-t-4 border-double pr-6 py-2">{{ $totals['amount_due'] }}</td>
-                    </tr>
-                @else
-                    <tr>
-                        <td class="pl-6 py-2" colspan="2"></td>
-                        <td class="text-right font-semibold border-t-4 border-double py-2">Grand Total
-                            ({{ $metadata['currency_code'] }}):
-                        </td>
-                        <td class="text-right border-t-4 border-double pr-6 py-2">{{ $totals['total'] }}</td>
                     </tr>
                 @endif
                 </tfoot>

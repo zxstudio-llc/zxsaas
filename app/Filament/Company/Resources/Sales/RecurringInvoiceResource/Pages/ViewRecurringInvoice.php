@@ -3,20 +3,23 @@
 namespace App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 
 use App\Enums\Accounting\DayOfMonth;
-use App\Enums\Accounting\DayOfWeek;
-use App\Enums\Accounting\EndType;
-use App\Enums\Accounting\Frequency;
-use App\Enums\Accounting\IntervalType;
-use App\Enums\Accounting\Month;
+use App\Enums\Accounting\DocumentType;
+use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource;
-use App\Filament\Forms\Components\LabeledField;
-use App\Models\Setting\CompanyProfile;
-use App\Utilities\Localization\Timezone;
-use Filament\Forms;
-use Filament\Forms\Form;
+use App\Filament\Infolists\Components\DocumentPreview;
+use App\Models\Accounting\RecurringInvoice;
+use CodeWithDennis\SimpleAlert\Components\Infolists\SimpleAlert;
+use Filament\Actions;
+use Filament\Infolists\Components\Actions\Action;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\MaxWidth;
-use Guava\FilamentClusters\Forms\Cluster;
 
 class ViewRecurringInvoice extends ViewRecord
 {
@@ -35,285 +38,89 @@ class ViewRecurringInvoice extends ViewRecord
         return MaxWidth::SixExtraLarge;
     }
 
-    public function form(Form $form): Form
+    protected function getHeaderActions(): array
     {
-        return $form
-            ->disabled(false)
-            ->schema([
-                Forms\Components\Section::make('Scheduling')
-                    ->schema([
-                        Forms\Components\Group::make([
-                            Forms\Components\Select::make('frequency')
-                                ->label('Repeat this invoice')
-                                ->inlineLabel()
-                                ->options(Frequency::class)
-                                ->softRequired()
-                                ->live()
-                                ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                    $frequency = Frequency::parse($state);
-
-                                    if ($frequency->isDaily()) {
-                                        $set('interval_value', null);
-                                        $set('interval_type', null);
-                                    }
-
-                                    if ($frequency->isWeekly()) {
-                                        $currentDayOfWeek = now()->dayOfWeek;
-                                        $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
-                                        $set('day_of_week', $currentDayOfWeek);
-                                        $set('interval_value', null);
-                                        $set('interval_type', null);
-                                    }
-
-                                    if ($frequency->isMonthly()) {
-                                        $set('day_of_month', DayOfMonth::First);
-                                        $set('interval_value', null);
-                                        $set('interval_type', null);
-                                    }
-
-                                    if ($frequency->isYearly()) {
-                                        $currentMonth = now()->month;
-                                        $currentMonth = Month::parse($currentMonth);
-                                        $set('month', $currentMonth);
-
-                                        $currentDay = now()->dayOfMonth;
-                                        $currentDay = DayOfMonth::parse($currentDay);
-                                        $set('day_of_month', $currentDay);
-
-                                        $set('interval_value', null);
-                                        $set('interval_type', null);
-                                    }
-
-                                    if ($frequency->isCustom()) {
-                                        $set('interval_value', 1);
-                                        $set('interval_type', IntervalType::Month);
-
-                                        $currentDay = now()->dayOfMonth;
-                                        $currentDay = DayOfMonth::parse($currentDay);
-                                        $set('day_of_month', $currentDay);
-                                    }
-                                }),
-
-                            // Custom frequency fields
-
-                            LabeledField::make()
-                                ->prefix('every')
-                                ->schema([
-                                    Cluster::make([
-                                        Forms\Components\TextInput::make('interval_value')
-                                            ->label('every')
-                                            ->numeric()
-                                            ->default(1),
-                                        Forms\Components\Select::make('interval_type')
-                                            ->label('Interval Type')
-                                            ->options(IntervalType::class)
-                                            ->softRequired()
-                                            ->default(IntervalType::Month)
-                                            ->live()
-                                            ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                                $intervalType = IntervalType::parse($state);
-
-                                                if ($intervalType->isWeek()) {
-                                                    $currentDayOfWeek = now()->dayOfWeek;
-                                                    $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
-                                                    $set('day_of_week', $currentDayOfWeek);
-                                                }
-
-                                                if ($intervalType->isMonth()) {
-                                                    $currentDay = now()->dayOfMonth;
-                                                    $currentDay = DayOfMonth::parse($currentDay);
-                                                    $set('day_of_month', $currentDay);
-                                                }
-
-                                                if ($intervalType->isYear()) {
-                                                    $currentMonth = now()->month;
-                                                    $currentMonth = Month::parse($currentMonth);
-                                                    $set('month', $currentMonth);
-
-                                                    $currentDay = now()->dayOfMonth;
-                                                    $currentDay = DayOfMonth::parse($currentDay);
-                                                    $set('day_of_month', $currentDay);
-                                                }
-                                            }),
-                                    ])
-                                        ->live()
-                                        ->hiddenLabel(),
-                                ])
-                                ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))->isCustom()),
-
-                            LabeledField::make()
-                                ->prefix(function (Forms\Get $get) {
-                                    $frequency = Frequency::parse($get('frequency'));
-                                    $intervalType = IntervalType::parse($get('interval_type'));
-
-                                    if ($frequency->isYearly()) {
-                                        return 'every';
-                                    }
-
-                                    if ($frequency->isCustom() && $intervalType?->isYear()) {
-                                        return 'in';
-                                    }
-
-                                    return null;
-                                })
-                                ->schema([
-                                    Forms\Components\Select::make('month')
-                                        ->hiddenLabel()
-                                        ->options(Month::class)
-                                        ->live()
-                                        ->softRequired(),
-                                ])
-                                ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))->isYearly() || IntervalType::parse($get('interval_type'))?->isYear()),
-
-                            LabeledField::make()
-                                ->prefix('on the')
-                                ->suffix(function (Forms\Get $get) {
-                                    $frequency = Frequency::parse($get('frequency'));
-                                    $intervalType = IntervalType::parse($get('interval_type'));
-
-                                    if ($frequency->isMonthly()) {
-                                        return 'day of every month';
-                                    }
-
-                                    if ($frequency->isYearly() || ($frequency->isCustom() && $intervalType->isMonth()) || ($frequency->isCustom() && $intervalType->isYear())) {
-                                        return 'day of the month';
-                                    }
-
-                                    return null;
-                                })
-                                ->schema([
-                                    Forms\Components\Select::make('day_of_month')
-                                        ->hiddenLabel()
-                                        ->inlineLabel()
-                                        ->options(DayOfMonth::class)
-                                        ->live()
-                                        ->softRequired(),
-                                ])
-                                ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isMonthly() || Frequency::parse($get('frequency'))?->isYearly() || IntervalType::parse($get('interval_type'))?->isMonth() || IntervalType::parse($get('interval_type'))?->isYear()),
-
-                            LabeledField::make()
-                                ->prefix(function (Forms\Get $get) {
-                                    $frequency = Frequency::parse($get('frequency'));
-                                    $intervalType = IntervalType::parse($get('interval_type'));
-
-                                    if ($frequency->isWeekly()) {
-                                        return 'every';
-                                    }
-
-                                    if ($frequency->isCustom() && $intervalType->isWeek()) {
-                                        return 'on';
-                                    }
-
-                                    return null;
-                                })
-                                ->schema([
-                                    Forms\Components\Select::make('day_of_week')
-                                        ->hiddenLabel()
-                                        ->options(DayOfWeek::class)
-                                        ->live()
-                                        ->softRequired(),
-                                ])
-                                ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isWeekly() || IntervalType::parse($get('interval_type'))?->isWeek()),
-                        ])->columns(2),
-
-                        Forms\Components\Group::make([
-                            Forms\Components\DatePicker::make('start_date')
-                                ->label('Create first invoice on')
-                                ->inlineLabel()
-                                ->softRequired(),
-
-                            LabeledField::make()
-                                ->prefix('and end')
-                                ->suffix(function (Forms\Get $get) {
-                                    $endType = EndType::parse($get('end_type'));
-
-                                    if ($endType->isAfter()) {
-                                        return 'invoices';
-                                    }
-
-                                    return null;
-                                })
-                                ->schema(function (Forms\Get $get) {
-                                    $components = [];
-
-                                    $components[] = Forms\Components\Select::make('end_type')
-                                        ->hiddenLabel()
-                                        ->options(EndType::class)
-                                        ->softRequired()
-                                        ->live()
-                                        ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                            $endType = EndType::parse($state);
-
-                                            if ($endType->isNever()) {
-                                                $set('max_occurrences', null);
-                                                $set('end_date', null);
-                                            }
-
-                                            if ($endType->isAfter()) {
-                                                $set('max_occurrences', 1);
-                                                $set('end_date', null);
-                                            }
-
-                                            if ($endType->isOn()) {
-                                                $set('max_occurrences', null);
-                                                $set('end_date', now()->addMonth()->startOfMonth());
-                                            }
-                                        });
-
-                                    $endType = EndType::parse($get('end_type'));
-
-                                    if ($endType->isAfter()) {
-                                        $components[] = Forms\Components\TextInput::make('max_occurrences')
-                                            ->numeric()
-                                            ->live();
-                                    }
-
-                                    if ($endType->isOn()) {
-                                        $components[] = Forms\Components\DatePicker::make('end_date')
-                                            ->live();
-                                    }
-
-                                    return [
-                                        Cluster::make($components)
-                                            ->hiddenLabel(),
-                                    ];
-                                }),
-                        ])->columns(2),
-
-                        Forms\Components\Group::make([
-                            LabeledField::make()
-                                ->prefix('Create in')
-                                ->suffix('time zone')
-                                ->schema([
-                                    Forms\Components\Select::make('timezone')
-                                        ->softRequired()
-                                        ->hiddenLabel()
-                                        ->options(Timezone::getTimezoneOptions(CompanyProfile::first()->country))
-                                        ->searchable(),
-                                ])
-                                ->columns(1),
-                        ])->columns(2),
-                    ])
-                    ->headerActions([
-                        Forms\Components\Actions\Action::make('save')
-                            ->label('Submit and Approve')
-                            ->button()
-                            ->successNotificationTitle('Scheduling saved')
-                            ->action(function (Forms\Components\Actions\Action $action) {
-                                $this->save();
-
-                                $action->success();
-                            }),
-                    ]),
-            ]);
+        return [
+            Actions\ActionGroup::make([
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
+                RecurringInvoice::getUpdateScheduleAction(),
+                RecurringInvoice::getApproveDraftAction(),
+            ])
+                ->label('Actions')
+                ->button()
+                ->outlined()
+                ->dropdownPlacement('bottom-end')
+                ->icon('heroicon-c-chevron-down')
+                ->iconSize(IconSize::Small)
+                ->iconPosition(IconPosition::After),
+        ];
     }
 
-    public function save(): void
+    public function infolist(Infolist $infolist): Infolist
     {
-        $state = $this->form->getState();
-
-        $this->getRecord()->update($state);
-
-        $this->getRecord()->markAsApproved();
+        return $infolist
+            ->schema([
+                SimpleAlert::make('scheduleIsNotSet')
+                    ->info()
+                    ->title('Schedule Not Set')
+                    ->description('The schedule for this recurring invoice has not been set. You must set a schedule before you can approve this draft and start creating invoices.')
+                    ->visible(fn (RecurringInvoice $record) => ! $record->hasSchedule())
+                    ->columnSpanFull()
+                    ->actions([
+                        RecurringInvoice::getUpdateScheduleAction(Action::class)
+                            ->outlined(),
+                    ]),
+                Section::make('Invoice Details')
+                    ->columns(4)
+                    ->schema([
+                        Grid::make(1)
+                            ->schema([
+                                TextEntry::make('status')
+                                    ->badge(),
+                                TextEntry::make('client.name')
+                                    ->label('Client')
+                                    ->color('primary')
+                                    ->weight(FontWeight::SemiBold)
+                                    ->url(static fn (RecurringInvoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
+                                TextEntry::make('last_date')
+                                    ->label('Last Invoice')
+                                    ->date()
+                                    ->placeholder('Not Created'),
+                                TextEntry::make('next_date')
+                                    ->label('Next Invoice')
+                                    ->placeholder('Not Scheduled')
+                                    ->date(),
+                                TextEntry::make('schedule')
+                                    ->label('Schedule')
+                                    ->getStateUsing(function (RecurringInvoice $record) {
+                                        return $record->getScheduleDescription();
+                                    })
+                                    ->helperText(function (RecurringInvoice $record) {
+                                        return $record->getTimelineDescription();
+                                    }),
+                                TextEntry::make('occurrences_count')
+                                    ->label('Invoices Created')
+                                    ->visible(fn (RecurringInvoice $record) => $record->occurrences_count > 0),
+                                TextEntry::make('end_date')
+                                    ->label('Ends On')
+                                    ->date()
+                                    ->visible(fn (RecurringInvoice $record) => $record->end_type?->isOn()),
+                                TextEntry::make('approved_at')
+                                    ->label('Approved At')
+                                    ->placeholder('Not Approved')
+                                    ->date(),
+                                TextEntry::make('ended_at')
+                                    ->label('Ended At')
+                                    ->date()
+                                    ->visible(fn (RecurringInvoice $record) => $record->ended_at),
+                                TextEntry::make('total')
+                                    ->label('Invoice Amount')
+                                    ->currency(static fn (RecurringInvoice $record) => $record->currency_code),
+                            ])->columnSpan(1),
+                        DocumentPreview::make()
+                            ->type(DocumentType::RecurringInvoice),
+                    ]),
+            ]);
     }
 }

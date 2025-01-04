@@ -219,5 +219,8 @@
     "Estimate Footer": "Estimate Footer",
     "Scheduling": "Scheduling",
     "Scheduling Form": "Scheduling Form",
-    "Approve": "Approve"
+    "Approve": "Approve",
+    "Frequency": "Frequency",
+    "Schedule Bounds": "Schedule Bounds",
+    "Time Zone": "Time Zone"
 }
