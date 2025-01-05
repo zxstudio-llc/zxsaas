@@ -5,12 +5,11 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
 use App\Collections\Accounting\DocumentCollection;
-use App\Concerns\Blamable;
-use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DayOfMonth;
 use App\Enums\Accounting\DayOfWeek;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\EndType;
 use App\Enums\Accounting\Frequency;
 use App\Enums\Accounting\IntervalType;
@@ -20,32 +19,23 @@ use App\Enums\Setting\PaymentTerms;
 use App\Filament\Forms\Components\CustomSection;
 use App\Models\Common\Client;
 use App\Models\Setting\CompanyProfile;
-use App\Models\Setting\Currency;
 use App\Observers\RecurringInvoiceObserver;
 use App\Utilities\Localization\Timezone;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Support\Enums\MaxWidth;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 #[CollectedBy(DocumentCollection::class)]
 #[ObservedBy(RecurringInvoiceObserver::class)]
-class RecurringInvoice extends Model
+class RecurringInvoice extends Document
 {
-    use Blamable;
-    use CompanyOwned;
-    use HasFactory;
-
     protected $table = 'recurring_invoices';
 
     protected $fillable = [
@@ -120,19 +110,39 @@ class RecurringInvoice extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class, 'currency_code', 'code');
-    }
-
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class, 'recurring_invoice_id');
     }
 
-    public function lineItems(): MorphMany
+    public function documentType(): DocumentType
     {
-        return $this->morphMany(DocumentLineItem::class, 'documentable');
+        return DocumentType::RecurringInvoice;
+    }
+
+    public function documentNumber(): ?string
+    {
+        return 'Auto-generated';
+    }
+
+    public function documentDate(): ?string
+    {
+        return $this->calculateNextDate()?->toDefaultDateFormat() ?? 'Auto-generated';
+    }
+
+    public function dueDate(): ?string
+    {
+        return $this->calculateNextDueDate()?->toDefaultDateFormat() ?? 'Auto-generated';
+    }
+
+    public function referenceNumber(): ?string
+    {
+        return $this->order_number;
+    }
+
+    public function amountDue(): ?string
+    {
+        return $this->total;
     }
 
     public function isDraft(): bool
@@ -168,11 +178,6 @@ class RecurringInvoice extends Model
     public function canBeEnded(): bool
     {
         return $this->isActive() && ! $this->wasEnded();
-    }
-
-    public function hasLineItems(): bool
-    {
-        return $this->lineItems()->exists();
     }
 
     public function hasSchedule(): bool
@@ -345,7 +350,6 @@ class RecurringInvoice extends Model
             ->label(fn (self $record) => $record->hasSchedule() ? 'Update Schedule' : 'Set Schedule')
             ->icon('heroicon-o-calendar-date-range')
             ->slideOver()
-            ->modalWidth(MaxWidth::FiveExtraLarge)
             ->successNotificationTitle('Schedule Updated')
             ->mountUsing(function (self $record, Form $form) {
                 $data = $record->attributesToArray();
@@ -412,12 +416,10 @@ class RecurringInvoice extends Model
                         // Custom frequency fields in a nested grid
                         Cluster::make([
                             Forms\Components\TextInput::make('interval_value')
-                                ->label('every')
                                 ->softRequired()
                                 ->numeric()
                                 ->default(1),
                             Forms\Components\Select::make('interval_type')
-                                ->label('Interval Type')
                                 ->options(IntervalType::class)
                                 ->softRequired()
                                 ->default(IntervalType::Month)
@@ -449,7 +451,7 @@ class RecurringInvoice extends Model
                                 }),
                         ])
                             ->live()
-                            ->label('Interval')
+                            ->label('Every')
                             ->required()
                             ->markAsRequired(false)
                             ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isCustom()),
@@ -485,11 +487,11 @@ class RecurringInvoice extends Model
                             ),
                     ])->columns(2),
 
-                CustomSection::make('Dates')
+                CustomSection::make('Dates & Time')
                     ->contained(false)
                     ->schema([
                         Forms\Components\DatePicker::make('start_date')
-                            ->label('Create First Invoice')
+                            ->label('First Invoice Date')
                             ->softRequired(),
 
                         Forms\Components\Group::make(function (Forms\Get $get) {
@@ -524,6 +526,7 @@ class RecurringInvoice extends Model
                             if ($endType?->isAfter()) {
                                 $components[] = Forms\Components\TextInput::make('max_occurrences')
                                     ->numeric()
+                                    ->suffix('invoices')
                                     ->live();
                             }
 
@@ -534,23 +537,18 @@ class RecurringInvoice extends Model
 
                             return [
                                 Cluster::make($components)
-                                    ->label('Ends')
+                                    ->label('Schedule Ends')
                                     ->required()
                                     ->markAsRequired(false),
                             ];
                         }),
-                    ])
-                    ->columns(2),
 
-                CustomSection::make('Time Zone')
-                    ->contained(false)
-                    ->columns(2)
-                    ->schema([
                         Forms\Components\Select::make('timezone')
                             ->options(Timezone::getTimezoneOptions(CompanyProfile::first()->country))
                             ->searchable()
                             ->softRequired(),
-                    ]),
+                    ])
+                    ->columns(2),
             ])
             ->action(function (self $record, array $data, MountableAction $action) {
                 $record->update($data);

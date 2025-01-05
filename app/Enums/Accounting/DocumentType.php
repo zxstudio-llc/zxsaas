@@ -2,6 +2,7 @@
 
 namespace App\Enums\Accounting;
 
+use App\DTO\DocumentLabelDTO;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
 
@@ -47,41 +48,41 @@ enum DocumentType: string implements HasIcon, HasLabel
         };
     }
 
-    public function getLabels(): array
+    public function getLabels(): DocumentLabelDTO
     {
         return match ($this) {
-            self::Invoice => [
-                'title' => 'Invoice',
-                'number' => 'Invoice Number',
-                'reference_number' => 'P.O/S.O Number',
-                'date' => 'Invoice Date',
-                'due_date' => 'Payment Due',
-                'amount_due' => 'Amount Due',
-            ],
-            self::RecurringInvoice => [
-                'title' => 'Recurring Invoice',
-                'number' => 'Invoice Number',
-                'reference_number' => 'P.O/S.O Number',
-                'date' => 'Invoice Date',
-                'due_date' => 'Payment Due',
-                'amount_due' => 'Amount Due',
-            ],
-            self::Estimate => [
-                'title' => 'Estimate',
-                'number' => 'Estimate Number',
-                'reference_number' => 'Reference Number',
-                'date' => 'Estimate Date',
-                'due_date' => 'Expiration Date',
-                'amount_due' => 'Grand Total',
-            ],
-            self::Bill => [
-                'title' => 'Bill',
-                'number' => 'Bill Number',
-                'reference_number' => 'P.O/S.O Number',
-                'date' => 'Bill Date',
-                'due_date' => 'Payment Due',
-                'amount_due' => 'Amount Due',
-            ],
+            self::Invoice => new DocumentLabelDTO(
+                title: 'Invoice',
+                number: 'Invoice Number',
+                referenceNumber: 'P.O/S.O Number',
+                date: 'Invoice Date',
+                dueDate: 'Payment Due',
+                amountDue: 'Amount Due',
+            ),
+            self::RecurringInvoice => new DocumentLabelDTO(
+                title: 'Recurring Invoice',
+                number: 'Invoice Number',
+                referenceNumber: 'P.O/S.O Number',
+                date: 'Invoice Date',
+                dueDate: 'Payment Due',
+                amountDue: 'Amount Due',
+            ),
+            self::Estimate => new DocumentLabelDTO(
+                title: 'Estimate',
+                number: 'Estimate Number',
+                referenceNumber: 'Reference Number',
+                date: 'Estimate Date',
+                dueDate: 'Expiration Date',
+                amountDue: 'Grand Total',
+            ),
+            self::Bill => new DocumentLabelDTO(
+                title: 'Bill',
+                number: 'Bill Number',
+                referenceNumber: 'P.O/S.O Number',
+                date: 'Bill Date',
+                dueDate: 'Payment Due',
+                amountDue: 'Amount Due',
+            ),
         };
     }
 }

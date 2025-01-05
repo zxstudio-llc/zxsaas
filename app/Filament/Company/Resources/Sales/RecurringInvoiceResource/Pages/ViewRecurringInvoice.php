@@ -2,7 +2,6 @@
 
 namespace App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 
-use App\Enums\Accounting\DayOfMonth;
 use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource;
@@ -24,14 +23,6 @@ use Filament\Support\Enums\MaxWidth;
 class ViewRecurringInvoice extends ViewRecord
 {
     protected static string $resource = RecurringInvoiceResource::class;
-
-    protected function mutateFormDataBeforeFill(array $data): array
-    {
-        $data['day_of_month'] ??= DayOfMonth::First;
-        $data['start_date'] ??= now()->addMonth()->startOfMonth();
-
-        return $data;
-    }
 
     public function getMaxContentWidth(): MaxWidth | string | null
     {

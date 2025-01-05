@@ -5,16 +5,14 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
 use App\Collections\Accounting\DocumentCollection;
-use App\Concerns\Blamable;
-use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\EstimateStatus;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\EstimateResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Common\Client;
-use App\Models\Setting\Currency;
 use App\Observers\EstimateObserver;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
@@ -23,21 +21,15 @@ use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Carbon;
 
 #[CollectedBy(DocumentCollection::class)]
 #[ObservedBy(EstimateObserver::class)]
-class Estimate extends Model
+class Estimate extends Document
 {
-    use Blamable;
-    use CompanyOwned;
-    use HasFactory;
-
     protected $fillable = [
         'company_id',
         'client_id',
@@ -92,19 +84,39 @@ class Estimate extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class, 'currency_code', 'code');
-    }
-
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class);
     }
 
-    public function lineItems(): MorphMany
+    public function documentType(): DocumentType
     {
-        return $this->morphMany(DocumentLineItem::class, 'documentable');
+        return DocumentType::Estimate;
+    }
+
+    public function documentNumber(): ?string
+    {
+        return $this->estimate_number;
+    }
+
+    public function documentDate(): ?string
+    {
+        return $this->date?->toDateString();
+    }
+
+    public function dueDate(): ?string
+    {
+        return $this->expiration_date?->toDateString();
+    }
+
+    public function referenceNumber(): ?string
+    {
+        return $this->reference_number;
+    }
+
+    public function amountDue(): ?string
+    {
+        return $this->total;
     }
 
     protected function isCurrentlyExpired(): Attribute
@@ -188,11 +200,6 @@ class Estimate extends Model
             && ! $this->wasAccepted()
             && ! $this->wasDeclined()
             && ! $this->wasConverted();
-    }
-
-    public function hasLineItems(): bool
-    {
-        return $this->lineItems()->exists();
     }
 
     public function scopeActive(Builder $query): Builder

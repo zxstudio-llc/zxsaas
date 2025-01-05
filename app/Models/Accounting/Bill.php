@@ -5,11 +5,10 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
 use App\Collections\Accounting\DocumentCollection;
-use App\Concerns\Blamable;
-use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Filament\Company\Resources\Purchases\BillResource;
@@ -25,7 +24,6 @@ use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -34,12 +32,8 @@ use Illuminate\Support\Carbon;
 
 #[CollectedBy(DocumentCollection::class)]
 #[ObservedBy(BillObserver::class)]
-class Bill extends Model
+class Bill extends Document
 {
-    use Blamable;
-    use CompanyOwned;
-    use HasFactory;
-
     protected $table = 'bills';
 
     protected $fillable = [
@@ -81,19 +75,9 @@ class Bill extends Model
         'amount_due' => MoneyCast::class,
     ];
 
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class, 'currency_code', 'code');
-    }
-
     public function vendor(): BelongsTo
     {
         return $this->belongsTo(Vendor::class);
-    }
-
-    public function lineItems(): MorphMany
-    {
-        return $this->morphMany(DocumentLineItem::class, 'documentable');
     }
 
     public function transactions(): MorphMany
@@ -120,6 +104,36 @@ class Bill extends Model
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    public function documentType(): DocumentType
+    {
+        return DocumentType::Bill;
+    }
+
+    public function documentNumber(): ?string
+    {
+        return $this->bill_number;
+    }
+
+    public function documentDate(): ?string
+    {
+        return $this->date?->toDefaultDateFormat();
+    }
+
+    public function dueDate(): ?string
+    {
+        return $this->due_date?->toDefaultDateFormat();
+    }
+
+    public function referenceNumber(): ?string
+    {
+        return $this->order_number;
+    }
+
+    public function amountDue(): ?string
+    {
+        return $this->amount_due;
     }
 
     protected function isCurrentlyOverdue(): Attribute
@@ -150,11 +164,6 @@ class Bill extends Model
             BillStatus::Paid,
             BillStatus::Void,
         ]) && $this->currency_code === CurrencyAccessor::getDefaultCurrency();
-    }
-
-    public function hasLineItems(): bool
-    {
-        return $this->lineItems()->exists();
     }
 
     public function hasPayments(): bool

@@ -5,10 +5,9 @@ namespace App\Models\Accounting;
 use App\Casts\MoneyCast;
 use App\Casts\RateCast;
 use App\Collections\Accounting\DocumentCollection;
-use App\Concerns\Blamable;
-use App\Concerns\CompanyOwned;
 use App\Enums\Accounting\AdjustmentComputation;
 use App\Enums\Accounting\DocumentDiscountMethod;
+use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
@@ -16,7 +15,6 @@ use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Models\Banking\BankAccount;
 use App\Models\Common\Client;
 use App\Models\Company;
-use App\Models\Setting\Currency;
 use App\Observers\InvoiceObserver;
 use App\Utilities\Currency\CurrencyAccessor;
 use App\Utilities\Currency\CurrencyConverter;
@@ -27,7 +25,6 @@ use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -36,12 +33,8 @@ use Illuminate\Support\Carbon;
 
 #[CollectedBy(DocumentCollection::class)]
 #[ObservedBy(InvoiceObserver::class)]
-class Invoice extends Model
+class Invoice extends Document
 {
-    use Blamable;
-    use CompanyOwned;
-    use HasFactory;
-
     protected $table = 'invoices';
 
     protected $fillable = [
@@ -100,11 +93,6 @@ class Invoice extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function currency(): BelongsTo
-    {
-        return $this->belongsTo(Currency::class, 'currency_code', 'code');
-    }
-
     public function estimate(): BelongsTo
     {
         return $this->belongsTo(Estimate::class);
@@ -113,11 +101,6 @@ class Invoice extends Model
     public function recurringInvoice(): BelongsTo
     {
         return $this->belongsTo(RecurringInvoice::class);
-    }
-
-    public function lineItems(): MorphMany
-    {
-        return $this->morphMany(DocumentLineItem::class, 'documentable');
     }
 
     public function transactions(): MorphMany
@@ -144,6 +127,36 @@ class Invoice extends Model
     {
         return $this->morphOne(Transaction::class, 'transactionable')
             ->where('type', TransactionType::Journal);
+    }
+
+    public function documentType(): DocumentType
+    {
+        return DocumentType::Invoice;
+    }
+
+    public function documentNumber(): ?string
+    {
+        return $this->invoice_number;
+    }
+
+    public function documentDate(): ?string
+    {
+        return $this->date?->toDefaultDateFormat();
+    }
+
+    public function dueDate(): ?string
+    {
+        return $this->due_date?->toDefaultDateFormat();
+    }
+
+    public function referenceNumber(): ?string
+    {
+        return $this->order_number;
+    }
+
+    public function amountDue(): ?string
+    {
+        return $this->amount_due;
     }
 
     public function scopeUnpaid(Builder $query): Builder
@@ -220,11 +233,6 @@ class Invoice extends Model
     public function canBeMarkedAsSent(): bool
     {
         return ! $this->hasBeenSent();
-    }
-
-    public function hasLineItems(): bool
-    {
-        return $this->lineItems()->exists();
     }
 
     public function hasPayments(): bool
