@@ -3,7 +3,9 @@
 namespace App\Enums\Accounting;
 
 use App\Enums\Concerns\ParsesEnum;
+use Carbon\CarbonImmutable;
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Carbon;
 
 enum DayOfMonth: int implements HasLabel
 {
@@ -78,5 +80,24 @@ enum DayOfMonth: int implements HasLabel
             self::Thirtieth => '30th',
             self::ThirtyFirst => '31st',
         };
+    }
+
+    public function isFirst(): bool
+    {
+        return $this === self::First;
+    }
+
+    public function isLast(): bool
+    {
+        return $this === self::Last;
+    }
+
+    public function resolveDate(Carbon | CarbonImmutable $date): Carbon | CarbonImmutable
+    {
+        if ($this->isLast()) {
+            return $date->endOfMonth();
+        }
+
+        return $date->day(min($this->value, $date->daysInMonth));
     }
 }

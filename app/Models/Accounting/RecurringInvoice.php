@@ -13,6 +13,7 @@ use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\EndType;
 use App\Enums\Accounting\Frequency;
 use App\Enums\Accounting\IntervalType;
+use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\Month;
 use App\Enums\Accounting\RecurringInvoiceStatus;
 use App\Enums\Setting\PaymentTerms;
@@ -28,6 +29,7 @@ use Filament\Forms\Form;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Database\Eloquent\Attributes\CollectedBy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -91,6 +93,7 @@ class RecurringInvoice extends Document
         'payment_terms' => PaymentTerms::class,
         'frequency' => Frequency::class,
         'interval_type' => IntervalType::class,
+        'interval_value' => 'integer',
         'month' => Month::class,
         'day_of_month' => DayOfMonth::class,
         'day_of_week' => DayOfWeek::class,
@@ -223,9 +226,6 @@ class RecurringInvoice extends Document
         return "Repeat every {$interval}{$dayDescription}";
     }
 
-    /**
-     * Get a human-readable description of when the schedule ends.
-     */
     public function getEndDescription(): string
     {
         if (! $this->end_type) {
@@ -243,9 +243,6 @@ class RecurringInvoice extends Document
         };
     }
 
-    /**
-     * Get the schedule timeline description.
-     */
     public function getTimelineDescription(): string
     {
         $parts = [];
@@ -261,12 +258,14 @@ class RecurringInvoice extends Document
         return implode(', ', $parts);
     }
 
-    /**
-     * Get next occurrence date based on the schedule.
-     */
-    public function calculateNextDate(): ?Carbon
+    public function calculateNextDate(?Carbon $lastDate = null): ?Carbon
     {
-        $lastDate = $this->last_date ?? $this->start_date;
+        $lastDate ??= $this->last_date;
+
+        if (! $lastDate && $this->start_date) {
+            return $this->start_date;
+        }
+
         if (! $lastDate) {
             return null;
         }
@@ -274,59 +273,109 @@ class RecurringInvoice extends Document
         $nextDate = match (true) {
             $this->frequency->isDaily() => $lastDate->addDay(),
 
-            $this->frequency->isWeekly() => $lastDate->addWeek(),
+            $this->frequency->isWeekly() => $this->calculateNextWeeklyDate($lastDate),
 
-            $this->frequency->isMonthly() => $lastDate->addMonth(),
+            $this->frequency->isMonthly() => $this->calculateNextMonthlyDate($lastDate),
 
-            $this->frequency->isYearly() => $lastDate->addYear(),
+            $this->frequency->isYearly() => $this->calculateNextYearlyDate($lastDate),
 
             $this->frequency->isCustom() => $this->calculateCustomNextDate($lastDate),
 
             default => null
         };
 
-        // Check if we've reached the end
-        if ($this->hasReachedEnd($nextDate)) {
+        if (! $nextDate || $this->hasReachedEnd($nextDate)) {
             return null;
         }
 
         return $nextDate;
     }
 
-    public function calculateNextDueDate(): ?Carbon
+    public function calculateNextWeeklyDate(Carbon $lastDate): ?Carbon
     {
-        $nextDate = $this->calculateNextDate();
-        if (! $nextDate) {
-            return null;
-        }
-
-        $terms = $this->payment_terms;
-        if (! $terms) {
-            return $nextDate;
-        }
-
-        return $nextDate->addDays($terms->getDays());
+        return $lastDate->copy()->next($this->day_of_week->value);
     }
 
-    /**
-     * Calculate next date for custom intervals
-     */
-    protected function calculateCustomNextDate(Carbon $lastDate): ?\Carbon\Carbon
+    public function calculateNextMonthlyDate(Carbon $lastDate): ?Carbon
     {
-        $value = $this->interval_value ?? 1;
+        return match (true) {
+            $lastDate->equalTo($this->start_date) => $lastDate->copy()->day(
+                min($this->day_of_month->value, $lastDate->daysInMonth)
+            ),
+
+            default => $lastDate->copy()->addMonth()->day(
+                min($this->day_of_month->value, $lastDate->copy()->addMonth()->daysInMonth)
+            ),
+        };
+    }
+
+    public function calculateNextYearlyDate(Carbon $lastDate): ?Carbon
+    {
+        return match (true) {
+            $lastDate->equalTo($this->start_date) => $lastDate->copy()
+                ->month($this->month->value)
+                ->day(min($this->day_of_month->value, $lastDate->daysInMonth)),
+
+            default => $lastDate->copy()
+                ->addYear()
+                ->month($this->month->value)
+                ->day(min($this->day_of_month->value, $lastDate->copy()->addYear()->month($this->month->value)->daysInMonth))
+        };
+    }
+
+    protected function calculateCustomNextDate(Carbon $lastDate): ?Carbon
+    {
+        $interval = $this->interval_value ?? 1;
 
         return match ($this->interval_type) {
-            IntervalType::Day => $lastDate->addDays($value),
-            IntervalType::Week => $lastDate->addWeeks($value),
-            IntervalType::Month => $lastDate->addMonths($value),
-            IntervalType::Year => $lastDate->addYears($value),
+            IntervalType::Day => $lastDate->copy()->addDays($interval),
+
+            IntervalType::Week => match (true) {
+                $lastDate->equalTo($this->start_date) => $lastDate->copy()->next($this->day_of_week->value),
+
+                $lastDate->dayOfWeek === $this->day_of_week->value => $lastDate->copy()->addWeeks($interval),
+
+                default => $lastDate->copy()->next($this->day_of_week->value),
+            },
+
+            IntervalType::Month => match (true) {
+                $lastDate->equalTo($this->start_date) => $lastDate->copy()->day(
+                    min($this->day_of_month->value, $lastDate->daysInMonth)
+                ),
+
+                default => $lastDate->copy()->addMonths($interval)->day(
+                    min($this->day_of_month->value, $lastDate->copy()->addMonths($interval)->daysInMonth)
+                ),
+            },
+
+            IntervalType::Year => match (true) {
+                $lastDate->equalTo($this->start_date) => $lastDate->copy()
+                    ->month($this->month->value)
+                    ->day(min($this->day_of_month->value, $lastDate->daysInMonth)),
+
+                default => $lastDate->copy()
+                    ->addYears($interval)
+                    ->month($this->month->value)
+                    ->day(min($this->day_of_month->value, $lastDate->copy()->addYears($interval)->month($this->month->value)->daysInMonth))
+            },
+
             default => null
         };
     }
 
-    /**
-     * Check if the schedule has reached its end
-     */
+    public function calculateNextDueDate(): ?Carbon
+    {
+        if (! $nextDate = $this->calculateNextDate()) {
+            return null;
+        }
+
+        if (! $terms = $this->payment_terms) {
+            return $nextDate;
+        }
+
+        return $nextDate->copy()->addDays($terms->getDays());
+    }
+
     public function hasReachedEnd(?Carbon $nextDate = null): bool
     {
         if (! $this->end_type) {
@@ -464,18 +513,74 @@ class RecurringInvoice extends Document
                             ->visible(
                                 fn (Forms\Get $get) => Frequency::parse($get('frequency'))->isYearly() ||
                                 IntervalType::parse($get('interval_type'))?->isYear()
-                            ),
+                            )
+                            ->live()
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                $dayOfMonth = DayOfMonth::parse($get('day_of_month'));
+                                $frequency = Frequency::parse($get('frequency'));
+                                $intervalType = IntervalType::parse($get('interval_type'));
+                                $month = Month::parse($state);
+
+                                if (($frequency->isYearly() || $intervalType?->isYear()) && $month && $dayOfMonth) {
+                                    $date = $dayOfMonth->resolveDate(today()->month($month->value))->toImmutable();
+
+                                    $adjustedStartDate = $date->lt(today())
+                                        ? $dayOfMonth->resolveDate($date->addYear()->month($month->value))
+                                        : $dayOfMonth->resolveDate($date->month($month->value));
+
+                                    $adjustedDay = min($dayOfMonth->value, $adjustedStartDate->daysInMonth);
+
+                                    $set('day_of_month', $adjustedDay);
+
+                                    $set('start_date', $adjustedStartDate);
+                                }
+                            }),
 
                         Forms\Components\Select::make('day_of_month')
                             ->label('Day of Month')
-                            ->options(DayOfMonth::class)
+                            ->options(function (Forms\Get $get) {
+                                $month = Month::parse($get('month')) ?? Month::January;
+
+                                $daysInMonth = Carbon::createFromDate(null, $month->value)->daysInMonth;
+
+                                return collect(DayOfMonth::cases())
+                                    ->filter(static fn (DayOfMonth $dayOfMonth) => $dayOfMonth->value <= $daysInMonth || $dayOfMonth->isLast())
+                                    ->mapWithKeys(fn (DayOfMonth $dayOfMonth) => [$dayOfMonth->value => $dayOfMonth->getLabel()]);
+                            })
                             ->softRequired()
                             ->visible(
                                 fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isMonthly() ||
                                 Frequency::parse($get('frequency'))?->isYearly() ||
                                 IntervalType::parse($get('interval_type'))?->isMonth() ||
                                 IntervalType::parse($get('interval_type'))?->isYear()
-                            ),
+                            )
+                            ->live()
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                $dayOfMonth = DayOfMonth::parse($state);
+                                $frequency = Frequency::parse($get('frequency'));
+                                $intervalType = IntervalType::parse($get('interval_type'));
+                                $month = Month::parse($get('month'));
+
+                                if (($frequency->isMonthly() || $intervalType?->isMonth()) && $dayOfMonth) {
+                                    $date = $dayOfMonth->resolveDate(today())->toImmutable();
+
+                                    $adjustedStartDate = $date->lt(today())
+                                        ? $dayOfMonth->resolveDate($date->addMonth())
+                                        : $dayOfMonth->resolveDate($date);
+
+                                    $set('start_date', $adjustedStartDate);
+                                }
+
+                                if (($frequency->isYearly() || $intervalType?->isYear()) && $month && $dayOfMonth) {
+                                    $date = $dayOfMonth->resolveDate(today()->month($month->value))->toImmutable();
+
+                                    $adjustedStartDate = $date->lt(today())
+                                        ? $dayOfMonth->resolveDate($date->addYear()->month($month->value))
+                                        : $dayOfMonth->resolveDate($date->month($month->value));
+
+                                    $set('start_date', $adjustedStartDate);
+                                }
+                            }),
 
                         Forms\Components\Select::make('day_of_week')
                             ->label('Day of Week')
@@ -484,7 +589,17 @@ class RecurringInvoice extends Document
                             ->visible(
                                 fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isWeekly() ||
                                 IntervalType::parse($get('interval_type'))?->isWeek()
-                            ),
+                            )
+                            ->live()
+                            ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                $dayOfWeek = DayOfWeek::parse($state);
+
+                                $adjustedStartDate = today()->is($dayOfWeek->name)
+                                    ? today()
+                                    : today()->next($dayOfWeek->name);
+
+                                $set('start_date', $adjustedStartDate);
+                            }),
                     ])->columns(2),
 
                 CustomSection::make('Dates & Time')
@@ -492,7 +607,17 @@ class RecurringInvoice extends Document
                     ->schema([
                         Forms\Components\DatePicker::make('start_date')
                             ->label('First Invoice Date')
-                            ->softRequired(),
+                            ->softRequired()
+                            ->live()
+                            ->minDate(today())
+                            ->closeOnDateSelection()
+                            ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                $startDate = Carbon::parse($state);
+
+                                $dayOfWeek = DayOfWeek::parse($startDate->dayOfWeek);
+
+                                $set('day_of_week', $dayOfWeek);
+                            }),
 
                         Forms\Components\Group::make(function (Forms\Get $get) {
                             $components = [];
@@ -586,5 +711,106 @@ class RecurringInvoice extends Document
             'approved_at' => $approvedAt,
             'status' => RecurringInvoiceStatus::Active,
         ]);
+    }
+
+    public function generateInvoice(): ?Invoice
+    {
+        if (! $this->shouldGenerateInvoice()) {
+            return null;
+        }
+
+        $nextDate = $this->next_date ?? $this->calculateNextDate();
+
+        if (! $nextDate) {
+            return null;
+        }
+
+        $dueDate = $this->calculateNextDueDate();
+
+        $invoice = $this->invoices()->create([
+            'company_id' => $this->company_id,
+            'client_id' => $this->client_id,
+            'logo' => $this->logo,
+            'header' => $this->header,
+            'subheader' => $this->subheader,
+            'invoice_number' => Invoice::getNextDocumentNumber($this->company),
+            'date' => $nextDate,
+            'due_date' => $dueDate,
+            'status' => InvoiceStatus::Draft,
+            'currency_code' => $this->currency_code,
+            'discount_method' => $this->discount_method,
+            'discount_computation' => $this->discount_computation,
+            'discount_rate' => $this->discount_rate,
+            'subtotal' => $this->subtotal,
+            'tax_total' => $this->tax_total,
+            'discount_total' => $this->discount_total,
+            'total' => $this->total,
+            'terms' => $this->terms,
+            'footer' => $this->footer,
+            'created_by' => auth()->id(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->replicateLineItems($invoice);
+
+        $this->update([
+            'last_date' => $nextDate,
+            'next_date' => $this->calculateNextDate($nextDate),
+            'occurrences_count' => ($this->occurrences_count ?? 0) + 1,
+        ]);
+
+        return $invoice;
+    }
+
+    public function replicateLineItems(Model $target): void
+    {
+        $this->lineItems->each(function (DocumentLineItem $lineItem) use ($target) {
+            $replica = $lineItem->replicate([
+                'documentable_id',
+                'documentable_type',
+                'subtotal',
+                'total',
+                'created_by',
+                'updated_by',
+                'created_at',
+                'updated_at',
+            ]);
+
+            $replica->documentable_id = $target->id;
+            $replica->documentable_type = $target->getMorphClass();
+            $replica->save();
+
+            $replica->adjustments()->sync($lineItem->adjustments->pluck('id'));
+        });
+    }
+
+    public function shouldGenerateInvoice(): bool
+    {
+        if (! $this->isActive() || $this->hasReachedEnd()) {
+            return false;
+        }
+
+        $nextDate = $this->calculateNextDate();
+
+        if (! $nextDate || $nextDate->startOfDay()->isFuture()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function generateDueInvoices(): void
+    {
+        $maxIterations = 100;
+
+        for ($i = 0; $i < $maxIterations; $i++) {
+            $result = $this->generateInvoice();
+
+            if (! $result) {
+                break;
+            }
+
+            $this->refresh();
+        }
     }
 }

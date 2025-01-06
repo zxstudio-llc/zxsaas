@@ -4,6 +4,7 @@ namespace App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 
 use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
+use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource;
 use App\Filament\Infolists\Components\DocumentPreview;
 use App\Models\Accounting\RecurringInvoice;
@@ -19,6 +20,7 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Enums\IconSize;
 use Filament\Support\Enums\MaxWidth;
+use Illuminate\Support\Str;
 
 class ViewRecurringInvoice extends ViewRecord
 {
@@ -62,6 +64,16 @@ class ViewRecurringInvoice extends ViewRecord
                         RecurringInvoice::getUpdateScheduleAction(Action::class)
                             ->outlined(),
                     ]),
+                SimpleAlert::make('readyToApprove')
+                    ->info()
+                    ->title('Ready to Approve')
+                    ->description('This recurring invoice is ready for approval. Review the details, and approve it when you’re ready to start generating invoices.')
+                    ->visible(fn (RecurringInvoice $record) => $record->isDraft() && $record->hasSchedule())
+                    ->columnSpanFull()
+                    ->actions([
+                        RecurringInvoice::getApproveDraftAction(Action::class)
+                            ->outlined(),
+                    ]),
                 Section::make('Invoice Details')
                     ->columns(4)
                     ->schema([
@@ -91,8 +103,12 @@ class ViewRecurringInvoice extends ViewRecord
                                         return $record->getTimelineDescription();
                                     }),
                                 TextEntry::make('occurrences_count')
-                                    ->label('Invoices Created')
-                                    ->visible(fn (RecurringInvoice $record) => $record->occurrences_count > 0),
+                                    ->label('Created to Date')
+                                    ->visible(static fn (RecurringInvoice $record) => $record->occurrences_count > 0)
+                                    ->color('primary')
+                                    ->weight(FontWeight::SemiBold)
+                                    ->suffix(fn (RecurringInvoice $record) => Str::of(' invoice')->plural($record->occurrences_count))
+                                    ->url(static fn (RecurringInvoice $record) => InvoiceResource::getUrl()),
                                 TextEntry::make('end_date')
                                     ->label('Ends On')
                                     ->date()
