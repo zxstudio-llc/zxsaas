@@ -497,16 +497,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.336.8",
+            "version": "3.336.9",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "933da0d1b9b1ac9b37d5e32e127d4581b1aabaf6"
+                "reference": "bbc76138ed66f593dc2ae529c95fe1f794e6d77f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/933da0d1b9b1ac9b37d5e32e127d4581b1aabaf6",
-                "reference": "933da0d1b9b1ac9b37d5e32e127d4581b1aabaf6",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/bbc76138ed66f593dc2ae529c95fe1f794e6d77f",
+                "reference": "bbc76138ed66f593dc2ae529c95fe1f794e6d77f",
                 "shasum": ""
             },
             "require": {
@@ -589,9 +589,9 @@
             "support": {
                 "forum": "https://forums.aws.amazon.com/forum.jspa?forumID=80",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.336.8"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.336.9"
             },
-            "time": "2025-01-03T19:06:11+00:00"
+            "time": "2025-01-06T19:06:42+00:00"
         },
         {
             "name": "aws/aws-sdk-php-laravel",
@@ -2986,16 +2986,16 @@
         },
         {
             "name": "knplabs/knp-snappy",
-            "version": "v1.5.0",
+            "version": "v1.5.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/KnpLabs/snappy.git",
-                "reference": "98468898b50c09f26d56d905b79b0f52a2215da6"
+                "reference": "3dd138e9e47de91cd2e056c5e6e1a0dd72547ee7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/KnpLabs/snappy/zipball/98468898b50c09f26d56d905b79b0f52a2215da6",
-                "reference": "98468898b50c09f26d56d905b79b0f52a2215da6",
+                "url": "https://api.github.com/repos/KnpLabs/snappy/zipball/3dd138e9e47de91cd2e056c5e6e1a0dd72547ee7",
+                "reference": "3dd138e9e47de91cd2e056c5e6e1a0dd72547ee7",
                 "shasum": ""
             },
             "require": {
@@ -3047,9 +3047,9 @@
             ],
             "support": {
                 "issues": "https://github.com/KnpLabs/snappy/issues",
-                "source": "https://github.com/KnpLabs/snappy/tree/v1.5.0"
+                "source": "https://github.com/KnpLabs/snappy/tree/v1.5.1"
             },
-            "time": "2023-12-18T09:12:11+00:00"
+            "time": "2025-01-06T16:53:26+00:00"
         },
         {
             "name": "laravel/framework",
@@ -11528,16 +11528,16 @@
         },
         {
             "name": "sebastian/comparator",
-            "version": "6.2.1",
+            "version": "6.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/comparator.git",
-                "reference": "43d129d6a0f81c78bee378b46688293eb7ea3739"
+                "reference": "d4e47a769525c4dd38cea90e5dcd435ddbbc7115"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/comparator/zipball/43d129d6a0f81c78bee378b46688293eb7ea3739",
-                "reference": "43d129d6a0f81c78bee378b46688293eb7ea3739",
+                "url": "https://api.github.com/repos/sebastianbergmann/comparator/zipball/d4e47a769525c4dd38cea90e5dcd435ddbbc7115",
+                "reference": "d4e47a769525c4dd38cea90e5dcd435ddbbc7115",
                 "shasum": ""
             },
             "require": {
@@ -11549,6 +11549,9 @@
             },
             "require-dev": {
                 "phpunit/phpunit": "^11.4"
+            },
+            "suggest": {
+                "ext-bcmath": "For comparing BcMath\\Number objects"
             },
             "type": "library",
             "extra": {
@@ -11593,7 +11596,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/comparator/issues",
                 "security": "https://github.com/sebastianbergmann/comparator/security/policy",
-                "source": "https://github.com/sebastianbergmann/comparator/tree/6.2.1"
+                "source": "https://github.com/sebastianbergmann/comparator/tree/6.3.0"
             },
             "funding": [
                 {
@@ -11601,7 +11604,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-10-31T05:30:08+00:00"
+            "time": "2025-01-06T10:28:19+00:00"
         },
         {
             "name": "sebastian/complexity",

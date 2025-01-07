@@ -21,7 +21,9 @@ use App\Filament\Forms\Components\CustomSection;
 use App\Models\Common\Client;
 use App\Models\Setting\CompanyProfile;
 use App\Observers\RecurringInvoiceObserver;
+use App\Support\ScheduleHandler;
 use App\Utilities\Localization\Timezone;
+use CodeWithDennis\SimpleAlert\Components\Forms\SimpleAlert;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
 use Filament\Forms;
@@ -293,34 +295,17 @@ class RecurringInvoice extends Document
 
     public function calculateNextWeeklyDate(Carbon $lastDate): ?Carbon
     {
-        return $lastDate->copy()->next($this->day_of_week->value);
+        return $lastDate->copy()->next($this->day_of_week->name);
     }
 
     public function calculateNextMonthlyDate(Carbon $lastDate): ?Carbon
     {
-        return match (true) {
-            $lastDate->equalTo($this->start_date) => $lastDate->copy()->day(
-                min($this->day_of_month->value, $lastDate->daysInMonth)
-            ),
-
-            default => $lastDate->copy()->addMonth()->day(
-                min($this->day_of_month->value, $lastDate->copy()->addMonth()->daysInMonth)
-            ),
-        };
+        return $this->day_of_month->resolveDate($lastDate->copy()->addMonth());
     }
 
     public function calculateNextYearlyDate(Carbon $lastDate): ?Carbon
     {
-        return match (true) {
-            $lastDate->equalTo($this->start_date) => $lastDate->copy()
-                ->month($this->month->value)
-                ->day(min($this->day_of_month->value, $lastDate->daysInMonth)),
-
-            default => $lastDate->copy()
-                ->addYear()
-                ->month($this->month->value)
-                ->day(min($this->day_of_month->value, $lastDate->copy()->addYear()->month($this->month->value)->daysInMonth))
-        };
+        return $this->day_of_month->resolveDate($lastDate->copy()->addYear()->month($this->month->value));
     }
 
     protected function calculateCustomNextDate(Carbon $lastDate): ?Carbon
@@ -330,34 +315,11 @@ class RecurringInvoice extends Document
         return match ($this->interval_type) {
             IntervalType::Day => $lastDate->copy()->addDays($interval),
 
-            IntervalType::Week => match (true) {
-                $lastDate->equalTo($this->start_date) => $lastDate->copy()->next($this->day_of_week->value),
+            IntervalType::Week => $lastDate->copy()->addWeeks($interval),
 
-                $lastDate->dayOfWeek === $this->day_of_week->value => $lastDate->copy()->addWeeks($interval),
+            IntervalType::Month => $this->day_of_month->resolveDate($lastDate->copy()->addMonths($interval)),
 
-                default => $lastDate->copy()->next($this->day_of_week->value),
-            },
-
-            IntervalType::Month => match (true) {
-                $lastDate->equalTo($this->start_date) => $lastDate->copy()->day(
-                    min($this->day_of_month->value, $lastDate->daysInMonth)
-                ),
-
-                default => $lastDate->copy()->addMonths($interval)->day(
-                    min($this->day_of_month->value, $lastDate->copy()->addMonths($interval)->daysInMonth)
-                ),
-            },
-
-            IntervalType::Year => match (true) {
-                $lastDate->equalTo($this->start_date) => $lastDate->copy()
-                    ->month($this->month->value)
-                    ->day(min($this->day_of_month->value, $lastDate->daysInMonth)),
-
-                default => $lastDate->copy()
-                    ->addYears($interval)
-                    ->month($this->month->value)
-                    ->day(min($this->day_of_month->value, $lastDate->copy()->addYears($interval)->month($this->month->value)->daysInMonth))
-            },
+            IntervalType::Year => $this->day_of_month->resolveDate($lastDate->copy()->addYears($interval)->month($this->month->value)),
 
             default => null
         };
@@ -411,196 +373,97 @@ class RecurringInvoice extends Document
             ->form([
                 CustomSection::make('Frequency')
                     ->contained(false)
-                    ->schema([
-                        Forms\Components\Select::make('frequency')
-                            ->label('Repeats')
-                            ->options(Frequency::class)
-                            ->softRequired()
-                            ->live()
-                            ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                $frequency = Frequency::parse($state);
+                    ->schema(function (Forms\Get $get) {
+                        $frequency = Frequency::parse($get('frequency'));
+                        $intervalType = IntervalType::parse($get('interval_type'));
+                        $month = Month::parse($get('month'));
+                        $dayOfMonth = DayOfMonth::parse($get('day_of_month'));
 
-                                if ($frequency->isDaily()) {
-                                    $set('interval_value', null);
-                                    $set('interval_type', null);
-                                }
-
-                                if ($frequency->isWeekly()) {
-                                    $currentDayOfWeek = now()->dayOfWeek;
-                                    $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
-                                    $set('day_of_week', $currentDayOfWeek);
-                                    $set('interval_value', null);
-                                    $set('interval_type', null);
-                                }
-
-                                if ($frequency->isMonthly()) {
-                                    $set('day_of_month', DayOfMonth::First);
-                                    $set('interval_value', null);
-                                    $set('interval_type', null);
-                                }
-
-                                if ($frequency->isYearly()) {
-                                    $currentMonth = now()->month;
-                                    $currentMonth = Month::parse($currentMonth);
-                                    $set('month', $currentMonth);
-
-                                    $currentDay = now()->dayOfMonth;
-                                    $currentDay = DayOfMonth::parse($currentDay);
-                                    $set('day_of_month', $currentDay);
-
-                                    $set('interval_value', null);
-                                    $set('interval_type', null);
-                                }
-
-                                if ($frequency->isCustom()) {
-                                    $set('interval_value', 1);
-                                    $set('interval_type', IntervalType::Month);
-
-                                    $currentDay = now()->dayOfMonth;
-                                    $currentDay = DayOfMonth::parse($currentDay);
-                                    $set('day_of_month', $currentDay);
-                                }
-                            }),
-
-                        // Custom frequency fields in a nested grid
-                        Cluster::make([
-                            Forms\Components\TextInput::make('interval_value')
+                        return [
+                            Forms\Components\Select::make('frequency')
+                                ->label('Repeats')
+                                ->options(Frequency::class)
                                 ->softRequired()
-                                ->numeric()
-                                ->default(1),
-                            Forms\Components\Select::make('interval_type')
-                                ->options(IntervalType::class)
-                                ->softRequired()
-                                ->default(IntervalType::Month)
                                 ->live()
                                 ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                    $intervalType = IntervalType::parse($state);
-
-                                    if ($intervalType->isWeek()) {
-                                        $currentDayOfWeek = now()->dayOfWeek;
-                                        $currentDayOfWeek = DayOfWeek::parse($currentDayOfWeek);
-                                        $set('day_of_week', $currentDayOfWeek);
-                                    }
-
-                                    if ($intervalType->isMonth()) {
-                                        $currentDay = now()->dayOfMonth;
-                                        $currentDay = DayOfMonth::parse($currentDay);
-                                        $set('day_of_month', $currentDay);
-                                    }
-
-                                    if ($intervalType->isYear()) {
-                                        $currentMonth = now()->month;
-                                        $currentMonth = Month::parse($currentMonth);
-                                        $set('month', $currentMonth);
-
-                                        $currentDay = now()->dayOfMonth;
-                                        $currentDay = DayOfMonth::parse($currentDay);
-                                        $set('day_of_month', $currentDay);
-                                    }
+                                    $handler = new ScheduleHandler($set);
+                                    $handler->handleFrequencyChange($state);
                                 }),
-                        ])
-                            ->live()
-                            ->label('Every')
-                            ->required()
-                            ->markAsRequired(false)
-                            ->visible(fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isCustom()),
 
-                        // Specific schedule details
-                        Forms\Components\Select::make('month')
-                            ->label('Month')
-                            ->options(Month::class)
-                            ->softRequired()
-                            ->visible(
-                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))->isYearly() ||
-                                IntervalType::parse($get('interval_type'))?->isYear()
-                            )
-                            ->live()
-                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
-                                $dayOfMonth = DayOfMonth::parse($get('day_of_month'));
-                                $frequency = Frequency::parse($get('frequency'));
-                                $intervalType = IntervalType::parse($get('interval_type'));
-                                $month = Month::parse($state);
+                            // Custom frequency fields in a nested grid
+                            Cluster::make([
+                                Forms\Components\TextInput::make('interval_value')
+                                    ->softRequired()
+                                    ->numeric()
+                                    ->default(1),
+                                Forms\Components\Select::make('interval_type')
+                                    ->options(IntervalType::class)
+                                    ->softRequired()
+                                    ->default(IntervalType::Month)
+                                    ->live()
+                                    ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                        $handler = new ScheduleHandler($set);
+                                        $handler->handleIntervalTypeChange($state);
+                                    }),
+                            ])
+                                ->live()
+                                ->label('Every')
+                                ->required()
+                                ->markAsRequired(false)
+                                ->visible($frequency->isCustom()),
 
-                                if (($frequency->isYearly() || $intervalType?->isYear()) && $month && $dayOfMonth) {
-                                    $date = $dayOfMonth->resolveDate(today()->month($month->value))->toImmutable();
+                            // Specific schedule details
+                            Forms\Components\Select::make('month')
+                                ->label('Month')
+                                ->options(Month::class)
+                                ->softRequired()
+                                ->visible($frequency->isYearly() || $intervalType?->isYear())
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                    $handler = new ScheduleHandler($set, $get);
+                                    $handler->handleDateChange('month', $state);
+                                }),
 
-                                    $adjustedStartDate = $date->lt(today())
-                                        ? $dayOfMonth->resolveDate($date->addYear()->month($month->value))
-                                        : $dayOfMonth->resolveDate($date->month($month->value));
+                            Forms\Components\Select::make('day_of_month')
+                                ->label('Day of Month')
+                                ->options(function () use ($month) {
+                                    if (! $month) {
+                                        return DayOfMonth::class;
+                                    }
 
-                                    $adjustedDay = min($dayOfMonth->value, $adjustedStartDate->daysInMonth);
+                                    $daysInMonth = Carbon::createFromDate(null, $month->value)->daysInMonth;
 
-                                    $set('day_of_month', $adjustedDay);
+                                    return collect(DayOfMonth::cases())
+                                        ->filter(static fn (DayOfMonth $dayOfMonth) => $dayOfMonth->value <= $daysInMonth || $dayOfMonth->isLast())
+                                        ->mapWithKeys(fn (DayOfMonth $dayOfMonth) => [$dayOfMonth->value => $dayOfMonth->getLabel()]);
+                                })
+                                ->softRequired()
+                                ->visible(in_array($frequency, [Frequency::Monthly, Frequency::Yearly]) || in_array($intervalType, [IntervalType::Month, IntervalType::Year]))
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                    $handler = new ScheduleHandler($set, $get);
+                                    $handler->handleDateChange('day_of_month', $state);
+                                }),
 
-                                    $set('start_date', $adjustedStartDate);
-                                }
-                            }),
+                            SimpleAlert::make('dayOfMonthNotice')
+                                ->title(function () use ($dayOfMonth) {
+                                    return "The invoice will be created on the {$dayOfMonth->getLabel()} day of each month, or on the last day for months ending earlier.";
+                                })
+                                ->columnSpanFull()
+                                ->visible($dayOfMonth?->value > 28),
 
-                        Forms\Components\Select::make('day_of_month')
-                            ->label('Day of Month')
-                            ->options(function (Forms\Get $get) {
-                                $month = Month::parse($get('month')) ?? Month::January;
-
-                                $daysInMonth = Carbon::createFromDate(null, $month->value)->daysInMonth;
-
-                                return collect(DayOfMonth::cases())
-                                    ->filter(static fn (DayOfMonth $dayOfMonth) => $dayOfMonth->value <= $daysInMonth || $dayOfMonth->isLast())
-                                    ->mapWithKeys(fn (DayOfMonth $dayOfMonth) => [$dayOfMonth->value => $dayOfMonth->getLabel()]);
-                            })
-                            ->softRequired()
-                            ->visible(
-                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isMonthly() ||
-                                Frequency::parse($get('frequency'))?->isYearly() ||
-                                IntervalType::parse($get('interval_type'))?->isMonth() ||
-                                IntervalType::parse($get('interval_type'))?->isYear()
-                            )
-                            ->live()
-                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
-                                $dayOfMonth = DayOfMonth::parse($state);
-                                $frequency = Frequency::parse($get('frequency'));
-                                $intervalType = IntervalType::parse($get('interval_type'));
-                                $month = Month::parse($get('month'));
-
-                                if (($frequency->isMonthly() || $intervalType?->isMonth()) && $dayOfMonth) {
-                                    $date = $dayOfMonth->resolveDate(today())->toImmutable();
-
-                                    $adjustedStartDate = $date->lt(today())
-                                        ? $dayOfMonth->resolveDate($date->addMonth())
-                                        : $dayOfMonth->resolveDate($date);
-
-                                    $set('start_date', $adjustedStartDate);
-                                }
-
-                                if (($frequency->isYearly() || $intervalType?->isYear()) && $month && $dayOfMonth) {
-                                    $date = $dayOfMonth->resolveDate(today()->month($month->value))->toImmutable();
-
-                                    $adjustedStartDate = $date->lt(today())
-                                        ? $dayOfMonth->resolveDate($date->addYear()->month($month->value))
-                                        : $dayOfMonth->resolveDate($date->month($month->value));
-
-                                    $set('start_date', $adjustedStartDate);
-                                }
-                            }),
-
-                        Forms\Components\Select::make('day_of_week')
-                            ->label('Day of Week')
-                            ->options(DayOfWeek::class)
-                            ->softRequired()
-                            ->visible(
-                                fn (Forms\Get $get) => Frequency::parse($get('frequency'))?->isWeekly() ||
-                                IntervalType::parse($get('interval_type'))?->isWeek()
-                            )
-                            ->live()
-                            ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                $dayOfWeek = DayOfWeek::parse($state);
-
-                                $adjustedStartDate = today()->is($dayOfWeek->name)
-                                    ? today()
-                                    : today()->next($dayOfWeek->name);
-
-                                $set('start_date', $adjustedStartDate);
-                            }),
-                    ])->columns(2),
+                            Forms\Components\Select::make('day_of_week')
+                                ->label('Day of Week')
+                                ->options(DayOfWeek::class)
+                                ->softRequired()
+                                ->visible($frequency->isWeekly() || $intervalType?->isWeek())
+                                ->live()
+                                ->afterStateUpdated(function (Forms\Set $set, $state) {
+                                    $handler = new ScheduleHandler($set);
+                                    $handler->handleDateChange('day_of_week', $state);
+                                }),
+                        ];
+                    })->columns(2),
 
                 CustomSection::make('Dates & Time')
                     ->contained(false)
@@ -611,12 +474,9 @@ class RecurringInvoice extends Document
                             ->live()
                             ->minDate(today())
                             ->closeOnDateSelection()
-                            ->afterStateUpdated(function (Forms\Set $set, $state) {
-                                $startDate = Carbon::parse($state);
-
-                                $dayOfWeek = DayOfWeek::parse($startDate->dayOfWeek);
-
-                                $set('day_of_week', $dayOfWeek);
+                            ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                                $handler = new ScheduleHandler($set, $get);
+                                $handler->handleDateChange('start_date', $state);
                             }),
 
                         Forms\Components\Group::make(function (Forms\Get $get) {
@@ -630,20 +490,8 @@ class RecurringInvoice extends Document
                                 ->afterStateUpdated(function (Forms\Set $set, $state) {
                                     $endType = EndType::parse($state);
 
-                                    if ($endType?->isNever()) {
-                                        $set('max_occurrences', null);
-                                        $set('end_date', null);
-                                    }
-
-                                    if ($endType?->isAfter()) {
-                                        $set('max_occurrences', 1);
-                                        $set('end_date', null);
-                                    }
-
-                                    if ($endType?->isOn()) {
-                                        $set('max_occurrences', null);
-                                        $set('end_date', now()->addMonth()->startOfMonth());
-                                    }
+                                    $set('max_occurrences', $endType?->isAfter() ? 1 : null);
+                                    $set('end_date', $endType?->isOn() ? now()->addMonth()->startOfMonth() : null);
                                 });
 
                             $endType = EndType::parse($get('end_type'));
