@@ -4,7 +4,7 @@ namespace App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 
 use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
-use App\Filament\Company\Resources\Sales\InvoiceResource;
+use App\Filament\Company\Resources\Sales\InvoiceResource\Pages\ListInvoices;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource;
 use App\Filament\Infolists\Components\DocumentPreview;
 use App\Models\Accounting\RecurringInvoice;
@@ -108,7 +108,16 @@ class ViewRecurringInvoice extends ViewRecord
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
                                     ->suffix(fn (RecurringInvoice $record) => Str::of(' invoice')->plural($record->occurrences_count))
-                                    ->url(static fn (RecurringInvoice $record) => InvoiceResource::getUrl()),
+                                    ->url(static fn (RecurringInvoice $record) => ListInvoices::getUrl([
+                                        'tableFilters' => [
+                                            'client' => [
+                                                'value' => $record->client_id,
+                                            ],
+                                            'source_type' => [
+                                                'value' => DocumentType::RecurringInvoice->value,
+                                            ],
+                                        ],
+                                    ]), true),
                                 TextEntry::make('end_date')
                                     ->label('Ends On')
                                     ->date()

@@ -315,6 +315,9 @@ class InvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('invoice_number')
                     ->label('Number')
                     ->searchable()
+                    ->description(function (Invoice $record) {
+                        return $record->source_type?->getLabel();
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->sortable()
@@ -347,6 +350,22 @@ class InvoiceResource extends Resource
                         true: fn (Builder $query) => $query->whereHas('payments'),
                         false: fn (Builder $query) => $query->whereDoesntHave('payments'),
                     ),
+                Tables\Filters\SelectFilter::make('source_type')
+                    ->label('Source Type')
+                    ->options([
+                        DocumentType::Estimate->value => DocumentType::Estimate->getLabel(),
+                        DocumentType::RecurringInvoice->value => DocumentType::RecurringInvoice->getLabel(),
+                    ])
+                    ->native(false)
+                    ->query(function (Builder $query, array $data) {
+                        $sourceType = $data['value'];
+
+                        return match ($sourceType) {
+                            DocumentType::Estimate->value => $query->whereNotNull('estimate_id'),
+                            DocumentType::RecurringInvoice->value => $query->whereNotNull('recurring_invoice_id'),
+                            default => $query,
+                        };
+                    }),
                 DateRangeFilter::make('date')
                     ->fromLabel('From Date')
                     ->untilLabel('To Date')

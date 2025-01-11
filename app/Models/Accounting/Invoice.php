@@ -129,6 +129,17 @@ class Invoice extends Document
             ->where('type', TransactionType::Journal);
     }
 
+    protected function sourceType(): Attribute
+    {
+        return Attribute::get(function () {
+            return match (true) {
+                $this->estimate_id !== null => DocumentType::Estimate,
+                $this->recurring_invoice_id !== null => DocumentType::RecurringInvoice,
+                default => null,
+            };
+        });
+    }
+
     public function documentType(): DocumentType
     {
         return DocumentType::Invoice;
