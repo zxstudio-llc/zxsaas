@@ -1,10 +1,5 @@
 @php
-    use App\View\Models\DocumentPreviewViewModel;
-    use App\Enums\Accounting\DocumentType;
-
-    $type = $getType();
-    $viewModel = new DocumentPreviewViewModel($getRecord(), $type);
-    extract($viewModel->buildViewData(), EXTR_SKIP);
+    $document = \App\DTO\DocumentDTO::fromModel($getRecord());
 @endphp
 
 <div {{ $attributes }}>
@@ -13,16 +8,16 @@
         <x-company.invoice.header class="bg-gray-800 h-24">
             <!-- Logo -->
             <div class="w-2/3">
-                @if($logo && $style['show_logo'])
-                    <x-company.invoice.logo class="ml-8" :src="$logo"/>
+                @if($document->logo && $document->showLogo)
+                    <x-company.invoice.logo class="ml-8" :src="$document->logo"/>
                 @endif
             </div>
 
             <!-- Ribbon Container -->
             <div class="w-1/3 absolute right-0 top-0 p-3 h-32 flex flex-col justify-end rounded-bl-sm"
-                 style="background: {{ $style['accent_color'] }};">
-                @if($header)
-                    <h1 class="text-4xl font-bold text-white text-center uppercase">{{ $header }}</h1>
+                 style="background: {{ $document->accentColor }};">
+                @if($document->header)
+                    <h1 class="text-4xl font-bold text-white text-center uppercase">{{ $document->header }}</h1>
                 @endif
             </div>
         </x-company.invoice.header>
@@ -30,12 +25,11 @@
         <!-- Company Details -->
         <x-company.invoice.metadata class="modern-template-metadata space-y-8">
             <div class="text-sm">
-                <h2 class="text-lg font-semibold">{{ $company['name'] }}</h2>
-                @if($company['address'] && $company['city'] && $company['state'] && $company['zip_code'])
-                    <p>{{ $company['address'] }}</p>
-                    <p>{{ $company['city'] }}
-                        , {{ $company['state'] }} {{ $company['zip_code'] }}</p>
-                    <p>{{ $company['country'] }}</p>
+                <h2 class="text-lg font-semibold">{{ $document->company->name }}</h2>
+                @if($document->company->address && $document->company->city && $document->company->state && $document->company->zipCode)
+                    <p>{{ $document->company->address }}</p>
+                    <p>{{ $document->company->city }}, {{ $document->company->state }} {{ $document->company->zipCode }}</p>
+                    <p>{{ $document->company->country }}</p>
                 @endif
             </div>
 
@@ -44,20 +38,20 @@
                 <div class="text-sm tracking-tight">
                     <h3 class="text-gray-600 dark:text-gray-400 font-medium tracking-tight mb-1">BILL TO</h3>
                     <p class="text-base font-bold"
-                       style="color: {{ $style['accent_color'] }}">{{ $client['name'] }}</p>
+                       style="color: {{ $document->accentColor }}">{{ $document->client->name }}</p>
 
-                    @if($client['address_line_1'])
-                        <p>{{ $client['address_line_1'] }}</p>
+                    @if($document->client->addressLine1)
+                        <p>{{ $document->client->addressLine1 }}</p>
 
-                        @if($client['address_line_2'])
-                            <p>{{ $client['address_line_2'] }}</p>
+                        @if($document->client->addressLine2)
+                            <p>{{ $document->client->addressLine2 }}</p>
                         @endif
                         <p>
-                            {{ $client['city'] }}{{ $client['state'] ? ', ' . $client['state'] : '' }}
-                            {{ $client['postal_code'] }}
+                            {{ $document->client->city }}{{ $document->client->state ? ', ' . $document->client->state: '' }}
+                            {{ $document->client->postalCode }}
                         </p>
-                        @if($client['country'])
-                            <p>{{ $client['country'] }}</p>
+                        @if($document->client->country)
+                            <p>{{ $document->client->country }}</p>
                         @endif
                     @endif
                 </div>
@@ -66,22 +60,22 @@
                     <table class="min-w-full">
                         <tbody>
                         <tr>
-                            <td class="font-semibold text-right pr-2">{{ $labels['number'] }}:</td>
-                            <td class="text-left pl-2">{{ $metadata['number'] }}</td>
+                            <td class="font-semibold text-right pr-2">{{ $document->label->number }}:</td>
+                            <td class="text-left pl-2">{{ $document->number }}</td>
                         </tr>
-                        @if($metadata['reference_number'])
+                        @if($document->referenceNumber)
                             <tr>
-                                <td class="font-semibold text-right pr-2">{{ $labels['reference_number'] }}:</td>
-                                <td class="text-left pl-2">{{ $metadata['reference_number'] }}</td>
+                                <td class="font-semibold text-right pr-2">{{ $document->label->referenceNumber }}:</td>
+                                <td class="text-left pl-2">{{ $document->referenceNumber }}</td>
                             </tr>
                         @endif
                         <tr>
-                            <td class="font-semibold text-right pr-2">{{ $labels['date'] }}:</td>
-                            <td class="text-left pl-2">{{ $metadata['date'] }}</td>
+                            <td class="font-semibold text-right pr-2">{{ $document->label->date }}:</td>
+                            <td class="text-left pl-2">{{ $document->date }}</td>
                         </tr>
                         <tr>
-                            <td class="font-semibold text-right pr-2">{{ $labels['due_date'] }}:</td>
-                            <td class="text-left pl-2">{{ $metadata['due_date'] }}</td>
+                            <td class="font-semibold text-right pr-2">{{ $document->label->dueDate }}:</td>
+                            <td class="text-left pl-2">{{ $document->dueDate }}</td>
                         </tr>
                         </tbody>
                     </table>
@@ -101,17 +95,17 @@
                 </tr>
                 </thead>
                 <tbody class="text-sm tracking-tight border-y-2">
-                @foreach($lineItems as $index => $item)
+                @foreach($document->lineItems as $index => $item)
                     <tr @class(['bg-gray-100 dark:bg-gray-800' => $index % 2 === 0])>
                         <td class="text-left pl-6 font-semibold py-3">
-                            {{ $item['name'] }}
-                            @if($item['description'])
-                                <div class="text-gray-600 font-normal line-clamp-2 mt-1">{{ $item['description'] }}</div>
+                            {{ $item->name }}
+                            @if($item->description)
+                                <div class="text-gray-600 font-normal line-clamp-2 mt-1">{{ $item->description }}</div>
                             @endif
                         </td>
-                        <td class="text-center py-3">{{ $item['quantity'] }}</td>
-                        <td class="text-right py-3">{{ $item['unit_price'] }}</td>
-                        <td class="text-right pr-6 py-3">{{ $item['subtotal'] }}</td>
+                        <td class="text-center py-3">{{ $item->quantity }}</td>
+                        <td class="text-right py-3">{{ $item->unitPrice }}</td>
+                        <td class="text-right pr-6 py-3">{{ $item->subtotal }}</td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -119,44 +113,36 @@
                 <tr>
                     <td class="pl-6 py-2" colspan="2"></td>
                     <td class="text-right font-semibold py-2">Subtotal:</td>
-                    <td class="text-right pr-6 py-2">{{ $totals['subtotal'] }}</td>
+                    <td class="text-right pr-6 py-2">{{ $document->subtotal }}</td>
                 </tr>
-                @if($totals['discount'])
+                @if($document->discount)
                     <tr class="text-success-800 dark:text-success-600">
                         <td class="pl-6 py-2" colspan="2"></td>
                         <td class="text-right py-2">Discount:</td>
                         <td class="text-right pr-6 py-2">
-                            ({{ $totals['discount'] }})
+                            ({{ $document->discount }})
                         </td>
                     </tr>
                 @endif
-                @if($totals['tax'])
+                @if($document->tax)
                     <tr>
                         <td class="pl-6 py-2" colspan="2"></td>
                         <td class="text-right py-2">Tax:</td>
-                        <td class="text-right pr-6 py-2">{{ $totals['tax'] }}</td>
+                        <td class="text-right pr-6 py-2">{{ $document->tax }}</td>
                     </tr>
                 @endif
                 <tr>
                     <td class="pl-6 py-2" colspan="2"></td>
                     <td class="text-right font-semibold border-t py-2">Total:</td>
-                    <td class="text-right border-t pr-6 py-2">{{ $totals['total'] }}</td>
+                    <td class="text-right border-t pr-6 py-2">{{ $document->total }}</td>
                 </tr>
-                @if($totals['amount_due'])
+                @if($document->amountDue)
                     <tr>
                         <td class="pl-6 py-2" colspan="2"></td>
-                        <td class="text-right font-semibold border-t-4 border-double py-2">Amount Due
-                            ({{ $metadata['currency_code'] }}):
+                        <td class="text-right font-semibold border-t-4 border-double py-2">{{ $document->label->amountDue }}
+                            ({{ $document->currencyCode }}):
                         </td>
-                        <td class="text-right border-t-4 border-double pr-6 py-2">{{ $totals['amount_due'] }}</td>
-                    </tr>
-                @else
-                    <tr>
-                        <td class="pl-6 py-2" colspan="2"></td>
-                        <td class="text-right font-semibold border-t-4 border-double py-2">Grand Total
-                            ({{ $metadata['currency_code'] }}):
-                        </td>
-                        <td class="text-right border-t-4 border-double pr-6 py-2">{{ $totals['total'] }}</td>
+                        <td class="text-right border-t-4 border-double pr-6 py-2">{{ $document->amountDue }}</td>
                     </tr>
                 @endif
                 </tfoot>
@@ -165,13 +151,13 @@
 
         <!-- Footer Notes -->
         <x-company.invoice.footer class="modern-template-footer tracking-tight">
-            <h4 class="font-semibold px-6 text-sm" style="color: {{ $style['accent_color'] }}">
+            <h4 class="font-semibold px-6 text-sm" style="color: {{ $document->accentColor }}">
                 Terms & Conditions
             </h4>
             <span class="border-t-2 my-2 border-gray-300 block w-full"></span>
             <div class="flex justify-between space-x-4 px-6 text-sm">
-                <p class="w-1/2 break-words line-clamp-4">{{ $terms }}</p>
-                <p class="w-1/2 break-words line-clamp-4">{{ $footer }}</p>
+                <p class="w-1/2 break-words line-clamp-4">{{ $document->terms }}</p>
+                <p class="w-1/2 break-words line-clamp-4">{{ $document->footer }}</p>
             </div>
         </x-company.invoice.footer>
     </x-company.invoice.container>

@@ -216,5 +216,12 @@
     "Create": "Create",
     "Estimate Header": "Estimate Header",
     "Estimate Details": "Estimate Details",
-    "Estimate Footer": "Estimate Footer"
+    "Estimate Footer": "Estimate Footer",
+    "Scheduling": "Scheduling",
+    "Scheduling Form": "Scheduling Form",
+    "Approve": "Approve",
+    "Frequency": "Frequency",
+    "Schedule Bounds": "Schedule Bounds",
+    "Time Zone": "Time Zone",
+    "Dates & Time": "Dates & Time"
 }
