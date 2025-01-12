@@ -6,6 +6,7 @@ use App\Models\Accounting\Bill;
 use App\Models\Accounting\DocumentLineItem;
 use App\Models\Accounting\Estimate;
 use App\Models\Accounting\Invoice;
+use App\Models\Accounting\RecurringInvoice;
 use App\Models\Common\Offering;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -37,7 +38,7 @@ class DocumentLineItemFactory extends Factory
         ];
     }
 
-    public function forInvoice(Invoice $invoice): static
+    public function forInvoice(Invoice | RecurringInvoice $invoice): static
     {
         return $this
             ->for($invoice, 'documentable')

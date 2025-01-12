@@ -11,7 +11,10 @@ class RecurringInvoiceObserver
 {
     public function saving(RecurringInvoice $recurringInvoice): void
     {
-        if (($recurringInvoice->isDirty('start_date') && ! $recurringInvoice->last_date) || $this->otherScheduleDetailsChanged($recurringInvoice)) {
+        if (
+            $recurringInvoice->wasApproved() &&
+            (($recurringInvoice->isDirty('start_date') && ! $recurringInvoice->last_date) || $this->otherScheduleDetailsChanged($recurringInvoice))
+        ) {
             $recurringInvoice->next_date = $recurringInvoice->calculateNextDate();
         }
 

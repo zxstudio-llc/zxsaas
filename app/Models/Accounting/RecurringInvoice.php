@@ -187,7 +187,15 @@ class RecurringInvoice extends Document
 
     public function hasSchedule(): bool
     {
-        return $this->start_date !== null;
+        if (! $this->start_date) {
+            return false;
+        }
+
+        if (! $this->wasApproved() && $this->start_date->lt(today())) {
+            return false;
+        }
+
+        return true;
     }
 
     public function getScheduleDescription(): string
@@ -264,7 +272,7 @@ class RecurringInvoice extends Document
     {
         $lastDate ??= $this->last_date;
 
-        if (! $lastDate && $this->start_date) {
+        if (! $lastDate && $this->start_date && $this->wasApproved()) {
             return $this->start_date;
         }
 
