@@ -296,6 +296,15 @@ class InvoiceResource extends Resource
     {
         return $table
             ->defaultSort('due_date')
+            ->modifyQueryUsing(function (Builder $query, Tables\Contracts\HasTable $livewire) {
+                $recurringInvoiceId = $livewire->recurringInvoice;
+
+                if (! empty($recurringInvoiceId)) {
+                    $query->where('recurring_invoice_id', $recurringInvoiceId);
+                }
+
+                return $query;
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -358,7 +367,7 @@ class InvoiceResource extends Resource
                     ])
                     ->native(false)
                     ->query(function (Builder $query, array $data) {
-                        $sourceType = $data['value'];
+                        $sourceType = $data['value'] ?? null;
 
                         return match ($sourceType) {
                             DocumentType::Estimate->value => $query->whereNotNull('estimate_id'),

@@ -108,16 +108,9 @@ class ViewRecurringInvoice extends ViewRecord
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
                                     ->suffix(fn (RecurringInvoice $record) => Str::of(' invoice')->plural($record->occurrences_count))
-                                    ->url(static fn (RecurringInvoice $record) => ListInvoices::getUrl([
-                                        'tableFilters' => [
-                                            'client' => [
-                                                'value' => $record->client_id,
-                                            ],
-                                            'source_type' => [
-                                                'value' => DocumentType::RecurringInvoice->value,
-                                            ],
-                                        ],
-                                    ]), true),
+                                    ->url(static function (RecurringInvoice $record) {
+                                        return ListInvoices::getUrl(['recurringInvoice' => $record->id]);
+                                    }),
                                 TextEntry::make('end_date')
                                     ->label('Ends On')
                                     ->date()
