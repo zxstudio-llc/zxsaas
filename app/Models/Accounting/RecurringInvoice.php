@@ -177,7 +177,7 @@ class RecurringInvoice extends Document
 
     public function canBeApproved(): bool
     {
-        return $this->isDraft() && $this->hasSchedule() && ! $this->wasApproved();
+        return $this->isDraft() && $this->hasSchedule() && ! $this->wasApproved() && $this->hasValidStartDate();
     }
 
     public function canBeEnded(): bool
@@ -187,15 +187,17 @@ class RecurringInvoice extends Document
 
     public function hasSchedule(): bool
     {
-        if (! $this->start_date) {
-            return false;
+        return $this->start_date !== null;
+    }
+
+    public function hasValidStartDate(): bool
+    {
+        if ($this->wasApproved()) {
+            return true;
         }
 
-        if (! $this->wasApproved() && $this->start_date->lt(today())) {
-            return false;
-        }
-
-        return true;
+        // For unapproved/draft invoices, start date must be today or in the future
+        return $this->start_date?->gte(today()) ?? false;
     }
 
     public function getScheduleDescription(): string

@@ -58,7 +58,7 @@ class ViewRecurringInvoice extends ViewRecord
                     ->info()
                     ->title('Schedule Not Set')
                     ->description('The schedule for this recurring invoice has not been set. You must set a schedule before you can approve this draft and start creating invoices.')
-                    ->visible(fn (RecurringInvoice $record) => ! $record->hasSchedule())
+                    ->visible(fn (RecurringInvoice $record) => ! $record->hasValidStartDate())
                     ->columnSpanFull()
                     ->actions([
                         RecurringInvoice::getUpdateScheduleAction(Action::class)
@@ -68,7 +68,7 @@ class ViewRecurringInvoice extends ViewRecord
                     ->info()
                     ->title('Ready to Approve')
                     ->description('This recurring invoice is ready for approval. Review the details, and approve it when you’re ready to start generating invoices.')
-                    ->visible(fn (RecurringInvoice $record) => $record->isDraft() && $record->hasSchedule())
+                    ->visible(fn (RecurringInvoice $record) => $record->canBeApproved())
                     ->columnSpanFull()
                     ->actions([
                         RecurringInvoice::getApproveDraftAction(Action::class)

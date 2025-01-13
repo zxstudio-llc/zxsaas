@@ -77,7 +77,7 @@ class ScheduleHandler
             'interval_value' => null,
             'interval_type' => null,
             'day_of_month' => null,
-            'start_date' => $this->today,
+            'start_date' => $this->today->toDateString(),
         ]);
     }
 
@@ -87,7 +87,7 @@ class ScheduleHandler
 
         $this->setMany($this->set, [
             'day_of_week' => $currentDayOfWeek,
-            'start_date' => $this->today,
+            'start_date' => $this->today->toDateString(),
             'interval_value' => null,
             'interval_type' => null,
             'day_of_month' => null,
@@ -106,7 +106,7 @@ class ScheduleHandler
         $this->setMany($this->set, [
             'month' => null,
             'day_of_month' => $dayOfMonth,
-            'start_date' => $adjustedStartDate,
+            'start_date' => $adjustedStartDate->toDateString(),
             'interval_value' => null,
             'interval_type' => null,
         ]);
@@ -120,7 +120,7 @@ class ScheduleHandler
         $this->setMany($this->set, [
             'month' => $currentMonth,
             'day_of_month' => $currentDayOfMonth,
-            'start_date' => $this->today,
+            'start_date' => $this->today->toDateString(),
             'interval_value' => null,
             'interval_type' => null,
         ]);
@@ -140,7 +140,7 @@ class ScheduleHandler
             'interval_type' => IntervalType::Month,
             'month' => null,
             'day_of_month' => $dayOfMonth,
-            'start_date' => $adjustedStartDate,
+            'start_date' => $adjustedStartDate->toDateString(),
         ]);
     }
 
@@ -150,7 +150,7 @@ class ScheduleHandler
 
         $this->setMany($this->set, [
             'day_of_week' => $currentDayOfWeek,
-            'start_date' => $this->today,
+            'start_date' => $this->today->toDateString(),
         ]);
     }
 
@@ -166,7 +166,7 @@ class ScheduleHandler
         $this->setMany($this->set, [
             'month' => null,
             'day_of_month' => $dayOfMonth,
-            'start_date' => $adjustedStartDate,
+            'start_date' => $adjustedStartDate->toDateString(),
         ]);
     }
 
@@ -178,7 +178,7 @@ class ScheduleHandler
         $this->setMany($this->set, [
             'month' => $currentMonth,
             'day_of_month' => $currentDayOfMonth,
-            'start_date' => $this->today,
+            'start_date' => $this->today->toDateString(),
         ]);
     }
 
@@ -223,7 +223,7 @@ class ScheduleHandler
 
             $this->setMany($this->set, [
                 'day_of_month' => $adjustedDay,
-                'start_date' => $adjustedStartDate,
+                'start_date' => $adjustedStartDate->toDateString(),
             ]);
         }
     }
@@ -246,7 +246,7 @@ class ScheduleHandler
                 ? $dayOfMonth->resolveDate($date->addMonth())
                 : $dayOfMonth->resolveDate($date);
 
-            ($this->set)('start_date', $adjustedStartDate);
+            ($this->set)('start_date', $adjustedStartDate->toDateString());
         }
 
         if (($frequency->isYearly() || $intervalType?->isYear()) && $month && $dayOfMonth) {
@@ -256,7 +256,7 @@ class ScheduleHandler
                 ? $dayOfMonth->resolveDate($date->addYear()->month($month->value))
                 : $dayOfMonth->resolveDate($date->month($month->value));
 
-            ($this->set)('start_date', $adjustedStartDate);
+            ($this->set)('start_date', $adjustedStartDate->toDateString());
         }
     }
 
@@ -268,6 +268,6 @@ class ScheduleHandler
             ? $this->today
             : $this->today->next($dayOfWeek->name);
 
-        ($this->set)('start_date', $adjustedStartDate);
+        ($this->set)('start_date', $adjustedStartDate->toDateString());
     }
 }
