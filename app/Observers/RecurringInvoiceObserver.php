@@ -13,7 +13,7 @@ class RecurringInvoiceObserver
     {
         if (
             $recurringInvoice->wasApproved() &&
-            (($recurringInvoice->isDirty('start_date') && ! $recurringInvoice->last_date) || $this->otherScheduleDetailsChanged($recurringInvoice))
+            (($recurringInvoice->isDirty('start_date') && ! $recurringInvoice->last_date))
         ) {
             $recurringInvoice->next_date = $recurringInvoice->calculateNextDate();
         }

@@ -66,62 +66,84 @@ class RecurringInvoiceFactory extends Factory
         ?Carbon $startDate = null,
         ?EndType $endType = null
     ): static {
-        $frequency ??= $this->faker->randomElement(Frequency::class);
-        $endType ??= EndType::Never;
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($frequency, $endType, $startDate) {
+            $this->ensureLineItems($recurringInvoice);
 
-        // Adjust the start date range based on frequency
-        $startDate = match ($frequency) {
-            Frequency::Daily => Carbon::parse($this->faker->dateTimeBetween('-30 days')), // At most 30 days back
-            default => $startDate ?? Carbon::parse($this->faker->dateTimeBetween('-1 year')),
-        };
+            $frequency ??= $this->faker->randomElement(Frequency::class);
+            $endType ??= EndType::Never;
 
-        return match ($frequency) {
-            Frequency::Daily => $this->withDailySchedule($startDate, $endType),
-            Frequency::Weekly => $this->withWeeklySchedule($startDate, $endType),
-            Frequency::Monthly => $this->withMonthlySchedule($startDate, $endType),
-            Frequency::Yearly => $this->withYearlySchedule($startDate, $endType),
-            Frequency::Custom => $this->withCustomSchedule($startDate, $endType),
-        };
+            // Adjust the start date range based on frequency
+            $startDate = match ($frequency) {
+                Frequency::Daily => Carbon::parse($this->faker->dateTimeBetween('-30 days')), // At most 30 days back
+                default => $startDate ?? Carbon::parse($this->faker->dateTimeBetween('-1 year')),
+            };
+
+            $state = match ($frequency) {
+                Frequency::Daily => $this->withDailySchedule($startDate, $endType),
+                Frequency::Weekly => $this->withWeeklySchedule($startDate, $endType),
+                Frequency::Monthly => $this->withMonthlySchedule($startDate, $endType),
+                Frequency::Yearly => $this->withYearlySchedule($startDate, $endType),
+                Frequency::Custom => $this->withCustomSchedule($startDate, $endType),
+            };
+
+            $state->callAfterCreating(collect([$recurringInvoice]));
+        });
     }
 
     protected function withDailySchedule(Carbon $startDate, EndType $endType): static
     {
-        return $this->state([
-            'frequency' => Frequency::Daily,
-            'start_date' => $startDate,
-            'end_type' => $endType,
-        ]);
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
+            $this->ensureLineItems($recurringInvoice);
+
+            $recurringInvoice->updateQuietly([
+                'frequency' => Frequency::Daily,
+                'start_date' => $startDate,
+                'end_type' => $endType,
+            ]);
+        });
     }
 
     protected function withWeeklySchedule(Carbon $startDate, EndType $endType): static
     {
-        return $this->state([
-            'frequency' => Frequency::Weekly,
-            'day_of_week' => DayOfWeek::from($startDate->dayOfWeek),
-            'start_date' => $startDate,
-            'end_type' => $endType,
-        ]);
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
+            $this->ensureLineItems($recurringInvoice);
+
+            $recurringInvoice->updateQuietly([
+                'frequency' => Frequency::Weekly,
+                'day_of_week' => DayOfWeek::from($startDate->dayOfWeek),
+                'start_date' => $startDate,
+                'end_type' => $endType,
+            ]);
+        });
     }
 
     protected function withMonthlySchedule(Carbon $startDate, EndType $endType): static
     {
-        return $this->state([
-            'frequency' => Frequency::Monthly,
-            'day_of_month' => DayOfMonth::from($startDate->day),
-            'start_date' => $startDate,
-            'end_type' => $endType,
-        ]);
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
+            $this->ensureLineItems($recurringInvoice);
+
+            $recurringInvoice->updateQuietly([
+                'frequency' => Frequency::Monthly,
+                'day_of_month' => DayOfMonth::from($startDate->day),
+                'start_date' => $startDate,
+                'end_type' => $endType,
+            ]);
+        });
     }
 
     protected function withYearlySchedule(Carbon $startDate, EndType $endType): static
     {
-        return $this->state([
-            'frequency' => Frequency::Yearly,
-            'month' => Month::from($startDate->month),
-            'day_of_month' => DayOfMonth::from($startDate->day),
-            'start_date' => $startDate,
-            'end_type' => $endType,
-        ]);
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
+            $this->ensureLineItems($recurringInvoice);
+
+            $recurringInvoice->updateQuietly([
+                'frequency' => Frequency::Yearly,
+                'month' => Month::from($startDate->month),
+                'day_of_month' => DayOfMonth::from($startDate->day),
+                'start_date' => $startDate,
+                'end_type' => $endType,
+            ]);
+        });
     }
 
     protected function withCustomSchedule(
@@ -130,46 +152,50 @@ class RecurringInvoiceFactory extends Factory
         ?IntervalType $intervalType = null,
         ?int $intervalValue = null
     ): static {
-        $intervalType ??= $this->faker->randomElement(IntervalType::class);
-        $intervalValue ??= match ($intervalType) {
-            IntervalType::Day => $this->faker->numberBetween(1, 7),
-            IntervalType::Week => $this->faker->numberBetween(1, 4),
-            IntervalType::Month => $this->faker->numberBetween(1, 3),
-            IntervalType::Year => 1,
-        };
+        return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($intervalType, $intervalValue, $startDate, $endType) {
+            $this->ensureLineItems($recurringInvoice);
 
-        $state = [
-            'frequency' => Frequency::Custom,
-            'interval_type' => $intervalType,
-            'interval_value' => $intervalValue,
-            'start_date' => $startDate,
-            'end_type' => $endType,
-        ];
+            $intervalType ??= $this->faker->randomElement(IntervalType::class);
+            $intervalValue ??= match ($intervalType) {
+                IntervalType::Day => $this->faker->numberBetween(1, 7),
+                IntervalType::Week => $this->faker->numberBetween(1, 4),
+                IntervalType::Month => $this->faker->numberBetween(1, 3),
+                IntervalType::Year => 1,
+            };
 
-        // Add interval-specific attributes
-        switch ($intervalType) {
-            case IntervalType::Day:
-                // No additional attributes needed
-                break;
+            $state = [
+                'frequency' => Frequency::Custom,
+                'interval_type' => $intervalType,
+                'interval_value' => $intervalValue,
+                'start_date' => $startDate,
+                'end_type' => $endType,
+            ];
 
-            case IntervalType::Week:
-                $state['day_of_week'] = DayOfWeek::from($startDate->dayOfWeek);
+            // Add interval-specific attributes
+            switch ($intervalType) {
+                case IntervalType::Day:
+                    // No additional attributes needed
+                    break;
 
-                break;
+                case IntervalType::Week:
+                    $state['day_of_week'] = DayOfWeek::from($startDate->dayOfWeek);
 
-            case IntervalType::Month:
-                $state['day_of_month'] = DayOfMonth::from($startDate->day);
+                    break;
 
-                break;
+                case IntervalType::Month:
+                    $state['day_of_month'] = DayOfMonth::from($startDate->day);
 
-            case IntervalType::Year:
-                $state['month'] = Month::from($startDate->month);
-                $state['day_of_month'] = DayOfMonth::from($startDate->day);
+                    break;
 
-                break;
-        }
+                case IntervalType::Year:
+                    $state['month'] = Month::from($startDate->month);
+                    $state['day_of_month'] = DayOfMonth::from($startDate->day);
 
-        return $this->state($state);
+                    break;
+            }
+
+            return $recurringInvoice->updateQuietly($state);
+        });
     }
 
     public function endAfter(int $occurrences = 12): static
@@ -208,10 +234,6 @@ class RecurringInvoiceFactory extends Factory
                 $recurringInvoice->refresh();
             }
 
-            if (! $recurringInvoice->canBeApproved()) {
-                return;
-            }
-
             $approvedAt = $recurringInvoice->start_date
                 ? $recurringInvoice->start_date->copy()->subDays($this->faker->numberBetween(1, 7))
                 : now()->subDays($this->faker->numberBetween(1, 30));
@@ -230,13 +252,17 @@ class RecurringInvoiceFactory extends Factory
     public function ended(): static
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) {
+            $this->ensureLineItems($recurringInvoice);
+
             if (! $recurringInvoice->canBeEnded()) {
                 $this->active()->callAfterCreating(collect([$recurringInvoice]));
             }
 
-            $endedAt = now()->subDays($this->faker->numberBetween(1, 30));
+            $endedAt = $recurringInvoice->last_date
+                ? $recurringInvoice->last_date->copy()->addDays($this->faker->numberBetween(1, 7))
+                : now()->subDays($this->faker->numberBetween(1, 30));
 
-            $recurringInvoice->update([
+            $recurringInvoice->updateQuietly([
                 'ended_at' => $endedAt,
                 'status' => RecurringInvoiceStatus::Ended,
             ]);
@@ -247,14 +273,6 @@ class RecurringInvoiceFactory extends Factory
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) {
             $this->ensureLineItems($recurringInvoice);
-
-            $nextDate = $recurringInvoice->calculateNextDate();
-
-            if ($nextDate) {
-                $recurringInvoice->updateQuietly([
-                    'next_date' => $nextDate,
-                ]);
-            }
         });
     }
 
