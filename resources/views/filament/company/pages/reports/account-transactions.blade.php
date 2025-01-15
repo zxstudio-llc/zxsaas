@@ -6,7 +6,7 @@
     </x-filament::section>
 
     <x-company.tables.container :report-loaded="$this->reportLoaded">
-        @if($this->report && ! $this->tableHasEmptyState())
+        @if(! $this->tableHasEmptyState())
             <x-company.tables.reports.account-transactions :report="$this->report"/>
         @else
             <x-filament-tables::empty-state
