@@ -276,6 +276,10 @@ class FilamentCompaniesServiceProvider extends PanelProvider
                 ->filtersFormWidth(MaxWidth::Small)
                 ->filtersTriggerAction(fn (Tables\Actions\Action $action) => $action->slideOver());
         }, isImportant: true);
+
+        Tables\Columns\TextColumn::configureUsing(function (Tables\Columns\TextColumn $column): void {
+            $column->placeholder('–');
+        });
     }
 
     /**

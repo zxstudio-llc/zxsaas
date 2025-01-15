@@ -19,6 +19,7 @@ use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 
@@ -111,6 +112,22 @@ class MacroServiceProvider extends ServiceProvider
                         }
                     };
                 });
+        });
+
+        TextColumn::macro('hideOnTabs', function (array $tabs): static {
+            $this->toggleable(isToggledHiddenByDefault: function (HasTable $livewire) use ($tabs) {
+                return in_array($livewire->activeTab, $tabs);
+            });
+
+            return $this;
+        });
+
+        TextColumn::macro('showOnTabs', function (array $tabs): static {
+            $this->toggleable(isToggledHiddenByDefault: function (HasTable $livewire) use ($tabs) {
+                return ! in_array($livewire->activeTab, $tabs);
+            });
+
+            return $this;
         });
 
         TextColumn::macro('defaultDateFormat', function (): static {

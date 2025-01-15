@@ -317,7 +317,8 @@ class InvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Due')
                     ->asRelativeDay()
-                    ->sortable(),
+                    ->sortable()
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('date')
                     ->date()
                     ->sortable(),
@@ -334,16 +335,20 @@ class InvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->alignEnd()
+                    ->showOnTabs(['unpaid']),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd()
+                    ->hideOnTabs(['draft']),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')

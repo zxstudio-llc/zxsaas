@@ -291,20 +291,31 @@ class RecurringInvoiceResource extends Resource
                     ->description(function (RecurringInvoice $record) {
                         return $record->getTimelineDescription();
                     }),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Created')
+                    ->date()
+                    ->sortable()
+                    ->showOnTabs(['draft']),
+                Tables\Columns\TextColumn::make('start_date')
+                    ->label('First Invoice')
+                    ->date()
+                    ->sortable()
+                    ->showOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('last_date')
                     ->label('Last Invoice')
                     ->date()
                     ->sortable()
-                    ->searchable(),
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('next_date')
                     ->label('Next Invoice')
                     ->date()
                     ->sortable()
-                    ->searchable(),
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (RecurringInvoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->alignEnd(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')

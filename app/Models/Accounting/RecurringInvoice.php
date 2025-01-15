@@ -200,8 +200,12 @@ class RecurringInvoice extends Document
         return $this->start_date?->gte(today()) ?? false;
     }
 
-    public function getScheduleDescription(): string
+    public function getScheduleDescription(): ?string
     {
+        if (! $this->hasSchedule()) {
+            return null;
+        }
+
         $frequency = $this->frequency;
 
         return match (true) {
@@ -215,7 +219,7 @@ class RecurringInvoice extends Document
 
             $frequency->isCustom() => $this->getCustomScheduleDescription(),
 
-            default => 'Not Configured',
+            default => null,
         };
     }
 
@@ -238,10 +242,10 @@ class RecurringInvoice extends Document
         return "Repeat every {$interval}{$dayDescription}";
     }
 
-    public function getEndDescription(): string
+    public function getEndDescription(): ?string
     {
         if (! $this->end_type) {
-            return 'Not configured';
+            return null;
         }
 
         return match (true) {
@@ -251,12 +255,16 @@ class RecurringInvoice extends Document
 
             $this->end_type->isOn() && $this->end_date => 'On ' . $this->end_date->toDefaultDateFormat(),
 
-            default => 'Not configured'
+            default => null,
         };
     }
 
-    public function getTimelineDescription(): string
+    public function getTimelineDescription(): ?string
     {
+        if (! $this->hasSchedule()) {
+            return null;
+        }
+
         $parts = [];
 
         if ($this->start_date) {

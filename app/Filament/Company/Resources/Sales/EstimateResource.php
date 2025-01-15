@@ -311,7 +311,7 @@ class EstimateResource extends Resource
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (Estimate $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->alignEnd(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')
