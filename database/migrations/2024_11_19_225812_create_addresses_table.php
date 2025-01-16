@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('addresses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('parent_address_id')->nullable()->constrained('addresses')->nullOnDelete();
             $table->morphs('addressable');
             $table->string('type'); // billing, shipping, etc.
             $table->string('recipient')->nullable();
@@ -21,7 +22,7 @@ return new class extends Migration
             $table->string('address_line_1');
             $table->string('address_line_2')->nullable();
             $table->string('city');
-            $table->string('state')->nullable();
+            $table->smallInteger('state_id')->nullable();
             $table->string('postal_code')->nullable();
             $table->string('country')->nullable();
             $table->text('notes')->nullable();

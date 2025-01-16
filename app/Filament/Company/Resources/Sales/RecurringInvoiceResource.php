@@ -9,6 +9,7 @@ use App\Enums\Setting\PaymentTerms;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\DocumentTotals;
+use App\Filament\Tables\Columns;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\RecurringInvoice;
 use App\Models\Common\Client;
@@ -272,11 +273,7 @@ class RecurringInvoiceResource extends Resource
         return $table
             ->defaultSort('next_date')
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->searchable(),
+                Columns::id(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->searchable(),

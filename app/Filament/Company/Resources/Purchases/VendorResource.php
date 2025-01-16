@@ -8,6 +8,7 @@ use App\Filament\Company\Resources\Purchases\VendorResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
+use App\Filament\Tables\Columns;
 use App\Models\Common\Vendor;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -173,6 +174,7 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
+                Columns::id(),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
                     ->searchable(),

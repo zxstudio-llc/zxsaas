@@ -189,20 +189,25 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null, ?bool $convertFromCents = null): static {
             $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convertFromCents ??= false;
 
-            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency): ?string {
+            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency, $convertFromCents): ?string {
                 if (blank($state)) {
                     return null;
                 }
 
                 $currency = $column->evaluate($currency);
 
+                if ($convertFromCents) {
+                    return CurrencyConverter::formatCentsToMoney($state, $currency);
+                }
+
                 return CurrencyConverter::formatToMoney($state, $currency);
             });
 
-            $this->description(static function (TextColumn $column, $state) use ($currency): ?string {
+            $this->description(static function (TextColumn $column, $state) use ($currency, $convertFromCents): ?string {
                 if (blank($state)) {
                     return null;
                 }
@@ -214,7 +219,11 @@ class MacroServiceProvider extends ServiceProvider
                     return null;
                 }
 
-                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                if ($convertFromCents) {
+                    $balanceInCents = $state;
+                } else {
+                    $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                }
 
                 $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
 
