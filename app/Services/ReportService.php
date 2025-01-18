@@ -11,6 +11,7 @@ use App\DTO\CashFlowOverviewDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
+use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
 use App\Support\Column;
@@ -261,7 +262,11 @@ class ReportService
         if ($transaction->transactionable_type === null || $transaction->is_payment) {
             return [
                 'type' => 'transaction',
-                'action' => $transaction->type->isJournal() ? 'updateJournalTransaction' : 'updateTransaction',
+                'action' => match ($transaction->type) {
+                    TransactionType::Journal => 'updateJournalTransaction',
+                    TransactionType::Transfer => 'updateTransfer',
+                    default => 'updateTransaction',
+                },
                 'id' => $transaction->id,
             ];
         }
