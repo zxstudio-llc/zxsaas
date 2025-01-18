@@ -19,12 +19,12 @@ return new class extends Migration
             $table->string('type'); // billing, shipping, etc.
             $table->string('recipient')->nullable();
             $table->string('phone')->nullable();
-            $table->string('address_line_1');
+            $table->string('address_line_1')->nullable();
             $table->string('address_line_2')->nullable();
-            $table->string('city');
+            $table->string('city')->nullable();
             $table->smallInteger('state_id')->nullable();
             $table->string('postal_code')->nullable();
-            $table->string('country')->nullable();
+            $table->string('country');
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();

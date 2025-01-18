@@ -42,7 +42,7 @@ class CompanyFactory extends Factory
     public function withCompanyProfile(): self
     {
         return $this->afterCreating(function (Company $company) {
-            CompanyProfile::factory()->forCompany($company)->withCountry('US')->create();
+            CompanyProfile::factory()->forCompany($company)->withAddress()->create();
         });
     }
 
@@ -52,7 +52,7 @@ class CompanyFactory extends Factory
     public function withCompanyDefaults(): self
     {
         return $this->afterCreating(function (Company $company) {
-            $countryCode = $company->profile->country;
+            $countryCode = $company->profile->address->country;
             $companyDefaultService = app(CompanyDefaultService::class);
             $companyDefaultService->createCompanyDefaults($company, $company->owner, 'USD', $countryCode, 'en');
         });

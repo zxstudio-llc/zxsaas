@@ -3,13 +3,13 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Filament\Company\Resources\Sales\ClientResource\Pages;
+use App\Filament\Forms\Components\CountrySelect;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
 use App\Filament\Tables\Columns;
 use App\Models\Common\Address;
 use App\Models\Common\Client;
-use App\Models\Locale\Country;
 use App\Models\Locale\State;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Forms;
@@ -192,14 +192,8 @@ class ClientResource extends Resource
                                 Forms\Components\TextInput::make('address_line_2')
                                     ->label('Address Line 2')
                                     ->maxLength(255),
-                                Forms\Components\Select::make('country')
-                                    ->searchable()
-                                    ->localizeLabel()
-                                    ->live()
-                                    ->options(Country::getAvailableCountryOptions())
-                                    ->afterStateUpdated(static function (Set $set) {
-                                        $set('state_id', null);
-                                    })
+                                CountrySelect::make('country')
+                                    ->clearStateField()
                                     ->required(),
                                 Forms\Components\Select::make('state_id')
                                     ->localizeLabel('State / Province')
@@ -275,14 +269,8 @@ class ClientResource extends Resource
                                         Forms\Components\TextInput::make('address_line_2')
                                             ->label('Address Line 2')
                                             ->maxLength(255),
-                                        Forms\Components\Select::make('country')
-                                            ->searchable()
-                                            ->localizeLabel()
-                                            ->live()
-                                            ->options(Country::getAvailableCountryOptions())
-                                            ->afterStateUpdated(static function (Set $set) {
-                                                $set('state_id', null);
-                                            })
+                                        CountrySelect::make('country')
+                                            ->clearStateField()
                                             ->required(),
                                         Forms\Components\Select::make('state_id')
                                             ->localizeLabel('State / Province')

@@ -98,10 +98,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('institutions');
-        Schema::dropIfExists('account_subtypes');
-        Schema::dropIfExists('accounts');
-        Schema::dropIfExists('bank_accounts');
         Schema::dropIfExists('connected_bank_accounts');
+        Schema::dropIfExists('bank_accounts');
+        Schema::dropIfExists('accounts');
+        Schema::dropIfExists('account_subtypes');
+        Schema::dropIfExists('institutions');
     }
 };

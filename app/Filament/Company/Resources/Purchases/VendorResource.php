@@ -5,13 +5,16 @@ namespace App\Filament\Company\Resources\Purchases;
 use App\Enums\Common\ContractorType;
 use App\Enums\Common\VendorType;
 use App\Filament\Company\Resources\Purchases\VendorResource\Pages;
+use App\Filament\Forms\Components\CountrySelect;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
 use App\Filament\Tables\Columns;
 use App\Models\Common\Vendor;
+use App\Models\Locale\State;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -149,20 +152,20 @@ class VendorResource extends Resource
                         Forms\Components\TextInput::make('address_line_2')
                             ->label('Address Line 2')
                             ->maxLength(255),
+                        CountrySelect::make('country')
+                            ->clearStateField()
+                            ->required(),
+                        Forms\Components\Select::make('state_id')
+                            ->localizeLabel('State / Province')
+                            ->searchable()
+                            ->options(static fn (Get $get) => State::getStateOptions($get('country')))
+                            ->nullable(),
                         Forms\Components\TextInput::make('city')
-                            ->label('City')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('state')
-                            ->label('State')
+                            ->localizeLabel('City / Town')
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('postal_code')
                             ->label('Postal Code / Zip Code')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('country')
-                            ->label('Country')
                             ->required()
                             ->maxLength(255),
                     ])

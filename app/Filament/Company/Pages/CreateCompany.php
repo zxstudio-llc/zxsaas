@@ -2,6 +2,7 @@
 
 namespace App\Filament\Company\Pages;
 
+use App\Enums\Common\AddressType;
 use App\Enums\Setting\EntityType;
 use App\Models\Company;
 use App\Models\Locale\Country;
@@ -66,6 +67,8 @@ class CreateCompany extends FilamentCreateCompany
                     ->live()
                     ->searchable()
                     ->options(Country::getAvailableCountryOptions())
+                    ->getSearchResultsUsing(fn (string $search): array => Country::getSearchResultsUsing($search))
+                    ->getOptionLabelUsing(fn ($value): ?string => Country::find($value)?->name . ' ' . Country::find($value)?->flag)
                     ->softRequired(),
                 Select::make('locale.language')
                     ->label('Language')
@@ -101,9 +104,14 @@ class CreateCompany extends FilamentCreateCompany
                 'personal_company' => $personalCompany,
             ]);
 
-            $company->profile()->create([
+            $profile = $company->profile()->create([
                 'email' => $data['profile']['email'],
                 'entity_type' => $data['profile']['entity_type'],
+            ]);
+
+            $profile->address()->create([
+                'company_id' => $company->id,
+                'type' => AddressType::General,
                 'country' => $data['profile']['country'],
             ]);
 
