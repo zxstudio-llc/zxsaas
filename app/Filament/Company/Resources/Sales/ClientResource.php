@@ -317,10 +317,6 @@ class ClientResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->description(fn (Client $client) => $client->primaryContact->full_name),
-                Tables\Columns\TextColumn::make('account_number')
-                    ->label('Account Number')
-                    ->searchable()
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('primaryContact.email')
                     ->label('Email')
                     ->searchable()
@@ -332,7 +328,7 @@ class ClientResource extends Resource
                 Tables\Columns\TextColumn::make('billingAddress.address_string')
                     ->label('Billing Address')
                     ->searchable()
-                    ->toggleable()
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->listWithLineBreaks(),
                 Tables\Columns\TextColumn::make('balance')
                     ->label('Balance')
