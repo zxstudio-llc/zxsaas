@@ -20,7 +20,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\ServiceProvider;
 
 class MacroServiceProvider extends ServiceProvider
@@ -112,6 +114,16 @@ class MacroServiceProvider extends ServiceProvider
                         }
                     };
                 });
+        });
+
+        TextColumn::macro('coloredDescription', function (string | Htmlable | Closure | null $description, string $color = 'danger') {
+            $this->description(static function (TextColumn $column) use ($description, $color): Htmlable {
+                $description = $column->evaluate($description);
+
+                return new HtmlString("<span class='text-{$color}-700 dark:text-{$color}-400'>{$description}</span>");
+            });
+
+            return $this;
         });
 
         TextColumn::macro('hideOnTabs', function (array $tabs): static {

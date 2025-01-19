@@ -3,14 +3,13 @@
 namespace App\Filament\Company\Resources\Sales;
 
 use App\Filament\Company\Resources\Sales\ClientResource\Pages;
-use App\Filament\Forms\Components\CountrySelect;
+use App\Filament\Forms\Components\AddressFields;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
 use App\Filament\Tables\Columns;
 use App\Models\Common\Address;
 use App\Models\Common\Client;
-use App\Models\Locale\State;
 use App\Utilities\Currency\CurrencyConverter;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -20,7 +19,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\HtmlString;
 
 class ClientResource extends Resource
 {
@@ -185,29 +183,7 @@ class ClientResource extends Resource
                             ->schema([
                                 Forms\Components\Hidden::make('type')
                                     ->default('billing'),
-                                Forms\Components\TextInput::make('address_line_1')
-                                    ->label('Address Line 1')
-                                    ->required()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('address_line_2')
-                                    ->label('Address Line 2')
-                                    ->maxLength(255),
-                                CountrySelect::make('country')
-                                    ->clearStateField()
-                                    ->required(),
-                                Forms\Components\Select::make('state_id')
-                                    ->localizeLabel('State / Province')
-                                    ->searchable()
-                                    ->options(static fn (Get $get) => State::getStateOptions($get('country')))
-                                    ->nullable(),
-                                Forms\Components\TextInput::make('city')
-                                    ->label('City')
-                                    ->required()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('postal_code')
-                                    ->label('Postal Code / Zip Code')
-                                    ->required()
-                                    ->maxLength(255),
+                                AddressFields::make(),
                             ])->columns(),
                     ])
                     ->columns(1),
@@ -260,33 +236,8 @@ class ClientResource extends Resource
                                         }
                                     })
                                     ->columnSpanFull(),
-                                Forms\Components\Grid::make()
-                                    ->schema([
-                                        Forms\Components\TextInput::make('address_line_1')
-                                            ->label('Address Line 1')
-                                            ->required()
-                                            ->maxLength(255),
-                                        Forms\Components\TextInput::make('address_line_2')
-                                            ->label('Address Line 2')
-                                            ->maxLength(255),
-                                        CountrySelect::make('country')
-                                            ->clearStateField()
-                                            ->required(),
-                                        Forms\Components\Select::make('state_id')
-                                            ->localizeLabel('State / Province')
-                                            ->searchable()
-                                            ->options(static fn (Get $get) => State::getStateOptions($get('country')))
-                                            ->nullable(),
-                                        Forms\Components\TextInput::make('city')
-                                            ->label('City')
-                                            ->required()
-                                            ->maxLength(255),
-                                        Forms\Components\TextInput::make('postal_code')
-                                            ->label('Postal Code / Zip Code')
-                                            ->required()
-                                            ->maxLength(255),
-                                    ])
-                                    ->visible(fn (Get $get) => ! $get('same_as_billing')),
+                                AddressFields::make()
+                                    ->visible(static fn (Get $get) => ! $get('same_as_billing')),
                                 Forms\Components\Textarea::make('notes')
                                     ->label('Delivery Instructions')
                                     ->maxLength(255)
@@ -304,7 +255,7 @@ class ClientResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable()
-                    ->description(fn (Client $client) => $client->primaryContact->full_name),
+                    ->description(static fn (Client $client) => $client->primaryContact->full_name),
                 Tables\Columns\TextColumn::make('primaryContact.email')
                     ->label('Email')
                     ->searchable()
@@ -312,7 +263,7 @@ class ClientResource extends Resource
                 Tables\Columns\TextColumn::make('primaryContact.phones')
                     ->label('Phone')
                     ->toggleable()
-                    ->state(fn (Client $client) => $client->primaryContact->first_available_phone),
+                    ->state(static fn (Client $client) => $client->primaryContact->first_available_phone),
                 Tables\Columns\TextColumn::make('billingAddress.address_string')
                     ->label('Billing Address')
                     ->searchable()
@@ -326,7 +277,7 @@ class ClientResource extends Resource
                             ->get()
                             ->sumMoneyInDefaultCurrency('amount_due');
                     })
-                    ->description(function (Client $client) {
+                    ->coloredDescription(function (Client $client) {
                         $overdue = $client->invoices()
                             ->overdue()
                             ->get()
@@ -338,21 +289,24 @@ class ClientResource extends Resource
 
                         $formattedOverdue = CurrencyConverter::formatCentsToMoney($overdue);
 
-                        return new HtmlString("<span class='text-danger-700 dark:text-danger-400'>Overdue: {$formattedOverdue}</span>");
+                        return "Overdue: {$formattedOverdue}";
                     })
                     ->sortable(query: function (Builder $query, string $direction) {
                         return $query
                             ->withSum(['invoices' => fn (Builder $query) => $query->unpaid()], 'amount_due')
                             ->orderBy('invoices_sum_amount_due', $direction);
                     })
-                    ->currency(fn (Client $client) => $client->currency_code, false)
+                    ->currency(convert: false)
                     ->alignEnd(),
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -373,6 +327,7 @@ class ClientResource extends Resource
         return [
             'index' => Pages\ListClients::route('/'),
             'create' => Pages\CreateClient::route('/create'),
+            'view' => Pages\ViewClient::route('/{record}'),
             'edit' => Pages\EditClient::route('/{record}/edit'),
         ];
     }

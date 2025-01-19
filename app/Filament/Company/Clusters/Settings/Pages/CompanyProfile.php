@@ -4,8 +4,7 @@ namespace App\Filament\Company\Clusters\Settings\Pages;
 
 use App\Enums\Setting\EntityType;
 use App\Filament\Company\Clusters\Settings;
-use App\Filament\Forms\Components\CountrySelect;
-use App\Models\Locale\State;
+use App\Filament\Forms\Components\AddressFields;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Utilities\Localization\Timezone;
 use CodeWithDennis\SimpleAlert\Components\Forms\SimpleAlert;
@@ -19,7 +18,6 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
@@ -204,27 +202,8 @@ class CompanyProfile extends Page
             ->schema([
                 Hidden::make('type')
                     ->default('general'),
-                TextInput::make('address_line_1')
-                    ->label('Address Line 1')
-                    ->softRequired()
-                    ->maxLength(255),
-                TextInput::make('address_line_2')
-                    ->label('Address Line 2')
-                    ->maxLength(255),
-                CountrySelect::make('country')
-                    ->clearStateField()
+                AddressFields::make()
                     ->softRequired(),
-                Select::make('state_id')
-                    ->localizeLabel('State / Province')
-                    ->searchable()
-                    ->options(static fn (Get $get) => State::getStateOptions($get('country'))),
-                TextInput::make('city')
-                    ->localizeLabel('City / Town')
-                    ->softRequired()
-                    ->maxLength(255),
-                TextInput::make('postal_code')
-                    ->label('Postal Code / Zip Code')
-                    ->maxLength(255),
             ])
             ->columns(2);
     }

@@ -298,10 +298,12 @@ class InvoiceResource extends Resource
         return $table
             ->defaultSort('due_date')
             ->modifyQueryUsing(function (Builder $query, Tables\Contracts\HasTable $livewire) {
-                $recurringInvoiceId = $livewire->recurringInvoice;
+                if (property_exists($livewire, 'recurringInvoice')) {
+                    $recurringInvoiceId = $livewire->recurringInvoice;
 
-                if (! empty($recurringInvoiceId)) {
-                    $query->where('recurring_invoice_id', $recurringInvoiceId);
+                    if (! empty($recurringInvoiceId)) {
+                        $query->where('recurring_invoice_id', $recurringInvoiceId);
+                    }
                 }
 
                 return $query;
@@ -388,8 +390,10 @@ class InvoiceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->url(static fn (Invoice $record) => Pages\EditInvoice::getUrl(['record' => $record])),
+                    Tables\Actions\ViewAction::make()
+                        ->url(static fn (Invoice $record) => Pages\ViewInvoice::getUrl(['record' => $record])),
                     Tables\Actions\DeleteAction::make(),
                     Invoice::getReplicateAction(Tables\Actions\ReplicateAction::class),
                     Invoice::getApproveDraftAction(Tables\Actions\Action::class),

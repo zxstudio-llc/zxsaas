@@ -71,19 +71,15 @@ class ContactFactory extends Factory
 
     public function primary(): self
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'is_primary' => true,
-            ];
-        });
+        return $this->state([
+            'is_primary' => true,
+        ]);
     }
 
     public function secondary(): self
     {
-        return $this->state(function (array $attributes) {
-            return [
-                'is_primary' => false,
-            ];
-        });
+        return $this->state([
+            'is_primary' => false,
+        ]);
     }
 }

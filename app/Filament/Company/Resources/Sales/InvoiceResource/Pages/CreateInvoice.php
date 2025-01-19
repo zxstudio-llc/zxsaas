@@ -17,6 +17,17 @@ class CreateInvoice extends CreateRecord
 
     protected static string $resource = InvoiceResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        $clientId = request()->query('client');
+
+        if ($clientId) {
+            $this->data['client_id'] = $clientId;
+        }
+    }
+
     public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::Full;
