@@ -8,6 +8,7 @@ use App\Filament\Forms\Components\CountrySelect;
 use App\Models\Locale\State;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Utilities\Localization\Timezone;
+use CodeWithDennis\SimpleAlert\Components\Forms\SimpleAlert;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
@@ -137,6 +138,7 @@ class CompanyProfile extends Page
         return $form
             ->schema([
                 $this->getIdentificationSection(),
+                $this->getNeedsAddressCompletionAlert(),
                 $this->getLocationDetailsSection(),
                 $this->getLegalAndComplianceSection(),
             ])
@@ -155,10 +157,9 @@ class CompanyProfile extends Page
                             ->email()
                             ->localizeLabel()
                             ->maxLength(255)
-                            ->required(),
+                            ->softRequired(),
                         TextInput::make('phone_number')
                             ->tel()
-                            ->nullable()
                             ->localizeLabel(),
                     ])->columns(1),
                 FileUpload::make('logo')
@@ -184,6 +185,18 @@ class CompanyProfile extends Page
             ])->columns();
     }
 
+    protected function getNeedsAddressCompletionAlert(): Component
+    {
+        return SimpleAlert::make('needsAddressCompletion')
+            ->warning()
+            ->border()
+            ->icon('heroicon-o-exclamation-triangle')
+            ->title('Address Information Incomplete')
+            ->description('Please complete the required address information for proper business operations.')
+            ->visible(fn (CompanyProfileModel $record) => $record->address->isIncomplete())
+            ->columnSpanFull();
+    }
+
     protected function getLocationDetailsSection(): Component
     {
         return Section::make('Address Information')
@@ -193,26 +206,24 @@ class CompanyProfile extends Page
                     ->default('general'),
                 TextInput::make('address_line_1')
                     ->label('Address Line 1')
-                    ->required()
+                    ->softRequired()
                     ->maxLength(255),
                 TextInput::make('address_line_2')
                     ->label('Address Line 2')
                     ->maxLength(255),
                 CountrySelect::make('country')
                     ->clearStateField()
-                    ->required(),
+                    ->softRequired(),
                 Select::make('state_id')
                     ->localizeLabel('State / Province')
                     ->searchable()
-                    ->options(static fn (Get $get) => State::getStateOptions($get('country')))
-                    ->nullable(),
+                    ->options(static fn (Get $get) => State::getStateOptions($get('country'))),
                 TextInput::make('city')
                     ->localizeLabel('City / Town')
-                    ->required()
+                    ->softRequired()
                     ->maxLength(255),
                 TextInput::make('postal_code')
                     ->label('Postal Code / Zip Code')
-                    ->required()
                     ->maxLength(255),
             ])
             ->columns(2);
@@ -225,11 +236,10 @@ class CompanyProfile extends Page
                 Select::make('entity_type')
                     ->localizeLabel()
                     ->options(EntityType::class)
-                    ->required(),
+                    ->softRequired(),
                 TextInput::make('tax_id')
                     ->localizeLabel('Tax ID')
-                    ->maxLength(50)
-                    ->nullable(),
+                    ->maxLength(50),
             ])->columns();
     }
 

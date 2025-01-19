@@ -56,6 +56,8 @@ class ViewRecurringInvoice extends ViewRecord
             ->schema([
                 SimpleAlert::make('scheduleIsNotSet')
                     ->info()
+                    ->border()
+                    ->icon('heroicon-o-information-circle')
                     ->title('Schedule Not Set')
                     ->description('The schedule for this recurring invoice has not been set. You must set a schedule before you can approve this draft and start creating invoices.')
                     ->visible(fn (RecurringInvoice $record) => ! $record->hasValidStartDate())

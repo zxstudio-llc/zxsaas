@@ -86,4 +86,9 @@ class Address extends Model
             ]);
         });
     }
+
+    public function isIncomplete(): bool
+    {
+        return empty($this->address_line_1) || empty($this->city);
+    }
 }

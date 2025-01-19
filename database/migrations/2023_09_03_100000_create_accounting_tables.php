@@ -51,8 +51,6 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-
-            $table->unique(['company_id', 'code']);
         });
 
         Schema::create('bank_accounts', function (Blueprint $table) {
@@ -66,8 +64,6 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-
-            $table->unique(['company_id', 'account_id']);
         });
 
         Schema::create('connected_bank_accounts', function (Blueprint $table) {
