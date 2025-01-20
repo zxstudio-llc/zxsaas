@@ -90,7 +90,7 @@ class RecurringInvoiceFactory extends Factory
         });
     }
 
-    protected function withDailySchedule(Carbon $startDate, EndType $endType): static
+    public function withDailySchedule(Carbon $startDate, EndType $endType): static
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
             $this->ensureLineItems($recurringInvoice);
@@ -103,7 +103,7 @@ class RecurringInvoiceFactory extends Factory
         });
     }
 
-    protected function withWeeklySchedule(Carbon $startDate, EndType $endType): static
+    public function withWeeklySchedule(Carbon $startDate, EndType $endType): static
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
             $this->ensureLineItems($recurringInvoice);
@@ -117,7 +117,7 @@ class RecurringInvoiceFactory extends Factory
         });
     }
 
-    protected function withMonthlySchedule(Carbon $startDate, EndType $endType): static
+    public function withMonthlySchedule(Carbon $startDate, EndType $endType): static
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
             $this->ensureLineItems($recurringInvoice);
@@ -131,7 +131,7 @@ class RecurringInvoiceFactory extends Factory
         });
     }
 
-    protected function withYearlySchedule(Carbon $startDate, EndType $endType): static
+    public function withYearlySchedule(Carbon $startDate, EndType $endType): static
     {
         return $this->afterCreating(function (RecurringInvoice $recurringInvoice) use ($startDate, $endType) {
             $this->ensureLineItems($recurringInvoice);
@@ -146,7 +146,7 @@ class RecurringInvoiceFactory extends Factory
         });
     }
 
-    protected function withCustomSchedule(
+    public function withCustomSchedule(
         Carbon $startDate,
         EndType $endType,
         ?IntervalType $intervalType = null,

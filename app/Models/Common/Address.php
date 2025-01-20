@@ -33,7 +33,7 @@ class Address extends Model
         'city',
         'state_id',
         'postal_code',
-        'country',
+        'country_code',
         'notes',
         'created_by',
         'updated_by',
@@ -60,7 +60,7 @@ class Address extends Model
 
     public function country(): BelongsTo
     {
-        return $this->belongsTo(Country::class, 'country', 'id');
+        return $this->belongsTo(Country::class, 'country_code', 'id');
     }
 
     public function state(): BelongsTo
@@ -80,7 +80,7 @@ class Address extends Model
                 implode(', ', $street), // Street 1 & 2 on same line if both exist
                 implode(', ', array_filter([
                     $this->city,
-                    $this->state->state_code,
+                    $this->state->name,
                     $this->postal_code,
                 ])),
             ]);

@@ -6,9 +6,9 @@ use App\Enums\Accounting\DocumentType;
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages\ListInvoices;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource;
+use App\Filament\Infolists\Components\BannerEntry;
 use App\Filament\Infolists\Components\DocumentPreview;
 use App\Models\Accounting\RecurringInvoice;
-use CodeWithDennis\SimpleAlert\Components\Infolists\SimpleAlert;
 use Filament\Actions;
 use Filament\Infolists\Components\Actions\Action;
 use Filament\Infolists\Components\Grid;
@@ -54,10 +54,8 @@ class ViewRecurringInvoice extends ViewRecord
     {
         return $infolist
             ->schema([
-                SimpleAlert::make('scheduleIsNotSet')
+                BannerEntry::make('scheduleIsNotSet')
                     ->info()
-                    ->border()
-                    ->icon('heroicon-o-information-circle')
                     ->title('Schedule Not Set')
                     ->description('The schedule for this recurring invoice has not been set. You must set a schedule before you can approve this draft and start creating invoices.')
                     ->visible(fn (RecurringInvoice $record) => ! $record->hasValidStartDate())
@@ -66,7 +64,7 @@ class ViewRecurringInvoice extends ViewRecord
                         RecurringInvoice::getUpdateScheduleAction(Action::class)
                             ->outlined(),
                     ]),
-                SimpleAlert::make('readyToApprove')
+                BannerEntry::make('readyToApprove')
                     ->info()
                     ->title('Ready to Approve')
                     ->description('This recurring invoice is ready for approval. Review the details, and approve it when you’re ready to start generating invoices.')

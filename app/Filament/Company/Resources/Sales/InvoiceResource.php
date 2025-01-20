@@ -115,7 +115,10 @@ class InvoiceResource extends Resource
                                             $set('currency_code', $currencyCode);
                                         }
                                     }),
-                                CreateCurrencySelect::make('currency_code'),
+                                CreateCurrencySelect::make('currency_code')
+                                    ->disabled(function (?Invoice $record) {
+                                        return $record?->hasPayments();
+                                    }),
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('invoice_number')

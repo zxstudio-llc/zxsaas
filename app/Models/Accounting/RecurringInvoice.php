@@ -17,13 +17,13 @@ use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\Month;
 use App\Enums\Accounting\RecurringInvoiceStatus;
 use App\Enums\Setting\PaymentTerms;
+use App\Filament\Forms\Components\Banner;
 use App\Filament\Forms\Components\CustomSection;
 use App\Models\Common\Client;
 use App\Models\Setting\CompanyProfile;
 use App\Observers\RecurringInvoiceObserver;
 use App\Support\ScheduleHandler;
 use App\Utilities\Localization\Timezone;
-use CodeWithDennis\SimpleAlert\Components\Forms\SimpleAlert;
 use Filament\Actions\Action;
 use Filament\Actions\MountableAction;
 use Filament\Forms;
@@ -311,19 +311,25 @@ class RecurringInvoice extends Document
         return $nextDate;
     }
 
-    public function calculateNextWeeklyDate(Carbon $lastDate): ?Carbon
+    public function calculateNextWeeklyDate(Carbon $lastDate, int $interval = 1): ?Carbon
     {
-        return $lastDate->copy()->next($this->day_of_week->name);
+        return $lastDate->copy()
+            ->addWeeks($interval - 1)
+            ->next($this->day_of_week->value);
     }
 
-    public function calculateNextMonthlyDate(Carbon $lastDate): ?Carbon
+    public function calculateNextMonthlyDate(Carbon $lastDate, int $interval = 1): ?Carbon
     {
-        return $this->day_of_month->resolveDate($lastDate->copy()->addMonth());
+        return $this->day_of_month->resolveDate(
+            $lastDate->copy()->addMonthsNoOverflow($interval)
+        );
     }
 
-    public function calculateNextYearlyDate(Carbon $lastDate): ?Carbon
+    public function calculateNextYearlyDate(Carbon $lastDate, int $interval = 1): ?Carbon
     {
-        return $this->day_of_month->resolveDate($lastDate->copy()->addYear()->month($this->month->value));
+        return $this->day_of_month->resolveDate(
+            $lastDate->copy()->addYears($interval)->month($this->month->value)
+        );
     }
 
     protected function calculateCustomNextDate(Carbon $lastDate): ?Carbon
@@ -333,11 +339,11 @@ class RecurringInvoice extends Document
         return match ($this->interval_type) {
             IntervalType::Day => $lastDate->copy()->addDays($interval),
 
-            IntervalType::Week => $lastDate->copy()->addWeeks($interval),
+            IntervalType::Week => $this->calculateNextWeeklyDate($lastDate, $interval),
 
-            IntervalType::Month => $this->day_of_month->resolveDate($lastDate->copy()->addMonths($interval)),
+            IntervalType::Month => $this->calculateNextMonthlyDate($lastDate, $interval),
 
-            IntervalType::Year => $this->day_of_month->resolveDate($lastDate->copy()->addYears($interval)->month($this->month->value)),
+            IntervalType::Year => $this->calculateNextYearlyDate($lastDate, $interval),
 
             default => null
         };
@@ -408,7 +414,6 @@ class RecurringInvoice extends Document
                                     $handler->handleFrequencyChange($state);
                                 }),
 
-                            // Custom frequency fields in a nested grid
                             Cluster::make([
                                 Forms\Components\TextInput::make('interval_value')
                                     ->softRequired()
@@ -430,7 +435,6 @@ class RecurringInvoice extends Document
                                 ->markAsRequired(false)
                                 ->visible($frequency->isCustom()),
 
-                            // Specific schedule details
                             Forms\Components\Select::make('month')
                                 ->label('Month')
                                 ->options(Month::class)
@@ -463,18 +467,19 @@ class RecurringInvoice extends Document
                                     $handler->handleDateChange('day_of_month', $state);
                                 }),
 
-                            SimpleAlert::make('dayOfMonthNotice')
-                                ->title(function () use ($dayOfMonth) {
-                                    return "The invoice will be created on the {$dayOfMonth->getLabel()} day of each month, or on the last day for months ending earlier.";
+                            Banner::make('dayOfMonthNotice')
+                                ->info()
+                                ->title(static function () use ($dayOfMonth) {
+                                    return "For months with fewer than {$dayOfMonth->value} days, the last day of the month will be used.";
                                 })
                                 ->columnSpanFull()
-                                ->visible($dayOfMonth?->value > 28),
+                                ->visible($dayOfMonth?->mayExceedMonthLength() && ($frequency->isMonthly() || $intervalType?->isMonth())),
 
                             Forms\Components\Select::make('day_of_week')
                                 ->label('Day of Week')
                                 ->options(DayOfWeek::class)
                                 ->softRequired()
-                                ->visible($frequency->isWeekly() || $intervalType?->isWeek())
+                                ->visible(($frequency->isWeekly() || $intervalType?->isWeek()) ?? false)
                                 ->live()
                                 ->afterStateUpdated(function (Forms\Set $set, $state) {
                                     $handler = new ScheduleHandler($set);

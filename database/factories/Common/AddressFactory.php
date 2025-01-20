@@ -33,7 +33,7 @@ class AddressFactory extends Factory
             'city' => $this->faker->city,
             'state_id' => $this->faker->state('US'),
             'postal_code' => $this->faker->postcode,
-            'country' => 'US',
+            'country_code' => 'US',
             'notes' => $this->faker->sentence,
             'created_by' => 1,
             'updated_by' => 1,

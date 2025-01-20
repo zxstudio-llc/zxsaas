@@ -15,6 +15,9 @@ class StateSelect extends Select
         $this
             ->localizeLabel('State / Province')
             ->searchable()
-            ->options(static fn (Get $get) => State::getStateOptions($get('country')));
+            ->options(static fn (Get $get) => State::getStateOptions($get('country_code')))
+            ->getSearchResultsUsing(static function (string $search, Get $get): array {
+                return State::getSearchResultsUsing($search, $get('country_code'));
+            });
     }
 }

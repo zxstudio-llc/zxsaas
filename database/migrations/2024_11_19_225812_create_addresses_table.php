@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('city')->nullable();
             $table->smallInteger('state_id')->nullable();
             $table->string('postal_code')->nullable();
-            $table->string('country');
+            $table->string('country_code');
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();

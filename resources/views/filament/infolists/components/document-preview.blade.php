@@ -26,10 +26,8 @@
         <x-company.invoice.metadata class="modern-template-metadata space-y-8">
             <div class="text-sm">
                 <h2 class="text-lg font-semibold">{{ $document->company->name }}</h2>
-                @if($document->company->address && $document->company->city && $document->company->state && $document->company->zipCode)
-                    <p>{{ $document->company->address }}</p>
-                    <p>{{ $document->company->city }}, {{ $document->company->state }} {{ $document->company->zipCode }}</p>
-                    <p>{{ $document->company->country }}</p>
+                @if($formattedAddress = $document->company->getFormattedAddressHtml())
+                    {!! $formattedAddress !!}
                 @endif
             </div>
 
@@ -40,19 +38,8 @@
                     <p class="text-base font-bold"
                        style="color: {{ $document->accentColor }}">{{ $document->client->name }}</p>
 
-                    @if($document->client->addressLine1)
-                        <p>{{ $document->client->addressLine1 }}</p>
-
-                        @if($document->client->addressLine2)
-                            <p>{{ $document->client->addressLine2 }}</p>
-                        @endif
-                        <p>
-                            {{ $document->client->city }}{{ $document->client->state ? ', ' . $document->client->state: '' }}
-                            {{ $document->client->postalCode }}
-                        </p>
-                        @if($document->client->country)
-                            <p>{{ $document->client->country }}</p>
-                        @endif
+                    @if($formattedAddress = $document->client->getFormattedAddressHtml())
+                        {!! $formattedAddress !!}
                     @endif
                 </div>
 

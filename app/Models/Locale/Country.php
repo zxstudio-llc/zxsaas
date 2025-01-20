@@ -51,7 +51,7 @@ class Country extends Model
 
     public function addresses(): HasMany
     {
-        return $this->hasMany(Address::class, 'country', 'id');
+        return $this->hasMany(Address::class, 'country_code', 'id');
     }
 
     public function states(): HasMany
@@ -101,8 +101,10 @@ class Country extends Model
     {
         return self::query()
             ->select(['id', 'name', 'flag'])
-            ->whereLike('name', "%{$search}%")
-            ->orWhereLike('id', "%{$search}%")
+            ->where(static function ($query) use ($search) {
+                $query->whereLike('name', "%{$search}%")
+                    ->orWhereLike('id', "%{$search}%");
+            })
             ->orderByRaw('
                 CASE
                     WHEN id = ? THEN 1
@@ -113,7 +115,7 @@ class Country extends Model
             ', [$search, $search . '%', $search . '%'])
             ->limit(50)
             ->get()
-            ->mapWithKeys(static fn ($country) => [
+            ->mapWithKeys(static fn (self $country) => [
                 $country->id => $country->name . ' ' . $country->flag,
             ])
             ->toArray();
@@ -121,7 +123,7 @@ class Country extends Model
 
     public static function getLanguagesByCountryCode(?string $code = null): array
     {
-        if ($code === null) {
+        if (! $code) {
             return Locales::getNames();
         }
 

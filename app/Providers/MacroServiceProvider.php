@@ -211,12 +211,19 @@ class MacroServiceProvider extends ServiceProvider
                 }
 
                 $currency = $column->evaluate($currency);
+                $showCurrency = $currency !== CurrencyAccessor::getDefaultCurrency();
 
                 if ($convertFromCents) {
-                    return CurrencyConverter::formatCentsToMoney($state, $currency);
+                    $balanceInCents = $state;
+                } else {
+                    $balanceInCents = CurrencyConverter::convertToCents($state, $currency);
                 }
 
-                return CurrencyConverter::formatToMoney($state, $currency);
+                if ($balanceInCents < 0) {
+                    return '(' . CurrencyConverter::formatCentsToMoney(abs($balanceInCents), $currency, $showCurrency) . ')';
+                }
+
+                return CurrencyConverter::formatCentsToMoney($balanceInCents, $currency, $showCurrency);
             });
 
             $this->description(static function (TextColumn $column, $state) use ($currency, $convertFromCents): ?string {
@@ -238,6 +245,10 @@ class MacroServiceProvider extends ServiceProvider
                 }
 
                 $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                if ($convertedBalanceInCents < 0) {
+                    return '(' . CurrencyConverter::formatCentsToMoney(abs($convertedBalanceInCents), $newCurrency, true) . ')';
+                }
 
                 return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
             });

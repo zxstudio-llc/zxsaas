@@ -5,9 +5,9 @@ namespace App\Filament\Company\Clusters\Settings\Pages;
 use App\Enums\Setting\EntityType;
 use App\Filament\Company\Clusters\Settings;
 use App\Filament\Forms\Components\AddressFields;
+use App\Filament\Forms\Components\Banner;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Utilities\Localization\Timezone;
-use CodeWithDennis\SimpleAlert\Components\Forms\SimpleAlert;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
@@ -185,10 +185,8 @@ class CompanyProfile extends Page
 
     protected function getNeedsAddressCompletionAlert(): Component
     {
-        return SimpleAlert::make('needsAddressCompletion')
+        return Banner::make('needsAddressCompletion')
             ->warning()
-            ->border()
-            ->icon('heroicon-o-exclamation-triangle')
             ->title('Address Information Incomplete')
             ->description('Please complete the required address information for proper business operations.')
             ->visible(fn (CompanyProfileModel $record) => $record->address->isIncomplete())

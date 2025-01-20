@@ -22,7 +22,7 @@ class AddressFields extends Grid
             TextInput::make('address_line_2')
                 ->label('Address Line 2')
                 ->maxLength(255),
-            CountrySelect::make('country')
+            CountrySelect::make('country_code')
                 ->clearStateField()
                 ->required(),
             StateSelect::make('state_id'),
