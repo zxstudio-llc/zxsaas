@@ -4,16 +4,16 @@ namespace App\Enums\Concerns;
 
 trait ParsesEnum
 {
-    public static function parse(string | self | null $value): ?self
+    public static function parse(string | self | null $value): ?static
     {
-        if ($value === null) {
+        if (! $value) {
             return null;
         }
 
-        if ($value instanceof self) {
+        if ($value instanceof static) {
             return $value;
         }
 
-        return self::from($value);
+        return static::tryFrom($value);
     }
 }

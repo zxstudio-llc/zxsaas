@@ -187,6 +187,23 @@ class DocumentDefault extends Model
         return $options[$optionValue] ?? null;
     }
 
+    public function resolveColumnLabel(string $column, string $default, ?array $data = null): string
+    {
+        if ($data) {
+            $custom = $data[$column]['custom'] ?? null;
+            $option = $data[$column]['option'] ?? null;
+        } else {
+            $custom = $this->{$column}['custom'] ?? null;
+            $option = $this->{$column}['option'] ?? null;
+        }
+
+        if ($custom) {
+            return $custom;
+        }
+
+        return $this->getLabelOptionFor($column, $option) ?? $default;
+    }
+
     protected static function newFactory(): Factory
     {
         return DocumentDefaultFactory::new();

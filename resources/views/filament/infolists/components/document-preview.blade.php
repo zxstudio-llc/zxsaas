@@ -2,6 +2,14 @@
     $document = \App\DTO\DocumentDTO::fromModel($getRecord());
 @endphp
 
+{!! $document->getFontHtml() !!}
+
+<style>
+    .inv-paper {
+        font-family: '{{ $document->font->getLabel() }}', sans-serif;
+    }
+</style>
+
 <div {{ $attributes }}>
     <x-company.invoice.container class="modern-template-container">
         <!-- Colored Header with Logo -->
@@ -75,10 +83,10 @@
             <table class="w-full text-left table-fixed">
                 <thead class="text-sm leading-relaxed">
                 <tr class="text-gray-600 dark:text-gray-400">
-                    <th class="text-left pl-6 w-[45%] py-4">Items</th>
-                    <th class="text-center w-[15%] py-4">Quantity</th>
-                    <th class="text-right w-[20%] py-4">Price</th>
-                    <th class="text-right pr-6 w-[20%] py-4">Amount</th>
+                    <th class="text-left pl-6 w-[50%] py-4">{{ $document->columnLabel->items }}</th>
+                    <th class="text-center w-[10%] py-4">{{ $document->columnLabel->units }}</th>
+                    <th class="text-right w-[20%] py-4">{{ $document->columnLabel->price }}</th>
+                    <th class="text-right pr-6 w-[20%] py-4">{{ $document->columnLabel->amount }}</th>
                 </tr>
                 </thead>
                 <tbody class="text-sm tracking-tight border-y-2">

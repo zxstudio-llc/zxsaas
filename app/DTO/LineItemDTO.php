@@ -26,7 +26,7 @@ readonly class LineItemDTO
         );
     }
 
-    private static function formatToMoney(float | string $value, ?string $currencyCode): string
+    protected static function formatToMoney(float | string $value, ?string $currencyCode): string
     {
         return CurrencyConverter::formatToMoney($value, $currencyCode);
     }
