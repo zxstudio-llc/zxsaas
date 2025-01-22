@@ -7,6 +7,7 @@ use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
+use App\Filament\Company\Resources\Sales\ClientResource\RelationManagers\InvoicesRelationManager;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
@@ -333,7 +334,8 @@ class InvoiceResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->hiddenOn(InvoicesRelationManager::class),
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()

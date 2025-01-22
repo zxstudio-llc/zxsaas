@@ -4,12 +4,11 @@ namespace App\Filament\Company\Resources\Sales\ClientResource\Pages;
 
 use App\Filament\Company\Resources\Sales\ClientResource;
 use App\Filament\Company\Resources\Sales\ClientResource\RelationManagers;
-use App\Models\Common\Client;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Number;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ViewClient extends ViewRecord
 {
@@ -19,6 +18,20 @@ class ViewClient extends ViewRecord
     {
         return [
             RelationManagers\InvoicesRelationManager::class,
+            RelationManagers\RecurringInvoicesRelationManager::class,
+            RelationManagers\EstimatesRelationManager::class,
+        ];
+    }
+
+    public function getTitle(): string | Htmlable
+    {
+        return $this->record->name;
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            ClientResource\Widgets\InvoiceOverview::class,
         ];
     }
 
@@ -26,49 +39,30 @@ class ViewClient extends ViewRecord
     {
         return $infolist
             ->schema([
-                Section::make('Financial Overview')
-                    ->columns(4)
+                Section::make('General')
+                    ->columns()
                     ->schema([
-                        TextEntry::make('last_12_months_paid')
-                            ->label('Last 12 Months Paid')
-                            ->getStateUsing(function (Client $record) {
-                                return $record->invoices()
-                                    ->whereNotNull('paid_at')
-                                    ->where('paid_at', '>=', now()->subMonths(12))
-                                    ->get()
-                                    ->sumMoneyInDefaultCurrency('total');
-                            })
-                            ->currency(convert: false),
-                        TextEntry::make('total_unpaid')
-                            ->label('Total Unpaid')
-                            ->getStateUsing(function (Client $record) {
-                                return $record->invoices()
-                                    ->unpaid()
-                                    ->get()
-                                    ->sumMoneyInDefaultCurrency('amount_due');
-                            })
-                            ->currency(convert: false),
-                        TextEntry::make('total_overdue')
-                            ->label('Total Overdue')
-                            ->getStateUsing(function (Client $record) {
-                                return $record->invoices()
-                                    ->overdue()
-                                    ->get()
-                                    ->sumMoneyInDefaultCurrency('amount_due');
-                            })
-                            ->currency(convert: false),
-                        TextEntry::make('average_payment_time')
-                            ->label('Average Payment Time')
-                            ->getStateUsing(function (Client $record) {
-                                return $record->invoices()
-                                    ->whereNotNull('paid_at')
-                                    ->selectRaw('AVG(TIMESTAMPDIFF(DAY, date, paid_at)) as avg_days')
-                                    ->value('avg_days');
-                            })
-                            ->suffix(' days')
-                            ->formatStateUsing(function ($state) {
-                                return Number::format($state ?? 0, maxPrecision: 1);
-                            }),
+                        TextEntry::make('primaryContact.full_name')
+                            ->label('Primary Contact'),
+                        TextEntry::make('primaryContact.email')
+                            ->label('Primary Email'),
+                        TextEntry::make('primaryContact.first_available_phone')
+                            ->label('Primary Phone'),
+                        TextEntry::make('website')
+                            ->label('Website')
+                            ->url(static fn ($state) => $state, true),
+                    ]),
+                Section::make('Additional Details')
+                    ->columns()
+                    ->schema([
+                        TextEntry::make('billingAddress.address_string')
+                            ->label('Billing Address')
+                            ->listWithLineBreaks(),
+                        TextEntry::make('shippingAddress.address_string')
+                            ->label('Shipping Address')
+                            ->listWithLineBreaks(),
+                        TextEntry::make('notes')
+                            ->label('Delivery Instructions'),
                     ]),
             ]);
     }

@@ -211,7 +211,10 @@ class VendorResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -232,6 +235,7 @@ class VendorResource extends Resource
         return [
             'index' => Pages\ListVendors::route('/'),
             'create' => Pages\CreateVendor::route('/create'),
+            'view' => Pages\ViewVendor::route('/{record}'),
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
     }

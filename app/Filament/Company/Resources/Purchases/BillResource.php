@@ -7,6 +7,7 @@ use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\PaymentMethod;
 use App\Filament\Company\Resources\Purchases\BillResource\Pages;
+use App\Filament\Company\Resources\Purchases\VendorResource\RelationManagers\BillsRelationManager;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\DocumentTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
@@ -251,7 +252,9 @@ class BillResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('vendor.name')
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable()
+                    ->hiddenOn(BillsRelationManager::class),
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (Bill $record) => $record->currency_code)
                     ->sortable()
