@@ -112,7 +112,7 @@ class CreateCompany extends FilamentCreateCompany
             $profile->address()->create([
                 'company_id' => $company->id,
                 'type' => AddressType::General,
-                'country' => $data['profile']['country'],
+                'country_code' => $data['profile']['country'],
             ]);
 
             $user?->switchCompany($company);

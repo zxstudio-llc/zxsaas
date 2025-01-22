@@ -56,7 +56,7 @@ it('returns data for the current company based on the CurrentCompanyScope', func
 it('validates that company default settings are non-null', function () {
     $testCompany = $this->testCompany;
 
-    expect($testCompany->profile->country)->not->toBeNull()
+    expect($testCompany->profile->address->country_code)->not->toBeNull()
         ->and($testCompany->profile->email)->not->toBeNull()
         ->and($testCompany->default->currency_code)->toBe('USD')
         ->and($testCompany->locale->language)->toBe('en')
