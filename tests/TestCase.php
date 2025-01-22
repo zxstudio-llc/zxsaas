@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\Common\Offering;
 use App\Models\Company;
 use App\Models\User;
 use App\Testing\TestsReport;
@@ -44,5 +45,18 @@ abstract class TestCase extends BaseTestCase
         $this->actingAs($this->testUser);
 
         Filament::setTenant($this->testCompany);
+    }
+
+    public function withOfferings(): static
+    {
+        Offering::factory()
+            ->for($this->testCompany)
+            ->sellable()
+            ->withSalesAdjustments()
+            ->purchasable()
+            ->withPurchaseAdjustments()
+            ->create();
+
+        return $this;
     }
 }

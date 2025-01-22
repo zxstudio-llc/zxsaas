@@ -81,7 +81,7 @@ trait ManagesLineItems
 
     protected function updateDocumentTotals(Model $record, array $data): array
     {
-        $currencyCode = $data['currency_code'] ?? CurrencyAccessor::getDefaultCurrency();
+        $currencyCode = $data['currency_code'] ?? $record->currency_code ?? CurrencyAccessor::getDefaultCurrency();
         $subtotalCents = $record->lineItems()->sum('subtotal');
         $taxTotalCents = $record->lineItems()->sum('tax_total');
         $discountTotalCents = $this->calculateDiscountTotal(

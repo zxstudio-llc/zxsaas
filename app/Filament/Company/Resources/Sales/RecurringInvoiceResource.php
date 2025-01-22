@@ -9,6 +9,7 @@ use App\Enums\Setting\PaymentTerms;
 use App\Filament\Company\Resources\Sales\RecurringInvoiceResource\Pages;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\DocumentTotals;
+use App\Filament\Tables\Columns;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\RecurringInvoice;
 use App\Models\Common\Client;
@@ -272,11 +273,7 @@ class RecurringInvoiceResource extends Resource
         return $table
             ->defaultSort('next_date')
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->searchable(),
+                Columns::id(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->searchable(),
@@ -291,20 +288,31 @@ class RecurringInvoiceResource extends Resource
                     ->description(function (RecurringInvoice $record) {
                         return $record->getTimelineDescription();
                     }),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Created')
+                    ->date()
+                    ->sortable()
+                    ->showOnTabs(['draft']),
+                Tables\Columns\TextColumn::make('start_date')
+                    ->label('First Invoice')
+                    ->date()
+                    ->sortable()
+                    ->showOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('last_date')
                     ->label('Last Invoice')
                     ->date()
                     ->sortable()
-                    ->searchable(),
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('next_date')
                     ->label('Next Invoice')
                     ->date()
                     ->sortable()
-                    ->searchable(),
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (RecurringInvoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->alignEnd(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')

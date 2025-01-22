@@ -7,12 +7,14 @@ use App\Enums\Accounting\DocumentDiscountMethod;
 use App\Enums\Accounting\DocumentType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\PaymentMethod;
+use App\Filament\Company\Resources\Sales\ClientResource\RelationManagers\InvoicesRelationManager;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 use App\Filament\Company\Resources\Sales\InvoiceResource\RelationManagers;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\DocumentTotals;
 use App\Filament\Tables\Actions\ReplicateBulkAction;
+use App\Filament\Tables\Columns;
 use App\Filament\Tables\Filters\DateRangeFilter;
 use App\Models\Accounting\Adjustment;
 use App\Models\Accounting\Invoice;
@@ -114,7 +116,10 @@ class InvoiceResource extends Resource
                                             $set('currency_code', $currencyCode);
                                         }
                                     }),
-                                CreateCurrencySelect::make('currency_code'),
+                                CreateCurrencySelect::make('currency_code')
+                                    ->disabled(function (?Invoice $record) {
+                                        return $record?->hasPayments();
+                                    }),
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('invoice_number')
@@ -297,27 +302,26 @@ class InvoiceResource extends Resource
         return $table
             ->defaultSort('due_date')
             ->modifyQueryUsing(function (Builder $query, Tables\Contracts\HasTable $livewire) {
-                $recurringInvoiceId = $livewire->recurringInvoice;
+                if (property_exists($livewire, 'recurringInvoice')) {
+                    $recurringInvoiceId = $livewire->recurringInvoice;
 
-                if (! empty($recurringInvoiceId)) {
-                    $query->where('recurring_invoice_id', $recurringInvoiceId);
+                    if (! empty($recurringInvoiceId)) {
+                        $query->where('recurring_invoice_id', $recurringInvoiceId);
+                    }
                 }
 
                 return $query;
             })
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->searchable(),
+                Columns::id(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('due_date')
                     ->label('Due')
                     ->asRelativeDay()
-                    ->sortable(),
+                    ->sortable()
+                    ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('date')
                     ->date()
                     ->sortable(),
@@ -330,20 +334,25 @@ class InvoiceResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('client.name')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->hiddenOn(InvoicesRelationManager::class),
                 Tables\Columns\TextColumn::make('total')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Amount Paid')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
-                    ->toggleable(),
+                    ->alignEnd()
+                    ->showOnTabs(['unpaid']),
                 Tables\Columns\TextColumn::make('amount_due')
                     ->label('Amount Due')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
-                    ->sortable(),
+                    ->sortable()
+                    ->alignEnd()
+                    ->hideOnTabs(['draft']),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('client')
@@ -386,8 +395,10 @@ class InvoiceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->url(static fn (Invoice $record) => Pages\EditInvoice::getUrl(['record' => $record])),
+                    Tables\Actions\ViewAction::make()
+                        ->url(static fn (Invoice $record) => Pages\ViewInvoice::getUrl(['record' => $record])),
                     Tables\Actions\DeleteAction::make(),
                     Invoice::getReplicateAction(Tables\Actions\ReplicateAction::class),
                     Invoice::getApproveDraftAction(Tables\Actions\Action::class),

@@ -130,7 +130,7 @@ class Localization extends Page
                 Select::make('timezone')
                     ->softRequired()
                     ->localizeLabel()
-                    ->options(Timezone::getTimezoneOptions(CompanyProfileModel::first()->country))
+                    ->options(Timezone::getTimezoneOptions(CompanyProfileModel::first()->address->country_code))
                     ->searchable(),
             ])->columns();
     }

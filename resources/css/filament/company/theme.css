@@ -18,6 +18,15 @@
     display: inline-flex;
 }
 
+/* End Alignment sortable column enhancement */
+.fi-ta-header-cell:has(button.justify-end > svg.fi-ta-header-cell-sort-icon) {
+    padding-right: 0.25rem;
+}
+
+.fi-ta-cell:has(.fi-ta-col-wrp > .justify-end) {
+    padding-right: 1rem;
+}
+
 :not(.dark) .fi-body {
     position: relative;
     background-color: #E8E9EB;

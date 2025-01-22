@@ -2,18 +2,23 @@
 
 namespace App\Filament\Company\Resources\Purchases;
 
+use App\Enums\Accounting\BillStatus;
 use App\Enums\Common\ContractorType;
 use App\Enums\Common\VendorType;
 use App\Filament\Company\Resources\Purchases\VendorResource\Pages;
+use App\Filament\Forms\Components\AddressFields;
 use App\Filament\Forms\Components\CreateCurrencySelect;
 use App\Filament\Forms\Components\CustomSection;
 use App\Filament\Forms\Components\PhoneBuilder;
+use App\Filament\Tables\Columns;
 use App\Models\Common\Vendor;
+use App\Utilities\Currency\CurrencyConverter;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class VendorResource extends Resource
 {
@@ -41,12 +46,12 @@ class VendorResource extends Resource
                                     ->columnSpanFull(),
                                 CreateCurrencySelect::make('currency_code')
                                     ->nullable()
-                                    ->visible(fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Regular),
+                                    ->visible(static fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Regular),
                                 Forms\Components\Select::make('contractor_type')
                                     ->label('Contractor Type')
                                     ->required()
                                     ->live()
-                                    ->visible(fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Contractor)
+                                    ->visible(static fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Contractor)
                                     ->options(ContractorType::class),
                                 Forms\Components\TextInput::make('ssn')
                                     ->label('Social Security Number')
@@ -55,7 +60,7 @@ class VendorResource extends Resource
                                     ->mask('999-99-9999')
                                     ->stripCharacters('-')
                                     ->maxLength(11)
-                                    ->visible(fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Individual)
+                                    ->visible(static fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Individual)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('ein')
                                     ->label('Employer Identification Number')
@@ -64,7 +69,7 @@ class VendorResource extends Resource
                                     ->mask('99-9999999')
                                     ->stripCharacters('-')
                                     ->maxLength(10)
-                                    ->visible(fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Business)
+                                    ->visible(static fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Business)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('account_number')
                                     ->maxLength(255),
@@ -141,29 +146,7 @@ class VendorResource extends Resource
                     ->schema([
                         Forms\Components\Hidden::make('type')
                             ->default('general'),
-                        Forms\Components\TextInput::make('address_line_1')
-                            ->label('Address Line 1')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('address_line_2')
-                            ->label('Address Line 2')
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('city')
-                            ->label('City')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('state')
-                            ->label('State')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('postal_code')
-                            ->label('Postal Code / Zip Code')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('country')
-                            ->label('Country')
-                            ->required()
-                            ->maxLength(255),
+                        AddressFields::make(),
                     ])
                     ->columns(2),
             ]);
@@ -173,24 +156,65 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
+                Columns::id(),
                 Tables\Columns\TextColumn::make('type')
                     ->badge()
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
-                    ->description(fn (Vendor $vendor) => $vendor->contact?->full_name),
+                    ->sortable()
+                    ->description(static fn (Vendor $vendor) => $vendor->contact?->full_name),
                 Tables\Columns\TextColumn::make('contact.email')
                     ->label('Email')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('primaryContact.phones')
+                Tables\Columns\TextColumn::make('contact.first_available_phone')
                     ->label('Phone')
-                    ->state(fn (Vendor $vendor) => $vendor->contact?->first_available_phone),
+                    ->state(static fn (Vendor $vendor) => $vendor->contact?->first_available_phone),
+                Tables\Columns\TextColumn::make('address.address_string')
+                    ->label('Address')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->listWithLineBreaks(),
+                Tables\Columns\TextColumn::make('payable_balance')
+                    ->label('Payable Balance')
+                    ->getStateUsing(function (Vendor $vendor) {
+                        return $vendor->bills()
+                            ->outstanding()
+                            ->get()
+                            ->sumMoneyInDefaultCurrency('amount_due');
+                    })
+                    ->coloredDescription(function (Vendor $vendor) {
+                        $overdue = $vendor->bills()
+                            ->where('status', BillStatus::Overdue)
+                            ->get()
+                            ->sumMoneyInDefaultCurrency('amount_due');
+
+                        if ($overdue <= 0) {
+                            return null;
+                        }
+
+                        $formattedOverdue = CurrencyConverter::formatCentsToMoney($overdue);
+
+                        return "Overdue: {$formattedOverdue}";
+                    })
+                    ->sortable(query: function (Builder $query, string $direction) {
+                        return $query
+                            ->withSum(['bills' => fn (Builder $query) => $query->outstanding()], 'amount_due')
+                            ->orderBy('bills_sum_amount_due', $direction);
+                    })
+                    ->currency(convert: false)
+                    ->alignEnd(),
+
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\ViewAction::make(),
+                ]),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -211,6 +235,7 @@ class VendorResource extends Resource
         return [
             'index' => Pages\ListVendors::route('/'),
             'create' => Pages\CreateVendor::route('/create'),
+            'view' => Pages\ViewVendor::route('/{record}'),
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
     }

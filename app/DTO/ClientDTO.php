@@ -25,9 +25,31 @@ readonly class ClientDTO
             addressLine1: $address?->address_line_1 ?? '',
             addressLine2: $address?->address_line_2 ?? '',
             city: $address?->city ?? '',
-            state: $address?->state ?? '',
+            state: $address?->state?->name ?? '',
             postalCode: $address?->postal_code ?? '',
-            country: $address?->country ?? '',
+            country: $address?->country?->name ?? '',
         );
+    }
+
+    public function getFormattedAddressHtml(): ?string
+    {
+        if (empty($this->addressLine1)) {
+            return null;
+        }
+
+        $lines = array_filter([
+            $this->addressLine1,
+            $this->addressLine2,
+            implode(', ', array_filter([
+                $this->city,
+                $this->state,
+                $this->postalCode,
+            ])),
+            $this->country,
+        ]);
+
+        return collect($lines)
+            ->map(static fn ($line) => "<p>{$line}</p>")
+            ->join('');
     }
 }

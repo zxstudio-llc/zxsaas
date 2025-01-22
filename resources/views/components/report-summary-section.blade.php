@@ -20,8 +20,8 @@
                         <strong
                             @class([
                                 'text-lg',
-                                'text-green-700 dark:text-green-500' => $isTargetLabel && $isPositive,
-                                'text-danger-700 dark:text-danger-500' => $isTargetLabel && ! $isPositive,
+                                'text-success-700 dark:text-success-400' => $isTargetLabel && $isPositive,
+                                'text-danger-700 dark:text-danger-400' => $isTargetLabel && ! $isPositive,
                             ])
                         >
                             {{ $summary['value'] }}

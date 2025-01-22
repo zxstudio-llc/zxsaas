@@ -100,4 +100,9 @@ enum DayOfMonth: int implements HasLabel
 
         return $date->day(min($this->value, $date->daysInMonth));
     }
+
+    public function mayExceedMonthLength(): bool
+    {
+        return $this->value > 28;
+    }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Enums\Setting;
 
+use App\Enums\Concerns\ParsesEnum;
 use Filament\Support\Contracts\HasLabel;
 
 enum PaymentTerms: string implements HasLabel
 {
+    use ParsesEnum;
+
     case DueUponReceipt = 'due_upon_receipt';
     case Net7 = 'net_7';
     case Net10 = 'net_10';

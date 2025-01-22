@@ -5,7 +5,9 @@ namespace App\Models\Common;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Common\AddressType;
+use App\Models\Accounting\Estimate;
 use App\Models\Accounting\Invoice;
+use App\Models\Accounting\RecurringInvoice;
 use App\Models\Setting\Currency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,8 +74,18 @@ class Client extends Model
             ->where('type', AddressType::Shipping);
     }
 
+    public function estimates(): HasMany
+    {
+        return $this->hasMany(Estimate::class);
+    }
+
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function recurringInvoices(): HasMany
+    {
+        return $this->hasMany(RecurringInvoice::class);
     }
 }

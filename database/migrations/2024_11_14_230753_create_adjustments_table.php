@@ -28,8 +28,6 @@ return new class extends Migration
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
-
-            $table->unique(['company_id', 'account_id']);
         });
     }
 

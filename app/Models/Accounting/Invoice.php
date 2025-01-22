@@ -180,6 +180,13 @@ class Invoice extends Document
         ]);
     }
 
+    public function scopeOverdue(Builder $query): Builder
+    {
+        return $query
+            ->unpaid()
+            ->where('status', InvoiceStatus::Overdue);
+    }
+
     protected function isCurrentlyOverdue(): Attribute
     {
         return Attribute::get(function () {

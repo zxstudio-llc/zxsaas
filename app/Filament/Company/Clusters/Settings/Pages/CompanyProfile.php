@@ -4,9 +4,8 @@ namespace App\Filament\Company\Clusters\Settings\Pages;
 
 use App\Enums\Setting\EntityType;
 use App\Filament\Company\Clusters\Settings;
-use App\Models\Locale\City;
-use App\Models\Locale\Country;
-use App\Models\Locale\State;
+use App\Filament\Forms\Components\AddressFields;
+use App\Filament\Forms\Components\Banner;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Utilities\Localization\Timezone;
 use Filament\Actions\Action;
@@ -14,12 +13,11 @@ use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Group;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use Filament\Pages\Page;
@@ -95,18 +93,7 @@ class CompanyProfile extends Page
             return;
         }
 
-        $countryChanged = $this->record->wasChanged('country');
-        $stateChanged = $this->record->wasChanged('state_id');
-
         $this->getSavedNotification()->send();
-
-        if ($countryChanged || $stateChanged) {
-            if ($countryChanged) {
-                $this->updateTimezone($this->record->country);
-            }
-
-            $this->getTimezoneChangeNotification()->send();
-        }
     }
 
     protected function updateTimezone(string $countryCode): void
@@ -149,6 +136,7 @@ class CompanyProfile extends Page
         return $form
             ->schema([
                 $this->getIdentificationSection(),
+                $this->getNeedsAddressCompletionAlert(),
                 $this->getLocationDetailsSection(),
                 $this->getLegalAndComplianceSection(),
             ])
@@ -167,10 +155,9 @@ class CompanyProfile extends Page
                             ->email()
                             ->localizeLabel()
                             ->maxLength(255)
-                            ->required(),
+                            ->softRequired(),
                         TextInput::make('phone_number')
                             ->tel()
-                            ->nullable()
                             ->localizeLabel(),
                     ])->columns(1),
                 FileUpload::make('logo')
@@ -196,41 +183,27 @@ class CompanyProfile extends Page
             ])->columns();
     }
 
+    protected function getNeedsAddressCompletionAlert(): Component
+    {
+        return Banner::make('needsAddressCompletion')
+            ->warning()
+            ->title('Address Information Incomplete')
+            ->description('Please complete the required address information for proper business operations.')
+            ->visible(fn (CompanyProfileModel $record) => $record->address->isIncomplete())
+            ->columnSpanFull();
+    }
+
     protected function getLocationDetailsSection(): Component
     {
-        return Section::make('Location Details')
+        return Section::make('Address Information')
+            ->relationship('address')
             ->schema([
-                Select::make('country')
-                    ->searchable()
-                    ->localizeLabel()
-                    ->live()
-                    ->options(Country::getAvailableCountryOptions())
-                    ->afterStateUpdated(static function (Set $set) {
-                        $set('state_id', null);
-                        $set('city_id', null);
-                    })
-                    ->required(),
-                Select::make('state_id')
-                    ->localizeLabel('State / Province')
-                    ->searchable()
-                    ->live()
-                    ->options(static fn (Get $get) => State::getStateOptions($get('country')))
-                    ->afterStateUpdated(static fn (Set $set) => $set('city_id', null))
-                    ->nullable(),
-                TextInput::make('address')
-                    ->localizeLabel('Street Address')
-                    ->maxLength(255)
-                    ->nullable(),
-                Select::make('city_id')
-                    ->localizeLabel('City / Town')
-                    ->searchable()
-                    ->options(static fn (Get $get) => City::getCityOptions($get('country'), $get('state_id')))
-                    ->nullable(),
-                TextInput::make('zip_code')
-                    ->localizeLabel('Zip / Postal Code')
-                    ->maxLength(20)
-                    ->nullable(),
-            ])->columns();
+                Hidden::make('type')
+                    ->default('general'),
+                AddressFields::make()
+                    ->softRequired(),
+            ])
+            ->columns(2);
     }
 
     protected function getLegalAndComplianceSection(): Component
@@ -240,11 +213,10 @@ class CompanyProfile extends Page
                 Select::make('entity_type')
                     ->localizeLabel()
                     ->options(EntityType::class)
-                    ->required(),
+                    ->softRequired(),
                 TextInput::make('tax_id')
                     ->localizeLabel('Tax ID')
-                    ->maxLength(50)
-                    ->nullable(),
+                    ->maxLength(50),
             ])->columns();
     }
 

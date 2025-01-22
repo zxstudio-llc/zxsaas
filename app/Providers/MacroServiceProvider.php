@@ -19,7 +19,10 @@ use Filament\Forms\Components\Field;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\ServiceProvider;
 
 class MacroServiceProvider extends ServiceProvider
@@ -113,6 +116,32 @@ class MacroServiceProvider extends ServiceProvider
                 });
         });
 
+        TextColumn::macro('coloredDescription', function (string | Htmlable | Closure | null $description, string $color = 'danger') {
+            $this->description(static function (TextColumn $column) use ($description, $color): Htmlable {
+                $description = $column->evaluate($description);
+
+                return new HtmlString("<span class='text-{$color}-700 dark:text-{$color}-400'>{$description}</span>");
+            });
+
+            return $this;
+        });
+
+        TextColumn::macro('hideOnTabs', function (array $tabs): static {
+            $this->toggleable(isToggledHiddenByDefault: function (HasTable $livewire) use ($tabs) {
+                return in_array($livewire->activeTab, $tabs);
+            });
+
+            return $this;
+        });
+
+        TextColumn::macro('showOnTabs', function (array $tabs): static {
+            $this->toggleable(isToggledHiddenByDefault: function (HasTable $livewire) use ($tabs) {
+                return ! in_array($livewire->activeTab, $tabs);
+            });
+
+            return $this;
+        });
+
         TextColumn::macro('defaultDateFormat', function (): static {
             $localization = Localization::firstOrFail();
 
@@ -172,20 +201,32 @@ class MacroServiceProvider extends ServiceProvider
             return $this;
         });
 
-        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null): static {
+        TextColumn::macro('currencyWithConversion', function (string | Closure | null $currency = null, ?bool $convertFromCents = null): static {
             $currency ??= CurrencyAccessor::getDefaultCurrency();
+            $convertFromCents ??= false;
 
-            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency): ?string {
+            $this->formatStateUsing(static function (TextColumn $column, $state) use ($currency, $convertFromCents): ?string {
                 if (blank($state)) {
                     return null;
                 }
 
                 $currency = $column->evaluate($currency);
+                $showCurrency = $currency !== CurrencyAccessor::getDefaultCurrency();
 
-                return CurrencyConverter::formatToMoney($state, $currency);
+                if ($convertFromCents) {
+                    $balanceInCents = $state;
+                } else {
+                    $balanceInCents = CurrencyConverter::convertToCents($state, $currency);
+                }
+
+                if ($balanceInCents < 0) {
+                    return '(' . CurrencyConverter::formatCentsToMoney(abs($balanceInCents), $currency, $showCurrency) . ')';
+                }
+
+                return CurrencyConverter::formatCentsToMoney($balanceInCents, $currency, $showCurrency);
             });
 
-            $this->description(static function (TextColumn $column, $state) use ($currency): ?string {
+            $this->description(static function (TextColumn $column, $state) use ($currency, $convertFromCents): ?string {
                 if (blank($state)) {
                     return null;
                 }
@@ -197,9 +238,17 @@ class MacroServiceProvider extends ServiceProvider
                     return null;
                 }
 
-                $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                if ($convertFromCents) {
+                    $balanceInCents = $state;
+                } else {
+                    $balanceInCents = CurrencyConverter::convertToCents($state, $oldCurrency);
+                }
 
                 $convertedBalanceInCents = CurrencyConverter::convertBalance($balanceInCents, $oldCurrency, $newCurrency);
+
+                if ($convertedBalanceInCents < 0) {
+                    return '(' . CurrencyConverter::formatCentsToMoney(abs($convertedBalanceInCents), $newCurrency, true) . ')';
+                }
 
                 return CurrencyConverter::formatCentsToMoney($convertedBalanceInCents, $newCurrency, true);
             });

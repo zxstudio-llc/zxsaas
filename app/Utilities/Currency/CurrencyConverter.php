@@ -62,11 +62,17 @@ class CurrencyConverter
         return $money->format();
     }
 
-    public static function formatToMoney(string | float $amount, ?string $currency = null): string
+    public static function formatToMoney(string | float $amount, ?string $currency = null, bool $withCode = false): string
     {
         $currency ??= CurrencyAccessor::getDefaultCurrency();
 
-        return money($amount, $currency, true)->format();
+        $money = money($amount, $currency, true);
+
+        if ($withCode) {
+            return $money->formatWithCode();
+        }
+
+        return $money->format();
     }
 
     public static function convertCentsToFloat(int $amount, ?string $currency = null): float

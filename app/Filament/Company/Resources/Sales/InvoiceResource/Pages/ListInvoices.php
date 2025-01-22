@@ -2,6 +2,7 @@
 
 namespace App\Filament\Company\Resources\Sales\InvoiceResource\Pages;
 
+use App\Concerns\HasTabSpecificColumnToggles;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Filament\Company\Resources\Sales\InvoiceResource;
 use App\Filament\Company\Resources\Sales\InvoiceResource\Widgets;
@@ -23,6 +24,7 @@ use Livewire\Attributes\Url;
 class ListInvoices extends ListRecords
 {
     use ExposesTableToWidgets;
+    use HasTabSpecificColumnToggles;
 
     protected static string $resource = InvoiceResource::class;
 
