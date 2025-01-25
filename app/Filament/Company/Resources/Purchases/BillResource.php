@@ -294,83 +294,85 @@ class BillResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\DeleteAction::make(),
-                    Bill::getReplicateAction(Tables\Actions\ReplicateAction::class),
-                    Tables\Actions\Action::make('recordPayment')
-                        ->label('Record Payment')
-                        ->stickyModalHeader()
-                        ->stickyModalFooter()
-                        ->modalFooterActionsAlignment(Alignment::End)
-                        ->modalWidth(MaxWidth::TwoExtraLarge)
-                        ->icon('heroicon-o-credit-card')
-                        ->visible(function (Bill $record) {
-                            return $record->canRecordPayment();
-                        })
-                        ->mountUsing(function (Bill $record, Form $form) {
-                            $form->fill([
-                                'posted_at' => now(),
-                                'amount' => $record->amount_due,
-                            ]);
-                        })
-                        ->databaseTransaction()
-                        ->successNotificationTitle('Payment Recorded')
-                        ->form([
-                            Forms\Components\DatePicker::make('posted_at')
-                                ->label('Date'),
-                            Forms\Components\TextInput::make('amount')
-                                ->label('Amount')
-                                ->required()
-                                ->money(fn (Bill $record) => $record->currency_code)
-                                ->live(onBlur: true)
-                                ->helperText(function (Bill $record, $state) {
-                                    $billCurrency = $record->currency_code;
-                                    if (! CurrencyConverter::isValidAmount($state, $billCurrency)) {
-                                        return null;
-                                    }
-
-                                    $amountDue = $record->getRawOriginal('amount_due');
-                                    $amount = CurrencyConverter::convertToCents($state, $billCurrency);
-
-                                    if ($amount <= 0) {
-                                        return 'Please enter a valid positive amount';
-                                    }
-
-                                    $newAmountDue = $amountDue - $amount;
-
-                                    return match (true) {
-                                        $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue, $billCurrency),
-                                        $newAmountDue === 0 => 'Bill will be fully paid',
-                                        default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue), $billCurrency),
-                                    };
-                                })
-                                ->rules([
-                                    static fn (Bill $record): Closure => static function (string $attribute, $value, Closure $fail) use ($record) {
-                                        if (! CurrencyConverter::isValidAmount($value, $record->currency_code)) {
-                                            $fail('Please enter a valid amount');
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\ViewAction::make(),
+                        Bill::getReplicateAction(Tables\Actions\ReplicateAction::class),
+                        Tables\Actions\Action::make('recordPayment')
+                            ->label('Record Payment')
+                            ->stickyModalHeader()
+                            ->stickyModalFooter()
+                            ->modalFooterActionsAlignment(Alignment::End)
+                            ->modalWidth(MaxWidth::TwoExtraLarge)
+                            ->icon('heroicon-o-credit-card')
+                            ->visible(function (Bill $record) {
+                                return $record->canRecordPayment();
+                            })
+                            ->mountUsing(function (Bill $record, Form $form) {
+                                $form->fill([
+                                    'posted_at' => now(),
+                                    'amount' => $record->amount_due,
+                                ]);
+                            })
+                            ->databaseTransaction()
+                            ->successNotificationTitle('Payment Recorded')
+                            ->form([
+                                Forms\Components\DatePicker::make('posted_at')
+                                    ->label('Date'),
+                                Forms\Components\TextInput::make('amount')
+                                    ->label('Amount')
+                                    ->required()
+                                    ->money(fn (Bill $record) => $record->currency_code)
+                                    ->live(onBlur: true)
+                                    ->helperText(function (Bill $record, $state) {
+                                        $billCurrency = $record->currency_code;
+                                        if (! CurrencyConverter::isValidAmount($state, $billCurrency)) {
+                                            return null;
                                         }
-                                    },
-                                ]),
-                            Forms\Components\Select::make('payment_method')
-                                ->label('Payment Method')
-                                ->required()
-                                ->options(PaymentMethod::class),
-                            Forms\Components\Select::make('bank_account_id')
-                                ->label('Account')
-                                ->required()
-                                ->options(BankAccount::query()
-                                    ->get()
-                                    ->pluck('account.name', 'id'))
-                                ->searchable(),
-                            Forms\Components\Textarea::make('notes')
-                                ->label('Notes'),
-                        ])
-                        ->action(function (Bill $record, Tables\Actions\Action $action, array $data) {
-                            $record->recordPayment($data);
 
-                            $action->success();
-                        }),
+                                        $amountDue = $record->getRawOriginal('amount_due');
+                                        $amount = CurrencyConverter::convertToCents($state, $billCurrency);
+
+                                        if ($amount <= 0) {
+                                            return 'Please enter a valid positive amount';
+                                        }
+
+                                        $newAmountDue = $amountDue - $amount;
+
+                                        return match (true) {
+                                            $newAmountDue > 0 => 'Amount due after payment will be ' . CurrencyConverter::formatCentsToMoney($newAmountDue, $billCurrency),
+                                            $newAmountDue === 0 => 'Bill will be fully paid',
+                                            default => 'Amount exceeds bill total by ' . CurrencyConverter::formatCentsToMoney(abs($newAmountDue), $billCurrency),
+                                        };
+                                    })
+                                    ->rules([
+                                        static fn (Bill $record): Closure => static function (string $attribute, $value, Closure $fail) use ($record) {
+                                            if (! CurrencyConverter::isValidAmount($value, $record->currency_code)) {
+                                                $fail('Please enter a valid amount');
+                                            }
+                                        },
+                                    ]),
+                                Forms\Components\Select::make('payment_method')
+                                    ->label('Payment Method')
+                                    ->required()
+                                    ->options(PaymentMethod::class),
+                                Forms\Components\Select::make('bank_account_id')
+                                    ->label('Account')
+                                    ->required()
+                                    ->options(BankAccount::query()
+                                        ->get()
+                                        ->pluck('account.name', 'id'))
+                                    ->searchable(),
+                                Forms\Components\Textarea::make('notes')
+                                    ->label('Notes'),
+                            ])
+                            ->action(function (Bill $record, Tables\Actions\Action $action, array $data) {
+                                $record->recordPayment($data);
+
+                                $action->success();
+                            }),
+                    ])->dropdown(false),
+                    Tables\Actions\DeleteAction::make(),
                 ]),
             ])
             ->bulkActions([

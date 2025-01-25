@@ -34,15 +34,19 @@ class ViewEstimate extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit Estimate')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    Estimate::getApproveDraftAction(),
+                    Estimate::getMarkAsSentAction(),
+                    Estimate::getMarkAsAcceptedAction(),
+                    Estimate::getMarkAsDeclinedAction(),
+                    Estimate::getReplicateAction(),
+                    Estimate::getConvertToInvoiceAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                Estimate::getApproveDraftAction(),
-                Estimate::getMarkAsSentAction(),
-                Estimate::getMarkAsAcceptedAction(),
-                Estimate::getMarkAsDeclinedAction(),
-                Estimate::getReplicateAction(),
-                Estimate::getConvertToInvoiceAction(),
             ])
                 ->label('Actions')
                 ->button()

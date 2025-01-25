@@ -389,49 +389,51 @@ class Transactions extends Page implements HasTable
                     ->disabled(fn (Transaction $transaction): bool => $transaction->isUncategorized())
                     ->action(fn (Transaction $transaction) => $transaction->update(['reviewed' => ! $transaction->reviewed])),
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make('updateTransaction')
-                        ->label('Edit Transaction')
-                        ->modalHeading('Edit Transaction')
-                        ->modalWidth(MaxWidth::ThreeExtraLarge)
-                        ->form(fn (Form $form) => $this->transactionForm($form))
-                        ->visible(static fn (Transaction $transaction) => $transaction->type->isStandard()),
-                    Tables\Actions\EditAction::make('updateTransfer')
-                        ->label('Edit Transfer')
-                        ->modalHeading('Edit Transfer')
-                        ->modalWidth(MaxWidth::ThreeExtraLarge)
-                        ->form(fn (Form $form) => $this->transferForm($form))
-                        ->visible(static fn (Transaction $transaction) => $transaction->type->isTransfer()),
-                    Tables\Actions\EditAction::make('updateJournalTransaction')
-                        ->label('Edit Journal Transaction')
-                        ->modalHeading('Journal Entry')
-                        ->modalWidth(MaxWidth::Screen)
-                        ->form(fn (Form $form) => $this->journalTransactionForm($form))
-                        ->afterFormFilled(function (Transaction $transaction) {
-                            $debitAmounts = $transaction->journalEntries->sumDebits()->getAmount();
-                            $creditAmounts = $transaction->journalEntries->sumCredits()->getAmount();
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make('editTransaction')
+                            ->label('Edit Transaction')
+                            ->modalHeading('Edit Transaction')
+                            ->modalWidth(MaxWidth::ThreeExtraLarge)
+                            ->form(fn (Form $form) => $this->transactionForm($form))
+                            ->visible(static fn (Transaction $transaction) => $transaction->type->isStandard()),
+                        Tables\Actions\EditAction::make('editTransfer')
+                            ->label('Edit Transfer')
+                            ->modalHeading('Edit Transfer')
+                            ->modalWidth(MaxWidth::ThreeExtraLarge)
+                            ->form(fn (Form $form) => $this->transferForm($form))
+                            ->visible(static fn (Transaction $transaction) => $transaction->type->isTransfer()),
+                        Tables\Actions\EditAction::make('editJournalTransaction')
+                            ->label('Edit Journal Transaction')
+                            ->modalHeading('Journal Entry')
+                            ->modalWidth(MaxWidth::Screen)
+                            ->form(fn (Form $form) => $this->journalTransactionForm($form))
+                            ->afterFormFilled(function (Transaction $transaction) {
+                                $debitAmounts = $transaction->journalEntries->sumDebits()->getAmount();
+                                $creditAmounts = $transaction->journalEntries->sumCredits()->getAmount();
 
-                            $this->setDebitAmount($debitAmounts);
-                            $this->setCreditAmount($creditAmounts);
-                        })
-                        ->modalSubmitAction(fn (Actions\StaticAction $action) => $action->disabled(! $this->isJournalEntryBalanced()))
-                        ->after(fn (Transaction $transaction) => $transaction->updateAmountIfBalanced())
-                        ->visible(static fn (Transaction $transaction) => $transaction->type->isJournal()),
+                                $this->setDebitAmount($debitAmounts);
+                                $this->setCreditAmount($creditAmounts);
+                            })
+                            ->modalSubmitAction(fn (Actions\StaticAction $action) => $action->disabled(! $this->isJournalEntryBalanced()))
+                            ->after(fn (Transaction $transaction) => $transaction->updateAmountIfBalanced())
+                            ->visible(static fn (Transaction $transaction) => $transaction->type->isJournal()),
+                        Tables\Actions\ReplicateAction::make()
+                            ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
+                            ->modal(false)
+                            ->beforeReplicaSaved(static function (Transaction $replica) {
+                                $replica->description = '(Copy of) ' . $replica->description;
+                            })
+                            ->after(static function (Transaction $original, Transaction $replica) {
+                                $original->journalEntries->each(function (JournalEntry $entry) use ($replica) {
+                                    $entry->replicate([
+                                        'transaction_id',
+                                    ])->fill([
+                                        'transaction_id' => $replica->id,
+                                    ])->save();
+                                });
+                            }),
+                    ])->dropdown(false),
                     Tables\Actions\DeleteAction::make(),
-                    Tables\Actions\ReplicateAction::make()
-                        ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
-                        ->modal(false)
-                        ->beforeReplicaSaved(static function (Transaction $replica) {
-                            $replica->description = '(Copy of) ' . $replica->description;
-                        })
-                        ->after(static function (Transaction $original, Transaction $replica) {
-                            $original->journalEntries->each(function (JournalEntry $entry) use ($replica) {
-                                $entry->replicate([
-                                    'transaction_id',
-                                ])->fill([
-                                    'transaction_id' => $replica->id,
-                                ])->save();
-                            });
-                        }),
                 ]),
             ])
             ->bulkActions([

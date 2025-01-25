@@ -325,10 +325,12 @@ class RecurringInvoiceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\ViewAction::make(),
+                        RecurringInvoice::getUpdateScheduleAction(Tables\Actions\Action::class),
+                    ])->dropdown(false),
                     Tables\Actions\DeleteAction::make(),
-                    RecurringInvoice::getUpdateScheduleAction(Tables\Actions\Action::class),
                 ]),
             ])
             ->bulkActions([

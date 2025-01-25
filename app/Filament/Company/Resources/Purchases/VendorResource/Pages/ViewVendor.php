@@ -2,12 +2,19 @@
 
 namespace App\Filament\Company\Resources\Purchases\VendorResource\Pages;
 
+use App\Filament\Company\Resources\Purchases\BillResource\Pages\CreateBill;
 use App\Filament\Company\Resources\Purchases\VendorResource;
 use App\Filament\Company\Resources\Purchases\VendorResource\RelationManagers;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Support\Enums\IconPosition;
+use Filament\Support\Enums\IconSize;
 
 class ViewVendor extends ViewRecord
 {
@@ -23,6 +30,31 @@ class ViewVendor extends ViewRecord
     public function getTitle(): string
     {
         return $this->record->name;
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            EditAction::make()
+                ->label('Edit Vendor')
+                ->outlined(),
+            ActionGroup::make([
+                ActionGroup::make([
+                    Action::make('newBill')
+                        ->label('New Bill')
+                        ->icon('heroicon-m-document-plus')
+                        ->url(CreateBill::getUrl(['vendor' => $this->record->getKey()])),
+                ])->dropdown(false),
+                DeleteAction::make(),
+            ])
+                ->label('Actions')
+                ->button()
+                ->outlined()
+                ->dropdownPlacement('bottom-end')
+                ->icon('heroicon-c-chevron-down')
+                ->iconSize(IconSize::Small)
+                ->iconPosition(IconPosition::After),
+        ];
     }
 
     protected function getHeaderWidgets(): array

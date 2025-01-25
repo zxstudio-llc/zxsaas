@@ -263,9 +263,9 @@ class ReportService
             return [
                 'type' => 'transaction',
                 'action' => match ($transaction->type) {
-                    TransactionType::Journal => 'updateJournalTransaction',
-                    TransactionType::Transfer => 'updateTransfer',
-                    default => 'updateTransaction',
+                    TransactionType::Journal => 'editJournalTransaction',
+                    TransactionType::Transfer => 'editTransfer',
+                    default => 'editTransaction',
                 },
                 'id' => $transaction->id,
             ];

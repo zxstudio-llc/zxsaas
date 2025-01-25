@@ -212,8 +212,11 @@ class VendorResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\ViewAction::make(),
+                    ])->dropdown(false),
+                    Tables\Actions\DeleteAction::make(),
                 ]),
             ])
             ->bulkActions([

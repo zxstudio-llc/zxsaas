@@ -383,7 +383,7 @@ class RecurringInvoice extends Document
     {
         return $action::make('updateSchedule')
             ->label(fn (self $record) => $record->hasSchedule() ? 'Update Schedule' : 'Set Schedule')
-            ->icon('heroicon-o-calendar-date-range')
+            ->icon('heroicon-m-calendar-date-range')
             ->slideOver()
             ->successNotificationTitle('Schedule Updated')
             ->mountUsing(function (self $record, Form $form) {

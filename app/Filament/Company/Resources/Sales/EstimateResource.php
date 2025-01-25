@@ -329,15 +329,17 @@ class EstimateResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\ViewAction::make(),
+                        Estimate::getReplicateAction(Tables\Actions\ReplicateAction::class),
+                        Estimate::getApproveDraftAction(Tables\Actions\Action::class),
+                        Estimate::getMarkAsSentAction(Tables\Actions\Action::class),
+                        Estimate::getMarkAsAcceptedAction(Tables\Actions\Action::class),
+                        Estimate::getMarkAsDeclinedAction(Tables\Actions\Action::class),
+                        Estimate::getConvertToInvoiceAction(Tables\Actions\Action::class),
+                    ])->dropdown(false),
                     Tables\Actions\DeleteAction::make(),
-                    Estimate::getReplicateAction(Tables\Actions\ReplicateAction::class),
-                    Estimate::getApproveDraftAction(Tables\Actions\Action::class),
-                    Estimate::getMarkAsSentAction(Tables\Actions\Action::class),
-                    Estimate::getMarkAsAcceptedAction(Tables\Actions\Action::class),
-                    Estimate::getMarkAsDeclinedAction(Tables\Actions\Action::class),
-                    Estimate::getConvertToInvoiceAction(Tables\Actions\Action::class),
                 ]),
             ])
             ->bulkActions([

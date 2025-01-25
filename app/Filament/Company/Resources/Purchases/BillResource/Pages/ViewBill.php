@@ -25,10 +25,14 @@ class ViewBill extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit Bill')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    Bill::getReplicateAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                Bill::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()

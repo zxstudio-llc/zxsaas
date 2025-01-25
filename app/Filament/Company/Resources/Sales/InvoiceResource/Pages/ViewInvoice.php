@@ -34,12 +34,16 @@ class ViewInvoice extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit Invoice')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    Invoice::getApproveDraftAction(),
+                    Invoice::getMarkAsSentAction(),
+                    Invoice::getReplicateAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                Invoice::getApproveDraftAction(),
-                Invoice::getMarkAsSentAction(),
-                Invoice::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()

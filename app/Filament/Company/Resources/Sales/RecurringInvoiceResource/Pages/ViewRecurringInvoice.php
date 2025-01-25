@@ -34,11 +34,15 @@ class ViewRecurringInvoice extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit Recurring Invoice')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    RecurringInvoice::getUpdateScheduleAction(),
+                    RecurringInvoice::getApproveDraftAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                RecurringInvoice::getUpdateScheduleAction(),
-                RecurringInvoice::getApproveDraftAction(),
             ])
                 ->label('Actions')
                 ->button()

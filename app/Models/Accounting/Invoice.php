@@ -465,7 +465,7 @@ class Invoice extends Document
     {
         return $action::make('approveDraft')
             ->label('Approve')
-            ->icon('heroicon-o-check-circle')
+            ->icon('heroicon-m-check-circle')
             ->visible(function (self $record) {
                 return $record->canBeApproved();
             })
@@ -482,7 +482,7 @@ class Invoice extends Document
     {
         return $action::make('markAsSent')
             ->label('Mark as Sent')
-            ->icon('heroicon-o-paper-airplane')
+            ->icon('heroicon-m-paper-airplane')
             ->visible(static function (self $record) {
                 return $record->canBeMarkedAsSent();
             })

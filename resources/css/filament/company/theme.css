@@ -14,6 +14,10 @@
     @apply bg-platinum;
 }
 
+.fi-dropdown-panel {
+    @apply divide-gray-200/80;
+}
+
 .fi-badge {
     display: inline-flex;
 }

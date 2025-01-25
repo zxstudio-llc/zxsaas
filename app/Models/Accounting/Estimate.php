@@ -263,7 +263,7 @@ class Estimate extends Document
     {
         return $action::make('approveDraft')
             ->label('Approve')
-            ->icon('heroicon-o-check-circle')
+            ->icon('heroicon-m-check-circle')
             ->visible(function (self $record) {
                 return $record->canBeApproved();
             })
@@ -280,7 +280,7 @@ class Estimate extends Document
     {
         return $action::make('markAsSent')
             ->label('Mark as Sent')
-            ->icon('heroicon-o-paper-airplane')
+            ->icon('heroicon-m-paper-airplane')
             ->visible(static function (self $record) {
                 return $record->canBeMarkedAsSent();
             })
@@ -351,7 +351,7 @@ class Estimate extends Document
     {
         return $action::make('markAsAccepted')
             ->label('Mark as Accepted')
-            ->icon('heroicon-o-check-badge')
+            ->icon('heroicon-m-check-badge')
             ->visible(static function (self $record) {
                 return $record->canBeMarkedAsAccepted();
             })
@@ -378,7 +378,7 @@ class Estimate extends Document
     {
         return $action::make('markAsDeclined')
             ->label('Mark as Declined')
-            ->icon('heroicon-o-x-circle')
+            ->icon('heroicon-m-x-circle')
             ->visible(static function (self $record) {
                 return $record->canBeMarkedAsDeclined();
             })
@@ -407,7 +407,7 @@ class Estimate extends Document
     {
         return $action::make('convertToInvoice')
             ->label('Convert to Invoice')
-            ->icon('heroicon-o-arrow-right-on-rectangle')
+            ->icon('heroicon-m-arrow-right-on-rectangle')
             ->visible(static function (self $record) {
                 return $record->canBeConverted();
             })
