@@ -220,16 +220,16 @@
         },
         {
             "name": "andrewdwallo/transmatic",
-            "version": "v1.1.0",
+            "version": "v1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/andrewdwallo/transmatic.git",
-                "reference": "fabd11ba0b9ed2813cd60556f7e8d3f0d236c329"
+                "reference": "30f5384e7e3b693beaf528b01650570a916daf47"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/andrewdwallo/transmatic/zipball/fabd11ba0b9ed2813cd60556f7e8d3f0d236c329",
-                "reference": "fabd11ba0b9ed2813cd60556f7e8d3f0d236c329",
+                "url": "https://api.github.com/repos/andrewdwallo/transmatic/zipball/30f5384e7e3b693beaf528b01650570a916daf47",
+                "reference": "30f5384e7e3b693beaf528b01650570a916daf47",
                 "shasum": ""
             },
             "require": {
@@ -296,9 +296,9 @@
             ],
             "support": {
                 "issues": "https://github.com/andrewdwallo/transmatic/issues",
-                "source": "https://github.com/andrewdwallo/transmatic/tree/v1.1.0"
+                "source": "https://github.com/andrewdwallo/transmatic/tree/v1.1.1"
             },
-            "time": "2024-03-22T21:31:50+00:00"
+            "time": "2025-01-26T05:48:43+00:00"
         },
         {
             "name": "anourvalar/eloquent-serialize",
