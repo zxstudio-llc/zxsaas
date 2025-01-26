@@ -39,7 +39,7 @@ class ViewRecurringInvoice extends ViewRecord
                 ->outlined(),
             Actions\ActionGroup::make([
                 Actions\ActionGroup::make([
-                    RecurringInvoice::getUpdateScheduleAction(),
+                    RecurringInvoice::getManageScheduleAction(),
                     RecurringInvoice::getApproveDraftAction(),
                 ])->dropdown(false),
                 Actions\DeleteAction::make(),
@@ -65,7 +65,7 @@ class ViewRecurringInvoice extends ViewRecord
                     ->visible(fn (RecurringInvoice $record) => ! $record->hasValidStartDate())
                     ->columnSpanFull()
                     ->actions([
-                        RecurringInvoice::getUpdateScheduleAction(Action::class)
+                        RecurringInvoice::getManageScheduleAction(Action::class)
                             ->outlined(),
                     ]),
                 BannerEntry::make('readyToApprove')

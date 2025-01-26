@@ -328,7 +328,7 @@ class RecurringInvoiceResource extends Resource
                     Tables\Actions\ActionGroup::make([
                         Tables\Actions\EditAction::make(),
                         Tables\Actions\ViewAction::make(),
-                        RecurringInvoice::getUpdateScheduleAction(Tables\Actions\Action::class),
+                        RecurringInvoice::getManageScheduleAction(Tables\Actions\Action::class),
                     ])->dropdown(false),
                     Tables\Actions\DeleteAction::make(),
                 ]),

@@ -379,13 +379,13 @@ class RecurringInvoice extends Document
         };
     }
 
-    public static function getUpdateScheduleAction(string $action = Action::class): MountableAction
+    public static function getManageScheduleAction(string $action = Action::class): MountableAction
     {
-        return $action::make('updateSchedule')
-            ->label(fn (self $record) => $record->hasSchedule() ? 'Update schedule' : 'Set schedule')
+        return $action::make('manageSchedule')
+            ->label(fn (self $record) => $record->hasSchedule() ? 'Edit schedule' : 'Set schedule')
             ->icon('heroicon-m-calendar-date-range')
             ->slideOver()
-            ->successNotificationTitle('Schedule updated')
+            ->successNotificationTitle('Schedule saved')
             ->mountUsing(function (self $record, Form $form) {
                 $data = $record->attributesToArray();
 
