@@ -163,7 +163,7 @@ class AccountChart extends Page
     protected function getArchiveFormComponent(): Component
     {
         return Checkbox::make('archived')
-            ->label('Archive Account')
+            ->label('Archive account')
             ->helperText('Archived accounts will not be available for selection in transactions.')
             ->hidden(static function (string $operation): bool {
                 return $operation === 'create';
@@ -186,7 +186,7 @@ class AccountChart extends Page
         return [
             CreateAction::make()
                 ->button()
-                ->label('Add New Account')
+                ->label('Add new account')
                 ->model(Account::class)
                 ->form(fn (Form $form) => $this->getChartForm($form, false)->operation('create')),
         ];

@@ -123,12 +123,12 @@ class InvoiceResource extends Resource
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('invoice_number')
-                                    ->label('Invoice Number')
+                                    ->label('Invoice number')
                                     ->default(fn () => Invoice::getNextDocumentNumber()),
                                 Forms\Components\TextInput::make('order_number')
                                     ->label('P.O/S.O Number'),
                                 Forms\Components\DatePicker::make('date')
-                                    ->label('Invoice Date')
+                                    ->label('Invoice date')
                                     ->live()
                                     ->default(now())
                                     ->disabled(function (?Invoice $record) {
@@ -143,7 +143,7 @@ class InvoiceResource extends Resource
                                         }
                                     }),
                                 Forms\Components\DatePicker::make('due_date')
-                                    ->label('Payment Due')
+                                    ->label('Payment due')
                                     ->default(function () use ($company) {
                                         return now()->addDays($company->defaultInvoice->payment_terms->getDays());
                                     })
@@ -151,7 +151,7 @@ class InvoiceResource extends Resource
                                         return $get('date') ?? now();
                                     }),
                                 Forms\Components\Select::make('discount_method')
-                                    ->label('Discount Method')
+                                    ->label('Discount method')
                                     ->options(DocumentDiscountMethod::class)
                                     ->selectablePlaceholder(false)
                                     ->default(DocumentDiscountMethod::PerLineItem)
@@ -342,13 +342,13 @@ class InvoiceResource extends Resource
                     ->toggleable()
                     ->alignEnd(),
                 Tables\Columns\TextColumn::make('amount_paid')
-                    ->label('Amount Paid')
+                    ->label('Amount paid')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
                     ->alignEnd()
                     ->showOnTabs(['unpaid']),
                 Tables\Columns\TextColumn::make('amount_due')
-                    ->label('Amount Due')
+                    ->label('Amount due')
                     ->currencyWithConversion(static fn (Invoice $record) => $record->currency_code)
                     ->sortable()
                     ->alignEnd()
@@ -363,13 +363,13 @@ class InvoiceResource extends Resource
                     ->options(InvoiceStatus::class)
                     ->native(false),
                 Tables\Filters\TernaryFilter::make('has_payments')
-                    ->label('Has Payments')
+                    ->label('Has payments')
                     ->queries(
                         true: fn (Builder $query) => $query->whereHas('payments'),
                         false: fn (Builder $query) => $query->whereDoesntHave('payments'),
                     ),
                 Tables\Filters\SelectFilter::make('source_type')
-                    ->label('Source Type')
+                    ->label('Source type')
                     ->options([
                         DocumentType::Estimate->value => DocumentType::Estimate->getLabel(),
                         DocumentType::RecurringInvoice->value => DocumentType::RecurringInvoice->getLabel(),
@@ -385,12 +385,12 @@ class InvoiceResource extends Resource
                         };
                     }),
                 DateRangeFilter::make('date')
-                    ->fromLabel('From Date')
-                    ->untilLabel('To Date')
+                    ->fromLabel('From date')
+                    ->untilLabel('To date')
                     ->indicatorLabel('Date'),
                 DateRangeFilter::make('due_date')
-                    ->fromLabel('From Due Date')
-                    ->untilLabel('To Due Date')
+                    ->fromLabel('From due date')
+                    ->untilLabel('To due date')
                     ->indicatorLabel('Due'),
             ])
             ->actions([
@@ -420,7 +420,7 @@ class InvoiceResource extends Resource
                                 ]);
                             })
                             ->databaseTransaction()
-                            ->successNotificationTitle('Payment Recorded')
+                            ->successNotificationTitle('Payment recorded')
                             ->form([
                                 Forms\Components\DatePicker::make('posted_at')
                                     ->label('Date'),
@@ -463,7 +463,7 @@ class InvoiceResource extends Resource
                                         },
                                     ]),
                                 Forms\Components\Select::make('payment_method')
-                                    ->label('Payment Method')
+                                    ->label('Payment method')
                                     ->required()
                                     ->options(PaymentMethod::class),
                                 Forms\Components\Select::make('bank_account_id')
@@ -492,8 +492,8 @@ class InvoiceResource extends Resource
                         ->label('Replicate')
                         ->modalWidth(MaxWidth::Large)
                         ->modalDescription('Replicating invoices will also replicate their line items. Are you sure you want to proceed?')
-                        ->successNotificationTitle('Invoices Replicated Successfully')
-                        ->failureNotificationTitle('Failed to Replicate Invoices')
+                        ->successNotificationTitle('Invoices replicated successfully')
+                        ->failureNotificationTitle('Failed to replicate invoices')
                         ->databaseTransaction()
                         ->deselectRecordsAfterCompletion()
                         ->excludeAttributes([
@@ -531,14 +531,14 @@ class InvoiceResource extends Resource
                         ->label('Approve')
                         ->icon('heroicon-o-check-circle')
                         ->databaseTransaction()
-                        ->successNotificationTitle('Invoices Approved')
+                        ->successNotificationTitle('Invoices approved')
                         ->failureNotificationTitle('Failed to Approve Invoices')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Invoice $record) => ! $record->canBeApproved());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Approval Failed')
+                                    ->title('Approval failed')
                                     ->body('Only draft invoices can be approved. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -555,17 +555,17 @@ class InvoiceResource extends Resource
                             $action->success();
                         }),
                     Tables\Actions\BulkAction::make('markAsSent')
-                        ->label('Mark as Sent')
+                        ->label('Mark as sent')
                         ->icon('heroicon-o-paper-airplane')
                         ->databaseTransaction()
-                        ->successNotificationTitle('Invoices Sent')
+                        ->successNotificationTitle('Invoices sent')
                         ->failureNotificationTitle('Failed to Mark Invoices as Sent')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Invoice $record) => ! $record->canBeMarkedAsSent());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Sending Failed')
+                                    ->title('Sending failed')
                                     ->body('Only unsent invoices can be marked as sent. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -582,14 +582,14 @@ class InvoiceResource extends Resource
                             $action->success();
                         }),
                     Tables\Actions\BulkAction::make('recordPayments')
-                        ->label('Record Payments')
+                        ->label('Record payments')
                         ->icon('heroicon-o-credit-card')
                         ->stickyModalHeader()
                         ->stickyModalFooter()
                         ->modalFooterActionsAlignment(Alignment::End)
                         ->modalWidth(MaxWidth::TwoExtraLarge)
                         ->databaseTransaction()
-                        ->successNotificationTitle('Payments Recorded')
+                        ->successNotificationTitle('Payments recorded')
                         ->failureNotificationTitle('Failed to Record Payments')
                         ->deselectRecordsAfterCompletion()
                         ->beforeFormFilled(function (Collection $records, Tables\Actions\BulkAction $action) {
@@ -597,7 +597,7 @@ class InvoiceResource extends Resource
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Payment Recording Failed')
+                                    ->title('Payment recording failed')
                                     ->body('Invoices that are either draft, paid, overpaid, voided, or are in a foreign currency cannot be processed through bulk payments. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -629,7 +629,7 @@ class InvoiceResource extends Resource
                                     },
                                 ]),
                             Forms\Components\Select::make('payment_method')
-                                ->label('Payment Method')
+                                ->label('Payment method')
                                 ->required()
                                 ->options(PaymentMethod::class),
                             Forms\Components\Select::make('bank_account_id')
@@ -650,7 +650,7 @@ class InvoiceResource extends Resource
                                 $formattedTotalAmountDue = CurrencyConverter::formatCentsToMoney($totalAmountDue);
 
                                 Notification::make()
-                                    ->title('Excess Payment Amount')
+                                    ->title('Excess payment amount')
                                     ->body("The payment amount exceeds the total amount due of {$formattedTotalAmountDue}. Please adjust the payment amount and try again.")
                                     ->persistent()
                                     ->warning()

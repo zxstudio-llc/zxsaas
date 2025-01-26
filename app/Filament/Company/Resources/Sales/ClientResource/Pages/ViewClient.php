@@ -41,20 +41,20 @@ class ViewClient extends ViewRecord
     {
         return [
             EditAction::make()
-                ->label('Edit Client')
+                ->label('Edit client')
                 ->outlined(),
             ActionGroup::make([
                 ActionGroup::make([
                     Action::make('newInvoice')
-                        ->label('New Invoice')
+                        ->label('New invoice')
                         ->icon('heroicon-m-document-plus')
                         ->url(CreateInvoice::getUrl(['client' => $this->record->getKey()])),
                     Action::make('newEstimate')
-                        ->label('New Estimate')
+                        ->label('New estimate')
                         ->icon('heroicon-m-document-duplicate')
                         ->url(CreateEstimate::getUrl(['client' => $this->record->getKey()])),
                     Action::make('newRecurringInvoice')
-                        ->label('New Recurring Invoice')
+                        ->label('New recurring invoice')
                         ->icon('heroicon-m-arrow-path')
                         ->url(CreateRecurringInvoice::getUrl(['client' => $this->record->getKey()])),
                 ])->dropdown(false),
@@ -85,11 +85,11 @@ class ViewClient extends ViewRecord
                     ->columns()
                     ->schema([
                         TextEntry::make('primaryContact.full_name')
-                            ->label('Primary Contact'),
+                            ->label('Primary contact'),
                         TextEntry::make('primaryContact.email')
-                            ->label('Primary Email'),
+                            ->label('Primary email'),
                         TextEntry::make('primaryContact.first_available_phone')
-                            ->label('Primary Phone'),
+                            ->label('Primary phone'),
                         TextEntry::make('website')
                             ->label('Website')
                             ->url(static fn ($state) => $state, true),
@@ -98,13 +98,13 @@ class ViewClient extends ViewRecord
                     ->columns()
                     ->schema([
                         TextEntry::make('billingAddress.address_string')
-                            ->label('Billing Address')
+                            ->label('Billing address')
                             ->listWithLineBreaks(),
                         TextEntry::make('shippingAddress.address_string')
-                            ->label('Shipping Address')
+                            ->label('Shipping address')
                             ->listWithLineBreaks(),
                         TextEntry::make('notes')
-                            ->label('Delivery Instructions'),
+                            ->label('Delivery instructions'),
                     ]),
             ]);
     }

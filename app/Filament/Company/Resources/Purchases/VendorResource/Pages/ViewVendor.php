@@ -36,12 +36,12 @@ class ViewVendor extends ViewRecord
     {
         return [
             EditAction::make()
-                ->label('Edit Vendor')
+                ->label('Edit vendor')
                 ->outlined(),
             ActionGroup::make([
                 ActionGroup::make([
                     Action::make('newBill')
-                        ->label('New Bill')
+                        ->label('New bill')
                         ->icon('heroicon-m-document-plus')
                         ->url(CreateBill::getUrl(['vendor' => $this->record->getKey()])),
                 ])->dropdown(false),
@@ -76,7 +76,7 @@ class ViewVendor extends ViewRecord
                         TextEntry::make('contact.email')
                             ->label('Email'),
                         TextEntry::make('contact.first_available_phone')
-                            ->label('Primary Phone'),
+                            ->label('Primary phone'),
                         TextEntry::make('website')
                             ->label('Website')
                             ->url(static fn ($state) => $state, true),
@@ -85,7 +85,7 @@ class ViewVendor extends ViewRecord
                     ->columns()
                     ->schema([
                         TextEntry::make('address.address_string')
-                            ->label('Billing Address')
+                            ->label('Billing address')
                             ->listWithLineBreaks(),
                         TextEntry::make('notes'),
                     ]),

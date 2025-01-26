@@ -55,11 +55,11 @@ class CreateCompany extends FilamentCreateCompany
                     ->maxLength(255)
                     ->softRequired(),
                 TextInput::make('profile.email')
-                    ->label('Company Email')
+                    ->label('Company email')
                     ->email()
                     ->softRequired(),
                 Select::make('profile.entity_type')
-                    ->label('Entity Type')
+                    ->label('Entity type')
                     ->options(EntityType::class)
                     ->softRequired(),
                 Select::make('profile.country')

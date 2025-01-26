@@ -35,7 +35,7 @@ class ViewEstimate extends ViewRecord
     {
         return [
             Actions\EditAction::make()
-                ->label('Edit Estimate')
+                ->label('Edit estimate')
                 ->outlined(),
             Actions\ActionGroup::make([
                 Actions\ActionGroup::make([
@@ -77,18 +77,18 @@ class ViewEstimate extends ViewRecord
                                     ->weight(FontWeight::SemiBold)
                                     ->url(static fn (Estimate $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                                 TextEntry::make('expiration_date')
-                                    ->label('Expiration Date')
+                                    ->label('Expiration date')
                                     ->asRelativeDay(),
                                 TextEntry::make('approved_at')
-                                    ->label('Approved At')
+                                    ->label('Approved at')
                                     ->placeholder('Not Approved')
                                     ->date(),
                                 TextEntry::make('last_sent_at')
-                                    ->label('Last Sent')
+                                    ->label('Last sent')
                                     ->placeholder('Never')
                                     ->date(),
                                 TextEntry::make('accepted_at')
-                                    ->label('Accepted At')
+                                    ->label('Accepted at')
                                     ->placeholder('Not Accepted')
                                     ->date(),
                             ])->columnSpan(1),

@@ -16,11 +16,11 @@ class AddressFields extends Grid
 
         $this->schema([
             TextInput::make('address_line_1')
-                ->label('Address Line 1')
+                ->label('Address line 1')
                 ->required()
                 ->maxLength(255),
             TextInput::make('address_line_2')
-                ->label('Address Line 2')
+                ->label('Address line 2')
                 ->maxLength(255),
             CountrySelect::make('country_code')
                 ->clearStateField()
@@ -31,7 +31,7 @@ class AddressFields extends Grid
                 ->required()
                 ->maxLength(255),
             TextInput::make('postal_code')
-                ->label('Postal Code / Zip Code')
+                ->label('Postal code')
                 ->maxLength(255),
         ]);
     }

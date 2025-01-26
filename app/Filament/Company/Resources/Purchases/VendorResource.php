@@ -34,11 +34,11 @@ class VendorResource extends Resource
                             ->columns(2)
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Vendor Name')
+                                    ->label('Vendor name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\Radio::make('type')
-                                    ->label('Vendor Type')
+                                    ->label('Vendor type')
                                     ->required()
                                     ->live()
                                     ->options(VendorType::class)
@@ -48,13 +48,13 @@ class VendorResource extends Resource
                                     ->nullable()
                                     ->visible(static fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Regular),
                                 Forms\Components\Select::make('contractor_type')
-                                    ->label('Contractor Type')
+                                    ->label('Contractor type')
                                     ->required()
                                     ->live()
                                     ->visible(static fn (Forms\Get $get) => VendorType::parse($get('type')) === VendorType::Contractor)
                                     ->options(ContractorType::class),
                                 Forms\Components\TextInput::make('ssn')
-                                    ->label('Social Security Number')
+                                    ->label('Social security number')
                                     ->required()
                                     ->live()
                                     ->mask('999-99-9999')
@@ -63,7 +63,7 @@ class VendorResource extends Resource
                                     ->visible(static fn (Forms\Get $get) => ContractorType::parse($get('contractor_type')) === ContractorType::Individual)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('ein')
-                                    ->label('Employer Identification Number')
+                                    ->label('Employer identification number')
                                     ->required()
                                     ->live()
                                     ->mask('99-9999999')
@@ -85,11 +85,11 @@ class VendorResource extends Resource
                                 Forms\Components\Hidden::make('is_primary')
                                     ->default(true),
                                 Forms\Components\TextInput::make('first_name')
-                                    ->label('First Name')
+                                    ->label('First name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('last_name')
-                                    ->label('Last Name')
+                                    ->label('Last name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('email')
@@ -123,7 +123,7 @@ class VendorResource extends Resource
                                         Forms\Components\Builder\Block::make('toll_free')
                                             ->schema([
                                                 Forms\Components\TextInput::make('number')
-                                                    ->label('Toll Free')
+                                                    ->label('Toll free')
                                                     ->required()
                                                     ->maxLength(15),
                                             ])->maxItems(1),
@@ -177,7 +177,7 @@ class VendorResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->listWithLineBreaks(),
                 Tables\Columns\TextColumn::make('payable_balance')
-                    ->label('Payable Balance')
+                    ->label('Payable balance')
                     ->getStateUsing(function (Vendor $vendor) {
                         return $vendor->bills()
                             ->outstanding()

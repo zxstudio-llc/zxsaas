@@ -243,7 +243,7 @@ abstract class BaseReportPage extends Page
     protected function getDateRangeFormComponent(): DateRangeSelect
     {
         return DateRangeSelect::make('dateRange')
-            ->label('Date Range')
+            ->label('Date range')
             ->selectablePlaceholder(false)
             ->startDateField('startDate')
             ->endDateField('endDate');
@@ -252,7 +252,7 @@ abstract class BaseReportPage extends Page
     protected function getStartDateFormComponent(): DatePicker
     {
         return DatePicker::make('startDate')
-            ->label('Start Date')
+            ->label('Start date')
             ->live()
             ->afterStateUpdated(static function ($state, Set $set) {
                 $set('dateRange', 'Custom');
@@ -262,7 +262,7 @@ abstract class BaseReportPage extends Page
     protected function getEndDateFormComponent(): DatePicker
     {
         return DatePicker::make('endDate')
-            ->label('End Date')
+            ->label('End date')
             ->live()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');
@@ -272,7 +272,7 @@ abstract class BaseReportPage extends Page
     protected function getAsOfDateFormComponent(): DatePicker
     {
         return DatePicker::make('asOfDate')
-            ->label('As of Date')
+            ->label('As of date')
             ->live()
             ->afterStateUpdated(static function (Set $set) {
                 $set('dateRange', 'Custom');

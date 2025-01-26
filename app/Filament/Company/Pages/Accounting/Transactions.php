@@ -95,10 +95,10 @@ class Transactions extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
-            $this->buildTransactionAction('addIncome', 'Add Income', TransactionType::Deposit),
-            $this->buildTransactionAction('addExpense', 'Add Expense', TransactionType::Withdrawal),
+            $this->buildTransactionAction('addIncome', 'Add income', TransactionType::Deposit),
+            $this->buildTransactionAction('addExpense', 'Add expense', TransactionType::Withdrawal),
             Actions\CreateAction::make('addTransfer')
-                ->label('Add Transfer')
+                ->label('Add transfer')
                 ->modalHeading('Add Transfer')
                 ->modalWidth(MaxWidth::ThreeExtraLarge)
                 ->model(static::getModel())
@@ -108,7 +108,7 @@ class Transactions extends Page implements HasTable
                 ->outlined(),
             Actions\ActionGroup::make([
                 Actions\CreateAction::make('addJournalTransaction')
-                    ->label('Add Journal Transaction')
+                    ->label('Add journal transaction')
                     ->fillForm(fn (): array => $this->getFormDefaultsForType(TransactionType::Journal))
                     ->modalWidth(MaxWidth::Screen)
                     ->model(static::getModel())
@@ -120,7 +120,7 @@ class Transactions extends Page implements HasTable
                     ->afterFormFilled(fn () => $this->resetJournalEntryAmounts())
                     ->after(fn (Transaction $transaction) => $transaction->updateAmountIfBalanced()),
                 Actions\Action::make('connectBank')
-                    ->label('Connect Your Bank')
+                    ->label('Connect your bank')
                     ->url(ConnectedAccount::getUrl()),
             ])
                 ->label('More')
@@ -144,7 +144,7 @@ class Transactions extends Page implements HasTable
                 Forms\Components\TextInput::make('description')
                     ->label('Description'),
                 Forms\Components\Select::make('bank_account_id')
-                    ->label('From Account')
+                    ->label('From account')
                     ->options(fn (Get $get, ?Transaction $transaction) => $this->getBankAccountOptions(excludedAccountId: $get('account_id'), currentBankAccountId: $transaction?->bank_account_id))
                     ->live()
                     ->searchable()
@@ -173,7 +173,7 @@ class Transactions extends Page implements HasTable
                     ->money(static fn (Forms\Get $get) => BankAccount::find($get('bank_account_id'))?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency())
                     ->required(),
                 Forms\Components\Select::make('account_id')
-                    ->label('To Account')
+                    ->label('To account')
                     ->live()
                     ->options(fn (Get $get, ?Transaction $transaction) => $this->getBankAccountAccountOptions(excludedBankAccountId: $get('bank_account_id'), currentAccountId: $transaction?->account_id))
                     ->searchable()
@@ -328,7 +328,7 @@ class Transactions extends Page implements HasTable
                     ->native(false)
                     ->options(TransactionType::class),
                 $this->buildDateRangeFilter('posted_at', 'Posted', true),
-                $this->buildDateRangeFilter('updated_at', 'Last Modified'),
+                $this->buildDateRangeFilter('updated_at', 'Last modified'),
             ])
             ->filtersFormSchema(fn (array $filters): array => [
                 Grid::make()
@@ -361,7 +361,7 @@ class Transactions extends Page implements HasTable
                                 ->close()
                                 ->color('gray'),
                             Tables\Actions\Action::make('resetFilters')
-                                ->label(__('Clear All'))
+                                ->label(__('Clear all'))
                                 ->color('primary')
                                 ->link()
                                 ->extraAttributes([
@@ -373,7 +373,7 @@ class Transactions extends Page implements HasTable
             )
             ->actions([
                 Tables\Actions\Action::make('markAsReviewed')
-                    ->label('Mark as Reviewed')
+                    ->label('Mark as reviewed')
                     ->view('filament.company.components.tables.actions.mark-as-reviewed')
                     ->icon(static fn (Transaction $transaction) => $transaction->reviewed ? 'heroicon-s-check-circle' : 'heroicon-o-check-circle')
                     ->color(static fn (Transaction $transaction, Tables\Actions\Action $action) => match (static::determineTransactionState($transaction, $action)) {
@@ -383,7 +383,7 @@ class Transactions extends Page implements HasTable
                     })
                     ->tooltip(static fn (Transaction $transaction, Tables\Actions\Action $action) => match (static::determineTransactionState($transaction, $action)) {
                         'reviewed' => 'Reviewed',
-                        'unreviewed' => 'Mark as Reviewed',
+                        'unreviewed' => 'Mark as reviewed',
                         'uncategorized' => 'Categorize first to mark as reviewed',
                     })
                     ->disabled(fn (Transaction $transaction): bool => $transaction->isUncategorized())
@@ -391,19 +391,19 @@ class Transactions extends Page implements HasTable
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ActionGroup::make([
                         Tables\Actions\EditAction::make('editTransaction')
-                            ->label('Edit Transaction')
+                            ->label('Edit transaction')
                             ->modalHeading('Edit Transaction')
                             ->modalWidth(MaxWidth::ThreeExtraLarge)
                             ->form(fn (Form $form) => $this->transactionForm($form))
                             ->visible(static fn (Transaction $transaction) => $transaction->type->isStandard()),
                         Tables\Actions\EditAction::make('editTransfer')
-                            ->label('Edit Transfer')
+                            ->label('Edit transfer')
                             ->modalHeading('Edit Transfer')
                             ->modalWidth(MaxWidth::ThreeExtraLarge)
                             ->form(fn (Form $form) => $this->transferForm($form))
                             ->visible(static fn (Transaction $transaction) => $transaction->type->isTransfer()),
                         Tables\Actions\EditAction::make('editJournalTransaction')
-                            ->label('Edit Journal Transaction')
+                            ->label('Edit journal transaction')
                             ->modalHeading('Journal Entry')
                             ->modalWidth(MaxWidth::Screen)
                             ->form(fn (Form $form) => $this->journalTransactionForm($form))
@@ -443,8 +443,8 @@ class Transactions extends Page implements HasTable
                         ->label('Replicate')
                         ->modalWidth(MaxWidth::Large)
                         ->modalDescription('Replicating transactions will also replicate their journal entries. Are you sure you want to proceed?')
-                        ->successNotificationTitle('Transactions Replicated Successfully')
-                        ->failureNotificationTitle('Failed to Replicate Transactions')
+                        ->successNotificationTitle('Transactions replicated successfully')
+                        ->failureNotificationTitle('Failed to replicate transactions')
                         ->deselectRecordsAfterCompletion()
                         ->excludeAttributes(['created_by', 'updated_by', 'created_at', 'updated_at'])
                         ->beforeReplicaSaved(static function (Transaction $replica) {
@@ -651,7 +651,7 @@ class Transactions extends Page implements HasTable
         $typeLabel = $type->getLabel();
 
         return FormAction::make("add{$typeLabel}Entry")
-            ->label("Add {$typeLabel} Entry")
+            ->label("Add {$typeLabel} entry")
             ->button()
             ->outlined()
             ->color($type->isDebit() ? 'primary' : 'gray')
@@ -697,13 +697,13 @@ class Transactions extends Page implements HasTable
                             ->startDateField("{$fieldPrefix}_start_date")
                             ->endDateField("{$fieldPrefix}_end_date"),
                         DatePicker::make("{$fieldPrefix}_start_date")
-                            ->label("{$label} From")
+                            ->label("{$label} from")
                             ->columnStart(1)
                             ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
                                 $set("{$fieldPrefix}_date_range", 'Custom');
                             }),
                         DatePicker::make("{$fieldPrefix}_end_date")
-                            ->label("{$label} To")
+                            ->label("{$label} to")
                             ->afterStateUpdated(static function (Set $set) use ($fieldPrefix) {
                                 $set("{$fieldPrefix}_date_range", 'Custom');
                             }),

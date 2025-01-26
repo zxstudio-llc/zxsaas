@@ -102,7 +102,7 @@ class AccountTransactions extends BaseReportPage
                     ->selectablePlaceholder(false),
                 Actions::make([
                     Actions\Action::make('applyFilters')
-                        ->label('Update Report')
+                        ->label('Update report')
                         ->action('applyFilters')
                         ->keyBindings(['mod+s'])
                         ->button(),
@@ -193,7 +193,7 @@ class AccountTransactions extends BaseReportPage
     {
         return [
             Action::make('createTransaction')
-                ->label('Create Transaction')
+                ->label('Create transaction')
                 ->url(Transactions::getUrl()),
         ];
     }

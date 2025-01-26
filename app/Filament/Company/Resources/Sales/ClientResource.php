@@ -34,7 +34,7 @@ class ClientResource extends Resource
                             ->columns()
                             ->schema([
                                 Forms\Components\TextInput::make('name')
-                                    ->label('Client Name')
+                                    ->label('Client name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('account_number')
@@ -52,11 +52,11 @@ class ClientResource extends Resource
                                 Forms\Components\Hidden::make('is_primary')
                                     ->default(true),
                                 Forms\Components\TextInput::make('first_name')
-                                    ->label('First Name')
+                                    ->label('First name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('last_name')
-                                    ->label('Last Name')
+                                    ->label('Last name')
                                     ->required()
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('email')
@@ -90,7 +90,7 @@ class ClientResource extends Resource
                                         Forms\Components\Builder\Block::make('toll_free')
                                             ->schema([
                                                 Forms\Components\TextInput::make('number')
-                                                    ->label('Toll Free')
+                                                    ->label('Toll free')
                                                     ->required()
                                                     ->maxLength(15),
                                             ])->maxItems(1),
@@ -137,12 +137,12 @@ class ClientResource extends Resource
                             ->addActionLabel('Add Contact')
                             ->schema([
                                 Forms\Components\TextInput::make('first_name')
-                                    ->label('First Name')
+                                    ->label('First name')
                                     ->required()
                                     ->live(onBlur: true)
                                     ->maxLength(255),
                                 Forms\Components\TextInput::make('last_name')
-                                    ->label('Last Name')
+                                    ->label('Last name')
                                     ->required()
                                     ->live(onBlur: true)
                                     ->maxLength(255),
@@ -206,7 +206,7 @@ class ClientResource extends Resource
                             ->contained(false)
                             ->schema([
                                 Forms\Components\Checkbox::make('same_as_billing')
-                                    ->label('Same as Billing Address')
+                                    ->label('Same as billing address')
                                     ->live()
                                     ->afterStateHydrated(function (?Address $record, Forms\Components\Checkbox $component) {
                                         if (! $record || $record->parent_address_id) {
@@ -239,7 +239,7 @@ class ClientResource extends Resource
                                 AddressFields::make()
                                     ->visible(static fn (Get $get) => ! $get('same_as_billing')),
                                 Forms\Components\Textarea::make('notes')
-                                    ->label('Delivery Instructions')
+                                    ->label('Delivery instructions')
                                     ->maxLength(255)
                                     ->columnSpanFull(),
                             ])->columns(),
@@ -265,7 +265,7 @@ class ClientResource extends Resource
                     ->toggleable()
                     ->state(static fn (Client $client) => $client->primaryContact->first_available_phone),
                 Tables\Columns\TextColumn::make('billingAddress.address_string')
-                    ->label('Billing Address')
+                    ->label('Billing address')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->listWithLineBreaks(),

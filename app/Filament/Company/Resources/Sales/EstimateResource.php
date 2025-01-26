@@ -111,12 +111,12 @@ class EstimateResource extends Resource
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\TextInput::make('estimate_number')
-                                    ->label('Estimate Number')
+                                    ->label('Estimate number')
                                     ->default(fn () => Estimate::getNextDocumentNumber()),
                                 Forms\Components\TextInput::make('reference_number')
-                                    ->label('Reference Number'),
+                                    ->label('Reference number'),
                                 Forms\Components\DatePicker::make('date')
-                                    ->label('Estimate Date')
+                                    ->label('Estimate date')
                                     ->live()
                                     ->default(now())
                                     ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
@@ -128,7 +128,7 @@ class EstimateResource extends Resource
                                         }
                                     }),
                                 Forms\Components\DatePicker::make('expiration_date')
-                                    ->label('Expiration Date')
+                                    ->label('Expiration date')
                                     ->default(function () use ($company) {
                                         return now()->addDays($company->defaultInvoice->payment_terms->getDays());
                                     })
@@ -136,7 +136,7 @@ class EstimateResource extends Resource
                                         return $get('date') ?? now();
                                     }),
                                 Forms\Components\Select::make('discount_method')
-                                    ->label('Discount Method')
+                                    ->label('Discount method')
                                     ->options(DocumentDiscountMethod::class)
                                     ->selectablePlaceholder(false)
                                     ->default(DocumentDiscountMethod::PerLineItem)
@@ -292,7 +292,7 @@ class EstimateResource extends Resource
                     ->badge()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('expiration_date')
-                    ->label('Expiration Date')
+                    ->label('Expiration date')
                     ->asRelativeDay()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('date')
@@ -319,12 +319,12 @@ class EstimateResource extends Resource
                     ->options(EstimateStatus::class)
                     ->native(false),
                 DateRangeFilter::make('date')
-                    ->fromLabel('From Date')
-                    ->untilLabel('To Date')
+                    ->fromLabel('From date')
+                    ->untilLabel('To date')
                     ->indicatorLabel('Date'),
                 DateRangeFilter::make('expiration_date')
-                    ->fromLabel('From Expiration Date')
-                    ->untilLabel('To Expiration Date')
+                    ->fromLabel('From expiration date')
+                    ->untilLabel('To expiration date')
                     ->indicatorLabel('Due'),
             ])
             ->actions([
@@ -349,8 +349,8 @@ class EstimateResource extends Resource
                         ->label('Replicate')
                         ->modalWidth(MaxWidth::Large)
                         ->modalDescription('Replicating estimates will also replicate their line items. Are you sure you want to proceed?')
-                        ->successNotificationTitle('Estimates Replicated Successfully')
-                        ->failureNotificationTitle('Failed to Replicate Estimates')
+                        ->successNotificationTitle('Estimates replicated successfully')
+                        ->failureNotificationTitle('Failed to replicate estimates')
                         ->databaseTransaction()
                         ->deselectRecordsAfterCompletion()
                         ->excludeAttributes([
@@ -388,14 +388,14 @@ class EstimateResource extends Resource
                         ->label('Approve')
                         ->icon('heroicon-o-check-circle')
                         ->databaseTransaction()
-                        ->successNotificationTitle('Estimates Approved')
-                        ->failureNotificationTitle('Failed to Approve Estimates')
+                        ->successNotificationTitle('Estimates approved')
+                        ->failureNotificationTitle('Failed to approve estimates')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeApproved());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Approval Failed')
+                                    ->title('Approval failed')
                                     ->body('Only draft estimates can be approved. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -412,17 +412,17 @@ class EstimateResource extends Resource
                             $action->success();
                         }),
                     Tables\Actions\BulkAction::make('markAsSent')
-                        ->label('Mark as Sent')
+                        ->label('Mark as sent')
                         ->icon('heroicon-o-paper-airplane')
                         ->databaseTransaction()
-                        ->successNotificationTitle('Estimates Sent')
-                        ->failureNotificationTitle('Failed to Mark Estimates as Sent')
+                        ->successNotificationTitle('Estimates sent')
+                        ->failureNotificationTitle('Failed to mark estimates as sent')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsSent());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Sending Failed')
+                                    ->title('Sending failed')
                                     ->body('Only unsent estimates can be marked as sent. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -439,17 +439,17 @@ class EstimateResource extends Resource
                             $action->success();
                         }),
                     Tables\Actions\BulkAction::make('markAsAccepted')
-                        ->label('Mark as Accepted')
+                        ->label('Mark as accepted')
                         ->icon('heroicon-o-check-badge')
                         ->databaseTransaction()
-                        ->successNotificationTitle('Estimates Accepted')
-                        ->failureNotificationTitle('Failed to Mark Estimates as Accepted')
+                        ->successNotificationTitle('Estimates accepted')
+                        ->failureNotificationTitle('Failed to mark estimates as accepted')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsAccepted());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Acceptance Failed')
+                                    ->title('Acceptance failed')
                                     ->body('Only sent estimates that haven\'t been accepted can be marked as accepted. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()
@@ -466,21 +466,21 @@ class EstimateResource extends Resource
                             $action->success();
                         }),
                     Tables\Actions\BulkAction::make('markAsDeclined')
-                        ->label('Mark as Declined')
+                        ->label('Mark as declined')
                         ->icon('heroicon-o-x-circle')
                         ->requiresConfirmation()
                         ->databaseTransaction()
                         ->color('danger')
                         ->modalHeading('Mark Estimates as Declined')
                         ->modalDescription('Are you sure you want to mark the selected estimates as declined? This action cannot be undone.')
-                        ->successNotificationTitle('Estimates Declined')
-                        ->failureNotificationTitle('Failed to Mark Estimates as Declined')
+                        ->successNotificationTitle('Estimates declined')
+                        ->failureNotificationTitle('Failed to mark estimates as declined')
                         ->before(function (Collection $records, Tables\Actions\BulkAction $action) {
                             $isInvalid = $records->contains(fn (Estimate $record) => ! $record->canBeMarkedAsDeclined());
 
                             if ($isInvalid) {
                                 Notification::make()
-                                    ->title('Declination Failed')
+                                    ->title('Declination failed')
                                     ->body('Only sent estimates that haven\'t been declined can be marked as declined. Please adjust your selection and try again.')
                                     ->persistent()
                                     ->danger()

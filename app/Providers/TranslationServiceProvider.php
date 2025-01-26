@@ -71,6 +71,6 @@ class TranslationServiceProvider extends ServiceProvider
             $label = str_replace(' id', '', $label);
         }
 
-        return ucwords($label);
+        return ucfirst($label);
     }
 }

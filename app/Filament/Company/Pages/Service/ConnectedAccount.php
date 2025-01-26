@@ -29,7 +29,7 @@ class ConnectedAccount extends Page
     {
         return [
             Action::make('connect')
-                ->label('Connect Account')
+                ->label('Connect account')
                 ->dispatch('createToken'),
         ];
     }

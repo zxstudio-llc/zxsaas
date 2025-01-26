@@ -68,7 +68,7 @@ class ListInvoices extends ListRecords
                     ->visible(fn () => ! empty($this->recurringInvoice))
                     ->actions([
                         Action::make('clearFilter')
-                            ->label('Clear Filter')
+                            ->label('Clear filter')
                             ->button()
                             ->outlined()
                             ->action('clearFilter'),

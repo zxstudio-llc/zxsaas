@@ -26,7 +26,7 @@ class ViewBill extends ViewRecord
     {
         return [
             Actions\EditAction::make()
-                ->label('Edit Bill')
+                ->label('Edit bill')
                 ->outlined(),
             Actions\ActionGroup::make([
                 Actions\ActionGroup::make([
@@ -64,7 +64,7 @@ class ViewBill extends ViewRecord
                             ->label('Total')
                             ->money(),
                         TextEntry::make('amount_due')
-                            ->label('Amount Due')
+                            ->label('Amount due')
                             ->money(),
                         TextEntry::make('date')
                             ->label('Date')
@@ -73,7 +73,7 @@ class ViewBill extends ViewRecord
                             ->label('Due')
                             ->asRelativeDay(),
                         TextEntry::make('paid_at')
-                            ->label('Paid At')
+                            ->label('Paid at')
                             ->placeholder('Not Paid')
                             ->date(),
                     ]),

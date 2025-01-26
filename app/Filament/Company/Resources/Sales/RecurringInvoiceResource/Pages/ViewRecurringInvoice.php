@@ -35,7 +35,7 @@ class ViewRecurringInvoice extends ViewRecord
     {
         return [
             Actions\EditAction::make()
-                ->label('Edit Recurring Invoice')
+                ->label('Edit recurring invoice')
                 ->outlined(),
             Actions\ActionGroup::make([
                 Actions\ActionGroup::make([
@@ -60,7 +60,7 @@ class ViewRecurringInvoice extends ViewRecord
             ->schema([
                 BannerEntry::make('scheduleIsNotSet')
                     ->info()
-                    ->title('Schedule Not Set')
+                    ->title('Schedule not set')
                     ->description('The schedule for this recurring invoice has not been set. You must set a schedule before you can approve this draft and start creating invoices.')
                     ->visible(fn (RecurringInvoice $record) => ! $record->hasValidStartDate())
                     ->columnSpanFull()
@@ -91,11 +91,11 @@ class ViewRecurringInvoice extends ViewRecord
                                     ->weight(FontWeight::SemiBold)
                                     ->url(static fn (RecurringInvoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                                 TextEntry::make('last_date')
-                                    ->label('Last Invoice')
+                                    ->label('Last invoice')
                                     ->date()
                                     ->placeholder('Not Created'),
                                 TextEntry::make('next_date')
-                                    ->label('Next Invoice')
+                                    ->label('Next invoice')
                                     ->placeholder('Not Scheduled')
                                     ->date(),
                                 TextEntry::make('schedule')
@@ -107,7 +107,7 @@ class ViewRecurringInvoice extends ViewRecord
                                         return $record->getTimelineDescription();
                                     }),
                                 TextEntry::make('occurrences_count')
-                                    ->label('Created to Date')
+                                    ->label('Created to date')
                                     ->visible(static fn (RecurringInvoice $record) => $record->occurrences_count > 0)
                                     ->color('primary')
                                     ->weight(FontWeight::SemiBold)
@@ -116,19 +116,19 @@ class ViewRecurringInvoice extends ViewRecord
                                         return ListInvoices::getUrl(['recurringInvoice' => $record->id]);
                                     }),
                                 TextEntry::make('end_date')
-                                    ->label('Ends On')
+                                    ->label('Ends on')
                                     ->date()
                                     ->visible(fn (RecurringInvoice $record) => $record->end_type?->isOn()),
                                 TextEntry::make('approved_at')
-                                    ->label('Approved At')
+                                    ->label('Approved at')
                                     ->placeholder('Not Approved')
                                     ->date(),
                                 TextEntry::make('ended_at')
-                                    ->label('Ended At')
+                                    ->label('Ended at')
                                     ->date()
                                     ->visible(fn (RecurringInvoice $record) => $record->ended_at),
                                 TextEntry::make('total')
-                                    ->label('Invoice Amount')
+                                    ->label('Invoice amount')
                                     ->currency(static fn (RecurringInvoice $record) => $record->currency_code),
                             ])->columnSpan(1),
                         DocumentPreview::make()
