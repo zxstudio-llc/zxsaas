@@ -221,14 +221,16 @@ class ExportService
      * @throws CannotInsertRecord
      * @throws Exception
      */
-    protected function writeDataRowsToCsv(Writer $csv, array $header, array $data, array $columns): void
+    protected function writeDataRowsToCsv(Writer $csv, ?array $header, array $data, array $columns): void
     {
-        if (isset($header[0]) && is_array($header[0])) {
-            foreach ($header as $headerRow) {
-                $csv->insertOne($headerRow);
+        if ($header) {
+            if (isset($header[0]) && is_array($header[0])) {
+                foreach ($header as $headerRow) {
+                    $csv->insertOne($headerRow);
+                }
+            } else {
+                $csv->insertOne($header);
             }
-        } else {
-            $csv->insertOne($header);
         }
 
         // Output data rows

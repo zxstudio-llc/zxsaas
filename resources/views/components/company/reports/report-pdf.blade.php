@@ -22,13 +22,15 @@
         </thead>
         @foreach($report->getCategories() as $category)
             <tbody>
-            <tr class="category-header-row">
-                @foreach($category->header as $index => $header)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
-                        {{ $header }}
-                    </td>
-                @endforeach
-            </tr>
+            @if(! empty($category->header))
+                <tr class="category-header-row">
+                    @foreach($category->header as $index => $header)
+                        <td class="{{ $report->getAlignmentClass($index) }}">
+                            {{ $header }}
+                        </td>
+                    @endforeach
+                </tr>
+            @endif
             @foreach($category->data as $account)
                 <tr>
                     @foreach($account as $index => $cell)
@@ -97,13 +99,15 @@
                 </tr>
             @endforeach
 
-            <tr class="category-summary-row">
-                @foreach($category->summary as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
-                        {{ $cell }}
-                    </td>
-                @endforeach
-            </tr>
+            @if(! empty($category->summary))
+                <tr class="category-summary-row">
+                    @foreach($category->summary as $index => $cell)
+                        <td class="{{ $report->getAlignmentClass($index) }}">
+                            {{ $cell }}
+                        </td>
+                    @endforeach
+                </tr>
+            @endif
 
             @unless($loop->last && empty($report->getOverallTotals()))
                 <tr class="spacer-row">
