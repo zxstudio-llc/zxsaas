@@ -107,13 +107,13 @@
                         </td>
                     @endforeach
                 </tr>
-            @endif
 
-            @unless($loop->last && empty($report->getOverallTotals()))
-                <tr class="spacer-row">
-                    <td colspan="{{ count($report->getHeaders()) }}"></td>
-                </tr>
-            @endunless
+                @unless($loop->last && empty($report->getOverallTotals()))
+                    <tr class="spacer-row">
+                        <td colspan="{{ count($report->getHeaders()) }}"></td>
+                    </tr>
+                @endunless
+            @endif
             </tbody>
         @endforeach
         <tfoot>

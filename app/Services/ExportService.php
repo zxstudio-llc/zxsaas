@@ -125,9 +125,9 @@ class ExportService
 
             if (filled($category->summary)) {
                 $csv->insertOne($category->summary);
-            }
 
-            $csv->insertOne([]);
+                $csv->insertOne([]);
+            }
         }
 
         if (method_exists($report, 'getOverviewHeaders') && filled($report->getOverviewHeaders())) {
