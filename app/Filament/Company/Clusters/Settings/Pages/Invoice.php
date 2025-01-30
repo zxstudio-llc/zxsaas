@@ -168,7 +168,7 @@ class Invoice extends Page
                     ->localizeLabel()
                     ->nullable(),
                 Textarea::make('footer')
-                    ->localizeLabel('Footer / Notes')
+                    ->localizeLabel('Footer')
                     ->nullable(),
             ])->columns();
     }
@@ -222,7 +222,7 @@ class Invoice extends Page
                             ->options(Template::class),
                         Select::make('item_name.option')
                             ->softRequired()
-                            ->localizeLabel('Item Name')
+                            ->localizeLabel('Item name')
                             ->options(InvoiceModel::getAvailableItemNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('item_name.custom'))) {
@@ -240,7 +240,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('unit_name.option')
                             ->softRequired()
-                            ->localizeLabel('Unit Name')
+                            ->localizeLabel('Unit name')
                             ->options(InvoiceModel::getAvailableUnitNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('unit_name.custom'))) {
@@ -258,7 +258,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('price_name.option')
                             ->softRequired()
-                            ->localizeLabel('Price Name')
+                            ->localizeLabel('Price name')
                             ->options(InvoiceModel::getAvailablePriceNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('price_name.custom'))) {
@@ -276,7 +276,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('amount_name.option')
                             ->softRequired()
-                            ->localizeLabel('Amount Name')
+                            ->localizeLabel('Amount name')
                             ->options(InvoiceModel::getAvailableAmountNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('amount_name.custom'))) {

@@ -2,8 +2,10 @@
     <x-company.tables.header :headers="$report->getHeaders()" :alignment-class="[$report, 'getAlignmentClass']"/>
     @foreach($report->getCategories() as $accountCategory)
         <tbody class="divide-y divide-gray-200 whitespace-nowrap dark:divide-white/5">
-        <x-company.tables.category-header :category-headers="$accountCategory->header"
-                                          :alignment-class="[$report, 'getAlignmentClass']"/>
+        @if(! empty($accountCategory->header))
+            <x-company.tables.category-header :category-headers="$accountCategory->header"
+                                              :alignment-class="[$report, 'getAlignmentClass']"/>
+        @endif
         @foreach($accountCategory->data as $categoryAccount)
             <tr>
                 @foreach($categoryAccount as $accountIndex => $categoryAccountCell)
@@ -48,19 +50,21 @@
                 @endforeach
             </tr>
         @endforeach
-        <tr>
-            @foreach($accountCategory->summary as $accountCategorySummaryIndex => $accountCategorySummaryCell)
-                <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountCategorySummaryIndex)"
-                                       bold="true">
-                    {{ $accountCategorySummaryCell }}
-                </x-company.tables.cell>
-            @endforeach
-        </tr>
-        <tr>
-            <td colspan="{{ count($report->getHeaders()) }}">
-                <div class="min-h-12"></div>
-            </td>
-        </tr>
+        @if(! empty($accountCategory->summary))
+            <tr>
+                @foreach($accountCategory->summary as $accountCategorySummaryIndex => $accountCategorySummaryCell)
+                    <x-company.tables.cell :alignment-class="$report->getAlignmentClass($accountCategorySummaryIndex)"
+                                           bold="true">
+                        {{ $accountCategorySummaryCell }}
+                    </x-company.tables.cell>
+                @endforeach
+            </tr>
+            <tr>
+                <td colspan="{{ count($report->getHeaders()) }}">
+                    <div class="min-h-12"></div>
+                </td>
+            </tr>
+        @endif
         </tbody>
     @endforeach
     <x-company.tables.footer :totals="$report->getOverallTotals()" :alignment-class="[$report, 'getAlignmentClass']"/>

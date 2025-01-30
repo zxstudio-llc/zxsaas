@@ -345,7 +345,7 @@ it('can update a deposit or withdrawal transaction', function (TransactionType $
     $newDescription = 'Updated Description';
 
     livewire(Transactions::class)
-        ->mountTableAction('updateTransaction', $transaction)
+        ->mountTableAction('editTransaction', $transaction)
         ->assertTableActionDataSet([
             'type' => $transactionType->value,
             'description' => $transaction->description,
@@ -377,8 +377,8 @@ it('does not show Edit Transfer or Edit Journal Transaction for deposit or withd
         ->create();
 
     livewire(Transactions::class)
-        ->assertTableActionHidden('updateTransfer', $transaction)
-        ->assertTableActionHidden('updateJournalTransaction', $transaction);
+        ->assertTableActionHidden('editTransfer', $transaction)
+        ->assertTableActionHidden('editJournalTransaction', $transaction);
 })->with([
     TransactionType::Deposit,
     TransactionType::Withdrawal,
@@ -394,7 +394,7 @@ it('can update a transfer transaction', function () {
     $newDescription = 'Updated Transfer Description';
 
     livewire(Transactions::class)
-        ->mountTableAction('updateTransfer', $transaction)
+        ->mountTableAction('editTransfer', $transaction)
         ->assertTableActionDataSet([
             'type' => TransactionType::Transfer->value,
             'description' => $transaction->description,
@@ -421,8 +421,8 @@ it('does not show Edit Transaction or Edit Journal Transaction for transfer tran
         ->create();
 
     livewire(Transactions::class)
-        ->assertTableActionHidden('updateTransaction', $transaction)
-        ->assertTableActionHidden('updateJournalTransaction', $transaction);
+        ->assertTableActionHidden('editTransaction', $transaction)
+        ->assertTableActionHidden('editJournalTransaction', $transaction);
 });
 
 it('replicates a transaction with correct journal entries', function () {

@@ -379,13 +379,13 @@ class RecurringInvoice extends Document
         };
     }
 
-    public static function getUpdateScheduleAction(string $action = Action::class): MountableAction
+    public static function getManageScheduleAction(string $action = Action::class): MountableAction
     {
-        return $action::make('updateSchedule')
-            ->label(fn (self $record) => $record->hasSchedule() ? 'Update Schedule' : 'Set Schedule')
-            ->icon('heroicon-o-calendar-date-range')
+        return $action::make('manageSchedule')
+            ->label(fn (self $record) => $record->hasSchedule() ? 'Edit schedule' : 'Set schedule')
+            ->icon('heroicon-m-calendar-date-range')
             ->slideOver()
-            ->successNotificationTitle('Schedule Updated')
+            ->successNotificationTitle('Schedule saved')
             ->mountUsing(function (self $record, Form $form) {
                 $data = $record->attributesToArray();
 
@@ -492,7 +492,7 @@ class RecurringInvoice extends Document
                     ->contained(false)
                     ->schema([
                         Forms\Components\DatePicker::make('start_date')
-                            ->label('First Invoice Date')
+                            ->label('First invoice date')
                             ->softRequired()
                             ->live()
                             ->minDate(today())
@@ -506,7 +506,7 @@ class RecurringInvoice extends Document
                             $components = [];
 
                             $components[] = Forms\Components\Select::make('end_type')
-                                ->label('End Schedule')
+                                ->label('End schedule')
                                 ->options(EndType::class)
                                 ->softRequired()
                                 ->live()
@@ -533,7 +533,7 @@ class RecurringInvoice extends Document
 
                             return [
                                 Cluster::make($components)
-                                    ->label('Schedule Ends')
+                                    ->label('Schedule ends')
                                     ->required()
                                     ->markAsRequired(false),
                             ];
@@ -562,7 +562,7 @@ class RecurringInvoice extends Document
                 return $record->canBeApproved();
             })
             ->databaseTransaction()
-            ->successNotificationTitle('Recurring Invoice Approved')
+            ->successNotificationTitle('Recurring invoice approved')
             ->action(function (self $record, MountableAction $action) {
                 $record->approveDraft();
 

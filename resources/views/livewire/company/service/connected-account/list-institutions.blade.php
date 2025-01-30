@@ -84,7 +84,7 @@
                             />
                         </div>
                         <h4 class="connected-account-empty-state-heading text-base font-semibold leading-6 text-gray-950 dark:text-white">
-                            {{ __('No Connected Accounts') }}
+                            {{ __('No connected accounts') }}
                         </h4>
                         <p class="connected-account-empty-state-description text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {{ __('Connect your bank account to get started.') }}
@@ -94,7 +94,7 @@
                                 wire:click="$dispatch('createToken')"
                                 wire:loading.attr="disabled"
                             >
-                                {{ __('Connect Account') }}
+                                {{ __('Connect account') }}
                             </x-filament::button>
                         </div>
                     </div>

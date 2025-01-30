@@ -25,10 +25,14 @@ class ViewBill extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit bill')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    Bill::getReplicateAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                Bill::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -60,7 +64,7 @@ class ViewBill extends ViewRecord
                             ->label('Total')
                             ->money(),
                         TextEntry::make('amount_due')
-                            ->label('Amount Due')
+                            ->label('Amount due')
                             ->money(),
                         TextEntry::make('date')
                             ->label('Date')
@@ -69,7 +73,7 @@ class ViewBill extends ViewRecord
                             ->label('Due')
                             ->asRelativeDay(),
                         TextEntry::make('paid_at')
-                            ->label('Paid At')
+                            ->label('Paid at')
                             ->placeholder('Not Paid')
                             ->date(),
                     ]),

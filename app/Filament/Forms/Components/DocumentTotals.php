@@ -21,14 +21,14 @@ class DocumentTotals extends Grid
 
         $this->schema([
             Select::make('discount_computation')
-                ->label('Discount Computation')
+                ->label('Discount computation')
                 ->hiddenLabel()
                 ->options(AdjustmentComputation::class)
                 ->default(AdjustmentComputation::Percentage)
                 ->selectablePlaceholder(false)
                 ->live(),
             TextInput::make('discount_rate')
-                ->label('Discount Rate')
+                ->label('Discount rate')
                 ->hiddenLabel()
                 ->live()
                 ->extraInputAttributes(['class' => 'text-right'])

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers;
+namespace App\Providers\Filament;
 
 use App\Actions\FilamentCompanies\AddCompanyEmployee;
 use App\Actions\FilamentCompanies\CreateConnectedAccount;
@@ -71,7 +71,7 @@ use Wallo\FilamentCompanies\FilamentCompanies;
 use Wallo\FilamentCompanies\Pages\Auth\Login;
 use Wallo\FilamentCompanies\Pages\Auth\Register;
 
-class FilamentCompaniesServiceProvider extends PanelProvider
+class CompanyPanelProvider extends PanelProvider
 {
     /**
      * @throws Exception

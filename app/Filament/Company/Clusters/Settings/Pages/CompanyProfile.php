@@ -113,11 +113,11 @@ class CompanyProfile extends Page
     {
         return Notification::make()
             ->info()
-            ->title('Timezone Update Required')
+            ->title('Timezone update required')
             ->body('You have changed your country or state. Please update your timezone to ensure accurate date and time information.')
             ->actions([
                 \Filament\Notifications\Actions\Action::make('updateTimezone')
-                    ->label('Update Timezone')
+                    ->label('Update timezone')
                     ->url(Localization::getUrl()),
             ])
             ->persistent()
@@ -187,7 +187,7 @@ class CompanyProfile extends Page
     {
         return Banner::make('needsAddressCompletion')
             ->warning()
-            ->title('Address Information Incomplete')
+            ->title('Address information incomplete')
             ->description('Please complete the required address information for proper business operations.')
             ->visible(fn (CompanyProfileModel $record) => $record->address->isIncomplete())
             ->columnSpanFull();

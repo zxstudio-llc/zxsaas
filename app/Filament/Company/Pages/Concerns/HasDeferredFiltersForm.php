@@ -79,7 +79,7 @@ trait HasDeferredFiltersForm
     public function applyFiltersAction(): Action
     {
         return Action::make('applyFilters')
-            ->label('Update Report')
+            ->label('Update report')
             ->action('applyFilters')
             ->keyBindings(['mod+s'])
             ->button();

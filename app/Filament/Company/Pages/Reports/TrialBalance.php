@@ -60,7 +60,7 @@ class TrialBalance extends BaseReportPage
             ->columns(4)
             ->schema([
                 Select::make('reportType')
-                    ->label('Report Type')
+                    ->label('Report type')
                     ->options([
                         'standard' => 'Standard',
                         'postClosing' => 'Post-Closing',

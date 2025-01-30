@@ -22,8 +22,6 @@ class OfferingResource extends Resource
 {
     protected static ?string $model = Offering::class;
 
-    protected static ?string $modelLabel = 'Offering';
-
     protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
     public static function form(Form $form): Form
@@ -68,7 +66,7 @@ class OfferingResource extends Resource
                 Forms\Components\Section::make('Sale Information')
                     ->schema([
                         Forms\Components\Select::make('income_account_id')
-                            ->label('Income Account')
+                            ->label('Income account')
                             ->options(Account::query()
                                 ->where('category', AccountCategory::Revenue)
                                 ->where('type', AccountType::OperatingRevenue)
@@ -81,12 +79,12 @@ class OfferingResource extends Resource
                                 'required' => 'The income account is required for sellable offerings.',
                             ]),
                         Forms\Components\Select::make('salesTaxes')
-                            ->label('Sales Tax')
+                            ->label('Sales tax')
                             ->relationship('salesTaxes', 'name')
                             ->preload()
                             ->multiple(),
                         Forms\Components\Select::make('salesDiscounts')
-                            ->label('Sales Discount')
+                            ->label('Sales discount')
                             ->relationship('salesDiscounts', 'name')
                             ->preload()
                             ->multiple(),
@@ -98,7 +96,7 @@ class OfferingResource extends Resource
                 Forms\Components\Section::make('Purchase Information')
                     ->schema([
                         Forms\Components\Select::make('expense_account_id')
-                            ->label('Expense Account')
+                            ->label('Expense account')
                             ->options(Account::query()
                                 ->where('category', AccountCategory::Expense)
                                 ->where('type', AccountType::OperatingExpense)
@@ -112,12 +110,12 @@ class OfferingResource extends Resource
                                 'required' => 'The expense account is required for purchasable offerings.',
                             ]),
                         Forms\Components\Select::make('purchaseTaxes')
-                            ->label('Purchase Tax')
+                            ->label('Purchase tax')
                             ->relationship('purchaseTaxes', 'name')
                             ->preload()
                             ->multiple(),
                         Forms\Components\Select::make('purchaseDiscounts')
-                            ->label('Purchase Discount')
+                            ->label('Purchase discount')
                             ->relationship('purchaseDiscounts', 'name')
                             ->preload()
                             ->multiple(),

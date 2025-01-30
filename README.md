@@ -15,7 +15,7 @@
 
 
 
-This repo is currently a work in progress — PRs and issues welcome!
+A Laravel and Filament-powered accounting platform, crafting a modern and automated solution for financial management.
 
 # Getting started
 
@@ -203,7 +203,8 @@ public static function getAllLanguages(): array
 
 ## Plaid Integration
 
-To integrate [Plaid](https://plaid.com/) with your application for enhanced financial data connectivity, you must first create an account with Plaid and obtain your credentials. Set your credentials in the `.env` file as follows:
+To integrate [Plaid](https://plaid.com/) with your application for enhanced financial data connectivity, you must first
+create an account with Plaid and obtain your credentials. Set your credentials in the `.env` file as follows:
 
 ```env
 PLAID_CLIENT_ID=your-client-id
@@ -212,9 +213,12 @@ PLAID_ENVIRONMENT=sandbox # Can be sandbox, development, or production
 PLAID_WEBHOOK_URL=https://my-static-domain.ngrok-free.app/api/plaid/webhook # Must have /api/plaid/webhook appended
 ```
 
-The `PLAID_WEBHOOK_URL` is essential as it enables your application to receive real-time updates on transactions from connected bank accounts. This webhook URL must contain a static domain, which can be obtained from services like ngrok that offer a free static domain upon signup. Alternatively, you may use any other service that provides a static domain.
+The `PLAID_WEBHOOK_URL` is essential as it enables your application to receive real-time updates on transactions from
+connected bank accounts. This webhook URL must contain a static domain, which can be obtained from services like ngrok
+that offer a free static domain upon signup. Alternatively, you may use any other service that provides a static domain.
 
-After integrating Plaid, you can connect your account on the "Connected Accounts" page and link your financial institution. Before importing transactions, ensure to run the following command to process the queued transactions:
+After integrating Plaid, you can connect your account on the "Connected Accounts" page and link your financial
+institution. Before importing transactions, ensure to run the following command to process the queued transactions:
 
 ```bash
 php artisan queue:work --queue=transactions
@@ -243,7 +247,6 @@ The testing process automatically handles refreshing and seeding the test databa
 migration is required. For more information on how to write and run tests using
 Pest, refer to the official documentation: [Pest Documentation](https://pestphp.com/docs).
 
-
 ## Dependencies
 
 - [filamentphp/filament](https://github.com/filamentphp/filament) - A collection of beautiful full-stack components
@@ -254,7 +257,8 @@ Pest, refer to the official documentation: [Pest Documentation](https://pestphp.
 - [akaunting/laravel-money](https://github.com/akaunting/laravel-money) - Currency formatting and conversion package for
   Laravel
 - [squirephp/squire](https://github.com/squirephp/squire) - A library of static Eloquent models for common fixture data
-- [awcodes/filament-table-repeater](https://github.com/awcodes/filament-table-repeater) - A modified version of the Filament Forms Repeater to display it as a table. 
+- [awcodes/filament-table-repeater](https://github.com/awcodes/filament-table-repeater) - A modified version of the
+  Filament Forms Repeater to display it as a table.
 
 ***Note*** : It is recommended to read the documentation for all dependencies to get yourself familiar with how the
 application works.

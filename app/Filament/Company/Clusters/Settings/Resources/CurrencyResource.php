@@ -27,7 +27,7 @@ class CurrencyResource extends Resource
 
     protected static ?string $model = CurrencyModel::class;
 
-    protected static ?string $modelLabel = 'Currency';
+    protected static ?string $modelLabel = 'currency';
 
     protected static ?string $cluster = Settings::class;
 
@@ -88,11 +88,11 @@ class CurrencyResource extends Resource
                             ->maxLength(5)
                             ->required(),
                         Forms\Components\Select::make('symbol_first')
-                            ->localizeLabel('Symbol Position')
-                            ->boolean(translate('Before Amount'), translate('After Amount'), translate('Select a symbol position'))
+                            ->localizeLabel('Symbol position')
+                            ->boolean(translate('Before amount'), translate('After amount'), translate('Select a symbol position'))
                             ->required(),
                         Forms\Components\TextInput::make('decimal_mark')
-                            ->localizeLabel('Decimal Separator')
+                            ->localizeLabel('Decimal separator')
                             ->maxLength(1)
                             ->rule(static function (Forms\Get $get): Closure {
                                 return static function ($attribute, $value, Closure $fail) use ($get) {
@@ -126,8 +126,8 @@ class CurrencyResource extends Resource
                     ->weight(FontWeight::Medium)
                     ->icon(static fn (CurrencyModel $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static function (CurrencyModel $record) {
-                        $tooltipMessage = translate('Default :Record', [
-                            'Record' => static::getModelLabel(),
+                        $tooltipMessage = translate('Default :record', [
+                            'record' => static::getModelLabel(),
                         ]);
 
                         return $record->isEnabled() ? $tooltipMessage : null;

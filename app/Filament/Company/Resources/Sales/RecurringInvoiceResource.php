@@ -108,21 +108,21 @@ class RecurringInvoiceResource extends Resource
                             ]),
                             Forms\Components\Group::make([
                                 Forms\Components\Placeholder::make('invoice_number')
-                                    ->label('Invoice Number')
+                                    ->label('Invoice number')
                                     ->content('Auto-generated'),
                                 Forms\Components\TextInput::make('order_number')
                                     ->label('P.O/S.O Number'),
                                 Forms\Components\Placeholder::make('date')
-                                    ->label('Invoice Date')
+                                    ->label('Invoice date')
                                     ->content('Auto-generated'),
                                 Forms\Components\Select::make('payment_terms')
-                                    ->label('Payment Due')
+                                    ->label('Payment due')
                                     ->options(PaymentTerms::class)
                                     ->softRequired()
                                     ->default($company->defaultInvoice->payment_terms)
                                     ->live(),
                                 Forms\Components\Select::make('discount_method')
-                                    ->label('Discount Method')
+                                    ->label('Discount method')
                                     ->options(DocumentDiscountMethod::class)
                                     ->selectablePlaceholder(false)
                                     ->default(DocumentDiscountMethod::PerLineItem)
@@ -294,17 +294,17 @@ class RecurringInvoiceResource extends Resource
                     ->sortable()
                     ->showOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('start_date')
-                    ->label('First Invoice')
+                    ->label('First invoice')
                     ->date()
                     ->sortable()
                     ->showOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('last_date')
-                    ->label('Last Invoice')
+                    ->label('Last invoice')
                     ->date()
                     ->sortable()
                     ->hideOnTabs(['draft']),
                 Tables\Columns\TextColumn::make('next_date')
-                    ->label('Next Invoice')
+                    ->label('Next invoice')
                     ->date()
                     ->sortable()
                     ->hideOnTabs(['draft']),
@@ -325,10 +325,12 @@ class RecurringInvoiceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\ViewAction::make(),
+                        RecurringInvoice::getManageScheduleAction(Tables\Actions\Action::class),
+                    ])->dropdown(false),
                     Tables\Actions\DeleteAction::make(),
-                    RecurringInvoice::getUpdateScheduleAction(Tables\Actions\Action::class),
                 ]),
             ])
             ->bulkActions([

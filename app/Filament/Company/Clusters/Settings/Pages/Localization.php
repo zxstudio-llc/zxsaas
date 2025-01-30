@@ -157,9 +157,9 @@ class Localization extends Page
 
     protected function getFinancialAndFiscalSection(): Component
     {
-        $beforeNumber = translate('Before Number');
-        $afterNumber = translate('After Number');
-        $selectPosition = translate('Select Position');
+        $beforeNumber = translate('Before number');
+        $afterNumber = translate('After number');
+        $selectPosition = translate('Select position');
 
         return Section::make('Financial & Fiscal')
             ->schema([
@@ -169,7 +169,7 @@ class Localization extends Page
                     ->options(NumberFormat::class),
                 Select::make('percent_first')
                     ->softRequired()
-                    ->localizeLabel('Percent Position')
+                    ->localizeLabel('Percent position')
                     ->boolean($beforeNumber, $afterNumber, $selectPosition),
                 Group::make()
                     ->schema([
@@ -197,7 +197,7 @@ class Localization extends Page
                             ->columnSpan(2)
                             ->required()
                             ->markAsRequired(false)
-                            ->label('Fiscal Year End'),
+                            ->label('Fiscal year end'),
                     ])->columns(3),
             ])->columns();
     }

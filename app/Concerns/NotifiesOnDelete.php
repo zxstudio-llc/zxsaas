@@ -14,7 +14,7 @@ trait NotifiesOnDelete
 
         Notification::make()
             ->danger()
-            ->title(translate('Action Denied'))
+            ->title(translate('Action denied'))
             ->body(translate(':Name cannot be deleted because it is :reason. Please update settings before deletion.', [
                 'Name' => $record->getAttribute('name'),
                 'reason' => $reason,
@@ -37,7 +37,7 @@ trait NotifiesOnDelete
 
         Notification::make()
             ->danger()
-            ->title(translate('Action Denied'))
+            ->title(translate('Action denied'))
             ->body($message)
             ->persistent()
             ->send();

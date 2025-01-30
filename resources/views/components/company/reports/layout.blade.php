@@ -50,7 +50,7 @@
 
         .table-class {
             border-collapse: collapse;
-            table-layout: fixed;
+            table-layout: auto;
             width: 100%;
         }
 

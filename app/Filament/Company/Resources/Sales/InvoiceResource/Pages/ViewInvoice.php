@@ -34,12 +34,16 @@ class ViewInvoice extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\EditAction::make()
+                ->label('Edit invoice')
+                ->outlined(),
             Actions\ActionGroup::make([
-                Actions\EditAction::make(),
+                Actions\ActionGroup::make([
+                    Invoice::getApproveDraftAction(),
+                    Invoice::getMarkAsSentAction(),
+                    Invoice::getReplicateAction(),
+                ])->dropdown(false),
                 Actions\DeleteAction::make(),
-                Invoice::getApproveDraftAction(),
-                Invoice::getMarkAsSentAction(),
-                Invoice::getReplicateAction(),
             ])
                 ->label('Actions')
                 ->button()
@@ -70,21 +74,21 @@ class ViewInvoice extends ViewRecord
                                     ->weight(FontWeight::SemiBold)
                                     ->url(static fn (Invoice $record) => ClientResource::getUrl('edit', ['record' => $record->client_id])),
                                 TextEntry::make('amount_due')
-                                    ->label('Amount Due')
+                                    ->label('Amount due')
                                     ->currency(static fn (Invoice $record) => $record->currency_code),
                                 TextEntry::make('due_date')
                                     ->label('Due')
                                     ->asRelativeDay(),
                                 TextEntry::make('approved_at')
-                                    ->label('Approved At')
+                                    ->label('Approved at')
                                     ->placeholder('Not Approved')
                                     ->date(),
                                 TextEntry::make('last_sent_at')
-                                    ->label('Last Sent')
+                                    ->label('Last sent')
                                     ->placeholder('Never')
                                     ->date(),
                                 TextEntry::make('paid_at')
-                                    ->label('Paid At')
+                                    ->label('Paid at')
                                     ->placeholder('Not Paid')
                                     ->date(),
                             ])->columnSpan(1),

@@ -94,7 +94,7 @@ class PaymentsRelationManager extends RelationManager
                         },
                     ]),
                 Forms\Components\Select::make('payment_method')
-                    ->label('Payment Method')
+                    ->label('Payment method')
                     ->required()
                     ->options(PaymentMethod::class),
                 Forms\Components\Select::make('bank_account_id')
@@ -161,7 +161,7 @@ class PaymentsRelationManager extends RelationManager
                         ]);
                     })
                     ->databaseTransaction()
-                    ->successNotificationTitle('Payment Recorded')
+                    ->successNotificationTitle('Payment recorded')
                     ->action(function (Tables\Actions\CreateAction $action, array $data) {
                         /** @var Invoice $record */
                         $record = $this->getOwnerRecord();

@@ -2,15 +2,19 @@
 
 namespace App\Services;
 
+use App\Contracts\MoneyFormattableDTO;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountCategoryDTO;
 use App\DTO\AccountDTO;
 use App\DTO\AccountTransactionDTO;
 use App\DTO\AccountTypeDTO;
+use App\DTO\AgingBucketDTO;
 use App\DTO\CashFlowOverviewDTO;
+use App\DTO\EntityReportDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
+use App\Enums\Accounting\DocumentEntityType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
 use App\Models\Accounting\Transaction;
@@ -27,21 +31,26 @@ class ReportService
         protected AccountService $accountService,
     ) {}
 
-    public function formatBalances(array $balances): AccountBalanceDTO
+    /**
+     * @param  class-string<MoneyFormattableDTO>|null  $dtoClass
+     */
+    public function formatBalances(array $balances, ?string $dtoClass = null, bool $formatZeros = true): MoneyFormattableDTO | array
     {
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $dtoClass ??= AccountBalanceDTO::class;
 
-        foreach ($balances as $key => $balance) {
-            $balances[$key] = money($balance, $defaultCurrency)->format();
+        $formattedBalances = array_map(static function ($balance) use ($formatZeros) {
+            if (! $formatZeros && $balance === 0) {
+                return '';
+            }
+
+            return CurrencyConverter::formatCentsToMoney($balance);
+        }, $balances);
+
+        if (! $dtoClass) {
+            return $formattedBalances;
         }
 
-        return new AccountBalanceDTO(
-            startingBalance: $balances['starting_balance'] ?? null,
-            debitBalance: $balances['debit_balance'] ?? null,
-            creditBalance: $balances['credit_balance'] ?? null,
-            netMovement: $balances['net_movement'] ?? null,
-            endingBalance: $balances['ending_balance'] ?? null,
-        );
+        return $dtoClass::fromArray($formattedBalances);
     }
 
     public function buildAccountBalanceReport(string $startDate, string $endDate, array $columns = []): ReportDTO
@@ -263,9 +272,9 @@ class ReportService
             return [
                 'type' => 'transaction',
                 'action' => match ($transaction->type) {
-                    TransactionType::Journal => 'updateJournalTransaction',
-                    TransactionType::Transfer => 'updateTransfer',
-                    default => 'updateTransaction',
+                    TransactionType::Journal => 'editJournalTransaction',
+                    TransactionType::Transfer => 'editTransfer',
+                    default => 'editTransaction',
                 },
                 'id' => $transaction->id,
             ];
@@ -361,10 +370,10 @@ class ReportService
 
         $formattedReportTotalBalances = $this->formatBalances($reportTotalBalances);
 
-        return new ReportDTO($accountCategories, $formattedReportTotalBalances, $columns, $trialBalanceType);
+        return new ReportDTO(categories: $accountCategories, overallTotal: $formattedReportTotalBalances, fields: $columns, reportType: $trialBalanceType);
     }
 
-    public function getRetainedEarningsBalances(string $startDate, string $endDate): AccountBalanceDTO
+    public function getRetainedEarningsBalances(string $startDate, string $endDate): MoneyFormattableDTO | array
     {
         $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate, $endDate)->getAmount();
 
@@ -507,7 +516,7 @@ class ReportService
         );
     }
 
-    private function calculateTotalCashFlows(array $sections, string $startDate): AccountBalanceDTO
+    private function calculateTotalCashFlows(array $sections, string $startDate): MoneyFormattableDTO | array
     {
         $totalInflow = 0;
         $totalOutflow = 0;
@@ -816,6 +825,77 @@ class ReportService
             overallTotal: $formattedReportTotalBalances,
             fields: $columns,
             startDate: $startDateCarbon,
+            endDate: $asOfDateCarbon,
+        );
+    }
+
+    public function buildAgingReport(
+        string $asOfDate,
+        DocumentEntityType $entityType,
+        array $columns = [],
+        int $daysPerPeriod = 30,
+        int $numberOfPeriods = 4
+    ): ReportDTO {
+        $asOfDateCarbon = Carbon::parse($asOfDate);
+
+        $documents = $entityType === DocumentEntityType::Client
+            ? $this->accountService->getUnpaidClientInvoices($asOfDate)->with(['client:id,name'])->get()->groupBy('client_id')
+            : $this->accountService->getUnpaidVendorBills($asOfDate)->with(['vendor:id,name'])->get()->groupBy('vendor_id');
+
+        $categories = [];
+
+        $agingBuckets = ['current' => 0];
+
+        for ($i = 1; $i <= $numberOfPeriods; $i++) {
+            $agingBuckets["period_{$i}"] = 0;
+        }
+
+        $agingBuckets['over_periods'] = 0;
+        $agingBuckets['total'] = 0;
+
+        $totalAging = $agingBuckets;
+
+        foreach ($documents as $entityId => $entityDocuments) {
+            $aging = $agingBuckets;
+
+            foreach ($entityDocuments as $document) {
+                $daysOverdue = $document->days_overdue ?? 0;
+                $balance = $document->getRawOriginal('amount_due');
+
+                if ($daysOverdue <= 0) {
+                    $aging['current'] += $balance;
+                } else {
+                    $period = ceil($daysOverdue / $daysPerPeriod);
+
+                    if ($period <= $numberOfPeriods) {
+                        $aging["period_{$period}"] += $balance;
+                    } else {
+                        $aging['over_periods'] += $balance;
+                    }
+                }
+            }
+
+            $aging['total'] = array_sum($aging);
+
+            foreach ($aging as $bucket => $amount) {
+                $totalAging[$bucket] += $amount;
+            }
+
+            $entity = $entityDocuments->first()->{$entityType->value};
+
+            $categories[] = new EntityReportDTO(
+                name: $entity->name,
+                id: $entityId,
+                aging: $this->formatBalances($aging, AgingBucketDTO::class, false),
+            );
+        }
+
+        $totalAging['total'] = array_sum($totalAging);
+
+        return new ReportDTO(
+            categories: ['Entities' => $categories],
+            agingSummary: $this->formatBalances($totalAging, AgingBucketDTO::class),
+            fields: $columns,
             endDate: $asOfDateCarbon,
         );
     }

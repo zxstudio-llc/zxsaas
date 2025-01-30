@@ -22,13 +22,15 @@
         </thead>
         @foreach($report->getCategories() as $category)
             <tbody>
-            <tr class="category-header-row">
-                @foreach($category->header as $index => $header)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
-                        {{ $header }}
-                    </td>
-                @endforeach
-            </tr>
+            @if(! empty($category->header))
+                <tr class="category-header-row">
+                    @foreach($category->header as $index => $header)
+                        <td class="{{ $report->getAlignmentClass($index) }}">
+                            {{ $header }}
+                        </td>
+                    @endforeach
+                </tr>
+            @endif
             @foreach($category->data as $account)
                 <tr>
                     @foreach($account as $index => $cell)
@@ -97,19 +99,21 @@
                 </tr>
             @endforeach
 
-            <tr class="category-summary-row">
-                @foreach($category->summary as $index => $cell)
-                    <td class="{{ $report->getAlignmentClass($index) }}">
-                        {{ $cell }}
-                    </td>
-                @endforeach
-            </tr>
-
-            @unless($loop->last && empty($report->getOverallTotals()))
-                <tr class="spacer-row">
-                    <td colspan="{{ count($report->getHeaders()) }}"></td>
+            @if(! empty($category->summary))
+                <tr class="category-summary-row">
+                    @foreach($category->summary as $index => $cell)
+                        <td class="{{ $report->getAlignmentClass($index) }}">
+                            {{ $cell }}
+                        </td>
+                    @endforeach
                 </tr>
-            @endunless
+
+                @unless($loop->last && empty($report->getOverallTotals()))
+                    <tr class="spacer-row">
+                        <td colspan="{{ count($report->getHeaders()) }}"></td>
+                    </tr>
+                @endunless
+            @endif
             </tbody>
         @endforeach
         <tfoot>

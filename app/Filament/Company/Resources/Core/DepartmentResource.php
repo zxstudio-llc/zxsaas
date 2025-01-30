@@ -56,7 +56,7 @@ class DepartmentResource extends Resource
                         Forms\Components\Group::make()
                             ->schema([
                                 Forms\Components\Select::make('parent_id')
-                                    ->localizeLabel('Parent Department')
+                                    ->localizeLabel('Parent department')
                                     ->relationship('parent', 'name')
                                     ->preload()
                                     ->searchable()

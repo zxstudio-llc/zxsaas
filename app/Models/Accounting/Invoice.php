@@ -465,12 +465,12 @@ class Invoice extends Document
     {
         return $action::make('approveDraft')
             ->label('Approve')
-            ->icon('heroicon-o-check-circle')
+            ->icon('heroicon-m-check-circle')
             ->visible(function (self $record) {
                 return $record->canBeApproved();
             })
             ->databaseTransaction()
-            ->successNotificationTitle('Invoice Approved')
+            ->successNotificationTitle('Invoice approved')
             ->action(function (self $record, MountableAction $action) {
                 $record->approveDraft();
 
@@ -481,12 +481,12 @@ class Invoice extends Document
     public static function getMarkAsSentAction(string $action = Action::class): MountableAction
     {
         return $action::make('markAsSent')
-            ->label('Mark as Sent')
-            ->icon('heroicon-o-paper-airplane')
+            ->label('Mark as sent')
+            ->icon('heroicon-m-paper-airplane')
             ->visible(static function (self $record) {
                 return $record->canBeMarkedAsSent();
             })
-            ->successNotificationTitle('Invoice Sent')
+            ->successNotificationTitle('Invoice sent')
             ->action(function (self $record, MountableAction $action) {
                 $record->markAsSent();
 

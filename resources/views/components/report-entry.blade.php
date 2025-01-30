@@ -10,14 +10,14 @@
         @class([
             'inline-flex rounded-lg p-3 ring-4 ring-white dark:ring-gray-900',
             match ($iconColor) {
-                'gray' => 'fi-color-gray bg-gray-50 text-gray-700 dark:bg-gray-900 dark:text-gray-500',
-                default => 'fi-color-custom bg-custom-50 text-custom-700 dark:bg-custom-950 dark:text-custom-500',
+                'gray' => 'fi-color-gray bg-gray-50 text-gray-700 dark:bg-gray-950 dark:text-gray-300',
+                default => 'fi-color-custom bg-custom-50 text-custom-700 dark:bg-custom-950 dark:text-custom-300',
             },
         ])
         @style([
             \Filament\Support\get_color_css_variables(
                 $iconColor,
-                shades: [50, 500, 700, 950],
+                shades: [50, 300, 700, 950],
             ) => $iconColor !== 'gray',
         ])
     >

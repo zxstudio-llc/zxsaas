@@ -25,7 +25,7 @@ class AccountResource extends Resource
 {
     protected static ?string $model = BankAccount::class;
 
-    protected static ?string $modelLabel = 'Account';
+    protected static ?string $modelLabel = 'account';
 
     public static function getModelLabel(): string
     {
@@ -89,7 +89,7 @@ class AccountResource extends Resource
                             ->columnSpanFull()
                             ->schema([
                                 Forms\Components\TextInput::make('number')
-                                    ->localizeLabel('Account Number')
+                                    ->localizeLabel('Account number')
                                     ->unique(ignoreRecord: true, modifyRuleUsing: static function (Unique $rule, $state) {
                                         $companyId = Auth::user()->currentCompany->id;
 
@@ -127,7 +127,7 @@ class AccountResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('account.ending_balance')
-                    ->localizeLabel('Ending Balance')
+                    ->localizeLabel('Ending balance')
                     ->state(static fn (BankAccount $record) => $record->account->ending_balance->convert()->formatWithCode())
                     ->toggleable()
                     ->alignment(Alignment::End),
