@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Collections\Accounting\DocumentCollection;
 use App\Contracts\MoneyFormattableDTO;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountCategoryDTO;
@@ -10,13 +11,18 @@ use App\DTO\AccountTransactionDTO;
 use App\DTO\AccountTypeDTO;
 use App\DTO\AgingBucketDTO;
 use App\DTO\CashFlowOverviewDTO;
+use App\DTO\ClientBalanceDTO;
+use App\DTO\ClientReportDTO;
 use App\DTO\EntityReportDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
 use App\Enums\Accounting\DocumentEntityType;
+use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\Bill;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
 use App\Support\Column;
 use App\Utilities\Currency\CurrencyAccessor;
@@ -838,42 +844,43 @@ class ReportService
     ): ReportDTO {
         $asOfDateCarbon = Carbon::parse($asOfDate);
 
+        /** @var DocumentCollection<int,DocumentCollection<int,Invoice|Bill>> $documents */
         $documents = $entityType === DocumentEntityType::Client
             ? $this->accountService->getUnpaidClientInvoices($asOfDate)->with(['client:id,name'])->get()->groupBy('client_id')
             : $this->accountService->getUnpaidVendorBills($asOfDate)->with(['vendor:id,name'])->get()->groupBy('vendor_id');
 
         $categories = [];
-
-        $agingBuckets = ['current' => 0];
-
+        $totalAging = [
+            'current' => 0,
+        ];
         for ($i = 1; $i <= $numberOfPeriods; $i++) {
-            $agingBuckets["period_{$i}"] = 0;
+            $totalAging["period_{$i}"] = 0;
         }
-
-        $agingBuckets['over_periods'] = 0;
-        $agingBuckets['total'] = 0;
-
-        $totalAging = $agingBuckets;
+        $totalAging['over_periods'] = 0;
+        $totalAging['total'] = 0;
 
         foreach ($documents as $entityId => $entityDocuments) {
-            $aging = $agingBuckets;
+            $aging = [
+                'current' => $entityDocuments
+                    ->filter(static fn ($doc) => ($doc->days_overdue ?? 0) <= 0)
+                    ->sumMoneyInDefaultCurrency('amount_due'),
+            ];
 
-            foreach ($entityDocuments as $document) {
-                $daysOverdue = $document->days_overdue ?? 0;
-                $balance = $document->getRawOriginal('amount_due');
+            for ($i = 1; $i <= $numberOfPeriods; $i++) {
+                $min = ($i - 1) * $daysPerPeriod;
+                $max = $i * $daysPerPeriod;
+                $aging["period_{$i}"] = $entityDocuments
+                    ->filter(static function ($doc) use ($min, $max) {
+                        $days = $doc->days_overdue ?? 0;
 
-                if ($daysOverdue <= 0) {
-                    $aging['current'] += $balance;
-                } else {
-                    $period = ceil($daysOverdue / $daysPerPeriod);
-
-                    if ($period <= $numberOfPeriods) {
-                        $aging["period_{$period}"] += $balance;
-                    } else {
-                        $aging['over_periods'] += $balance;
-                    }
-                }
+                        return $days > $min && $days <= $max;
+                    })
+                    ->sumMoneyInDefaultCurrency('amount_due');
             }
+
+            $aging['over_periods'] = $entityDocuments
+                ->filter(static fn ($doc) => ($doc->days_overdue ?? 0) > ($numberOfPeriods * $daysPerPeriod))
+                ->sumMoneyInDefaultCurrency('amount_due');
 
             $aging['total'] = array_sum($aging);
 
@@ -897,6 +904,67 @@ class ReportService
             agingSummary: $this->formatBalances($totalAging, AgingBucketDTO::class),
             fields: $columns,
             endDate: $asOfDateCarbon,
+        );
+    }
+
+    public function buildClientBalanceSummaryReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    {
+        /** @var DocumentCollection<int,DocumentCollection<int,Invoice>> $invoices */
+        $invoices = Invoice::query()
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereNotIn('status', [
+                InvoiceStatus::Draft,
+                InvoiceStatus::Void,
+            ])
+            ->whereNotNull('approved_at')
+            ->with(['client:id,name'])
+            ->get()
+            ->groupBy('client_id');
+
+        $clients = [];
+        $totalBalance = 0;
+        $totalPaidBalance = 0;
+        $totalUnpaidBalance = 0;
+
+        foreach ($invoices as $clientInvoices) {
+            $clientTotalBalance = $clientInvoices->sumMoneyInDefaultCurrency('total');
+
+            $clientPaidBalance = $clientInvoices->sumMoneyInDefaultCurrency('amount_paid');
+
+            $clientUnpaidBalance = $clientInvoices->whereNot('status', InvoiceStatus::Overpaid)
+                ->sumMoneyInDefaultCurrency('amount_due');
+
+            $totalBalance += $clientTotalBalance;
+            $totalPaidBalance += $clientPaidBalance;
+            $totalUnpaidBalance += $clientUnpaidBalance;
+
+            $formattedBalances = $this->formatBalances([
+                'total_balance' => $clientTotalBalance,
+                'paid_balance' => $clientPaidBalance,
+                'unpaid_balance' => $clientUnpaidBalance,
+            ], ClientBalanceDTO::class);
+
+            $client = $clientInvoices->first()->client;
+
+            $clients[] = new ClientReportDTO(
+                clientName: $client->name,
+                clientId: $client->id,
+                balance: $formattedBalances,
+            );
+        }
+
+        $clientBalanceTotal = $this->formatBalances([
+            'total_balance' => $totalBalance,
+            'paid_balance' => $totalPaidBalance,
+            'unpaid_balance' => $totalUnpaidBalance,
+        ], ClientBalanceDTO::class);
+
+        return new ReportDTO(
+            categories: ['Clients' => $clients],
+            clientBalanceTotal: $clientBalanceTotal,
+            fields: $columns,
+            startDate: Carbon::parse($startDate),
+            endDate: Carbon::parse($endDate),
         );
     }
 }
