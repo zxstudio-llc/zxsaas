@@ -9,5 +9,6 @@ readonly class EntityReportDTO
         public string $id,
         public ?AgingBucketDTO $aging = null,
         public ?EntityBalanceDTO $balance = null,
+        public ?PaymentMetricsDTO $paymentMetrics = null,
     ) {}
 }

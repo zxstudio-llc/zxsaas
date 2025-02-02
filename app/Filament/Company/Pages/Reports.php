@@ -9,9 +9,11 @@ use App\Filament\Company\Pages\Reports\AccountTransactions;
 use App\Filament\Company\Pages\Reports\BalanceSheet;
 use App\Filament\Company\Pages\Reports\CashFlowStatement;
 use App\Filament\Company\Pages\Reports\ClientBalanceSummary;
+use App\Filament\Company\Pages\Reports\ClientPaymentPerformance;
 use App\Filament\Company\Pages\Reports\IncomeStatement;
 use App\Filament\Company\Pages\Reports\TrialBalance;
 use App\Filament\Company\Pages\Reports\VendorBalanceSummary;
+use App\Filament\Company\Pages\Reports\VendorPaymentPerformance;
 use App\Filament\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Infolist;
@@ -95,6 +97,13 @@ class Reports extends Page
                             ->icon('heroicon-o-receipt-percent')
                             ->iconColor(Color::Emerald)
                             ->url(ClientBalanceSummary::getUrl()),
+                        ReportEntry::make('client_payment_performance')
+                            ->hiddenLabel()
+                            ->heading('Client Payment Performance')
+                            ->description('Analyzes payment behavior showing average days to pay, on-time payment rates, and late payment patterns for each client.')
+                            ->icon('heroicon-o-clock')
+                            ->iconColor(Color::Fuchsia)
+                            ->url(ClientPaymentPerformance::getUrl()),
                     ]),
                 Section::make('Vendor Reports')
                     ->aside()
@@ -115,6 +124,13 @@ class Reports extends Page
                             ->icon('heroicon-o-banknotes')
                             ->iconColor(Color::Orange)
                             ->url(VendorBalanceSummary::getUrl()),
+                        ReportEntry::make('vendor_payment_performance')
+                            ->hiddenLabel()
+                            ->heading('Vendor Payment Performance')
+                            ->description('Analyzes payment behavior showing average days to pay, on-time payment rates, and late payment patterns for each vendor.')
+                            ->icon('heroicon-o-clock')
+                            ->iconColor(Color::Violet)
+                            ->url(VendorPaymentPerformance::getUrl()),
                     ]),
                 Section::make('Detailed Reports')
                     ->aside()

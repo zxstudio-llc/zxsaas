@@ -29,4 +29,12 @@ enum DocumentEntityType: string implements HasLabel
             self::Vendor => 'Vendor Balance Summary',
         };
     }
+
+    public function getPaymentPerformanceReportTitle(): string
+    {
+        return match ($this) {
+            self::Client => 'Client Payment Performance',
+            self::Vendor => 'Vendor Payment Performance',
+        };
+    }
 }
