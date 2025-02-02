@@ -2,9 +2,9 @@
 
 namespace App\DTO;
 
-use App\Contracts\MoneyFormattableDTO;
+use App\Contracts\BalanceFormattable;
 
-readonly class AgingBucketDTO implements MoneyFormattableDTO
+readonly class AgingBucketDTO implements BalanceFormattable
 {
     /**
      * @param  array<string, string>  $periods

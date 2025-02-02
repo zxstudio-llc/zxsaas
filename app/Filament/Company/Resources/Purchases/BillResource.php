@@ -400,7 +400,7 @@ class BillResource extends Resource
                             'paid_at',
                         ])
                         ->beforeReplicaSaved(function (Bill $replica) {
-                            $replica->status = BillStatus::Unpaid;
+                            $replica->status = BillStatus::Open;
                             $replica->bill_number = Bill::getNextDocumentNumber();
                             $replica->date = now();
                             $replica->due_date = now()->addDays($replica->company->defaultBill->payment_terms->getDays());

@@ -14,11 +14,19 @@ enum DocumentEntityType: string implements HasLabel
         return $this->name;
     }
 
-    public function getReportTitle(): string
+    public function getAgingReportTitle(): string
     {
         return match ($this) {
             self::Client => 'Accounts Receivable Aging',
             self::Vendor => 'Accounts Payable Aging',
+        };
+    }
+
+    public function getBalanceSummaryReportTitle(): string
+    {
+        return match ($this) {
+            self::Client => 'Client Balance Summary',
+            self::Vendor => 'Vendor Balance Summary',
         };
     }
 }

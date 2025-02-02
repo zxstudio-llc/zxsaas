@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Collections\Accounting\DocumentCollection;
-use App\Contracts\MoneyFormattableDTO;
+use App\Contracts\BalanceFormattable;
 use App\DTO\AccountBalanceDTO;
 use App\DTO\AccountCategoryDTO;
 use App\DTO\AccountDTO;
@@ -11,12 +11,12 @@ use App\DTO\AccountTransactionDTO;
 use App\DTO\AccountTypeDTO;
 use App\DTO\AgingBucketDTO;
 use App\DTO\CashFlowOverviewDTO;
-use App\DTO\ClientBalanceDTO;
-use App\DTO\ClientReportDTO;
+use App\DTO\EntityBalanceDTO;
 use App\DTO\EntityReportDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
+use App\Enums\Accounting\BillStatus;
 use App\Enums\Accounting\DocumentEntityType;
 use App\Enums\Accounting\InvoiceStatus;
 use App\Enums\Accounting\TransactionType;
@@ -38,9 +38,9 @@ class ReportService
     ) {}
 
     /**
-     * @param  class-string<MoneyFormattableDTO>|null  $dtoClass
+     * @param  class-string<BalanceFormattable>|null  $dtoClass
      */
-    public function formatBalances(array $balances, ?string $dtoClass = null, bool $formatZeros = true): MoneyFormattableDTO | array
+    public function formatBalances(array $balances, ?string $dtoClass = null, bool $formatZeros = true): BalanceFormattable | array
     {
         $dtoClass ??= AccountBalanceDTO::class;
 
@@ -379,7 +379,7 @@ class ReportService
         return new ReportDTO(categories: $accountCategories, overallTotal: $formattedReportTotalBalances, fields: $columns, reportType: $trialBalanceType);
     }
 
-    public function getRetainedEarningsBalances(string $startDate, string $endDate): MoneyFormattableDTO | array
+    public function getRetainedEarningsBalances(string $startDate, string $endDate): BalanceFormattable | array
     {
         $retainedEarningsAmount = $this->calculateRetainedEarnings($startDate, $endDate)->getAmount();
 
@@ -522,7 +522,7 @@ class ReportService
         );
     }
 
-    private function calculateTotalCashFlows(array $sections, string $startDate): MoneyFormattableDTO | array
+    private function calculateTotalCashFlows(array $sections, string $startDate): BalanceFormattable | array
     {
         $totalInflow = 0;
         $totalOutflow = 0;
@@ -907,61 +907,74 @@ class ReportService
         );
     }
 
-    public function buildClientBalanceSummaryReport(string $startDate, string $endDate, array $columns = []): ReportDTO
+    public function buildEntityBalanceSummaryReport(string $startDate, string $endDate, DocumentEntityType $entityType, array $columns = []): ReportDTO
     {
-        /** @var DocumentCollection<int,DocumentCollection<int,Invoice>> $invoices */
-        $invoices = Invoice::query()
-            ->whereBetween('date', [$startDate, $endDate])
-            ->whereNotIn('status', [
-                InvoiceStatus::Draft,
-                InvoiceStatus::Void,
-            ])
-            ->whereNotNull('approved_at')
-            ->with(['client:id,name'])
-            ->get()
-            ->groupBy('client_id');
+        $documents = $entityType === DocumentEntityType::Client
+            ? Invoice::query()
+                ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotIn('status', [
+                    InvoiceStatus::Draft,
+                    InvoiceStatus::Void,
+                ])
+                ->whereNotNull('approved_at')
+                ->with(['client:id,name'])
+                ->get()
+                ->groupBy('client_id')
+            : Bill::query()
+                ->whereBetween('date', [$startDate, $endDate])
+                ->whereNotIn('status', [
+                    BillStatus::Void,
+                ])
+                ->with(['vendor:id,name'])
+                ->get()
+                ->groupBy('vendor_id');
 
-        $clients = [];
+        $entities = [];
         $totalBalance = 0;
         $totalPaidBalance = 0;
         $totalUnpaidBalance = 0;
 
-        foreach ($invoices as $clientInvoices) {
-            $clientTotalBalance = $clientInvoices->sumMoneyInDefaultCurrency('total');
+        /** @var DocumentCollection<int,Invoice|Bill> $entityDocuments */
+        foreach ($documents as $entityDocuments) {
+            $entityTotalBalance = $entityDocuments->sumMoneyInDefaultCurrency('total');
 
-            $clientPaidBalance = $clientInvoices->sumMoneyInDefaultCurrency('amount_paid');
+            $entityPaidBalance = $entityDocuments->sumMoneyInDefaultCurrency('amount_paid');
 
-            $clientUnpaidBalance = $clientInvoices->whereNot('status', InvoiceStatus::Overpaid)
-                ->sumMoneyInDefaultCurrency('amount_due');
+            $entityUnpaidBalance = match ($entityType) {
+                DocumentEntityType::Client => $entityDocuments->whereNot('status', InvoiceStatus::Overpaid)
+                    ->sumMoneyInDefaultCurrency('amount_due'),
+                DocumentEntityType::Vendor => $entityDocuments->whereIn('status', [BillStatus::Open, BillStatus::Partial, BillStatus::Overdue])
+                    ->sumMoneyInDefaultCurrency('amount_due'),
+            };
 
-            $totalBalance += $clientTotalBalance;
-            $totalPaidBalance += $clientPaidBalance;
-            $totalUnpaidBalance += $clientUnpaidBalance;
+            $totalBalance += $entityTotalBalance;
+            $totalPaidBalance += $entityPaidBalance;
+            $totalUnpaidBalance += $entityUnpaidBalance;
 
             $formattedBalances = $this->formatBalances([
-                'total_balance' => $clientTotalBalance,
-                'paid_balance' => $clientPaidBalance,
-                'unpaid_balance' => $clientUnpaidBalance,
-            ], ClientBalanceDTO::class);
+                'total_balance' => $entityTotalBalance,
+                'paid_balance' => $entityPaidBalance,
+                'unpaid_balance' => $entityUnpaidBalance,
+            ], EntityBalanceDTO::class);
 
-            $client = $clientInvoices->first()->client;
+            $entity = $entityDocuments->first()->{$entityType->value};
 
-            $clients[] = new ClientReportDTO(
-                clientName: $client->name,
-                clientId: $client->id,
+            $entities[] = new EntityReportDTO(
+                name: $entity->name,
+                id: $entity->id,
                 balance: $formattedBalances,
             );
         }
 
-        $clientBalanceTotal = $this->formatBalances([
+        $entityBalanceTotal = $this->formatBalances([
             'total_balance' => $totalBalance,
             'paid_balance' => $totalPaidBalance,
             'unpaid_balance' => $totalUnpaidBalance,
-        ], ClientBalanceDTO::class);
+        ], EntityBalanceDTO::class);
 
         return new ReportDTO(
-            categories: ['Clients' => $clients],
-            clientBalanceTotal: $clientBalanceTotal,
+            categories: ['Entities' => $entities],
+            entityBalanceTotal: $entityBalanceTotal,
             fields: $columns,
             startDate: Carbon::parse($startDate),
             endDate: Carbon::parse($endDate),

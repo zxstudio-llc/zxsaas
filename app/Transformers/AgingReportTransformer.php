@@ -18,7 +18,7 @@ class AgingReportTransformer extends BaseReportTransformer
 
     public function getTitle(): string
     {
-        return $this->entityType->getReportTitle();
+        return $this->entityType->getAgingReportTitle();
     }
 
     /**

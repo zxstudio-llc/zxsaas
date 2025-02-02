@@ -403,7 +403,7 @@ class AccountService
                 DB::raw('DATEDIFF(?, bills.due_date) as days_overdue'),
             ])
             ->addBinding([$asOfDate], 'select')
-            ->outstanding()
+            ->unpaid()
             ->where('amount_due', '>', 0);
     }
 }

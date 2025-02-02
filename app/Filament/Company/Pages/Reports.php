@@ -11,6 +11,7 @@ use App\Filament\Company\Pages\Reports\CashFlowStatement;
 use App\Filament\Company\Pages\Reports\ClientBalanceSummary;
 use App\Filament\Company\Pages\Reports\IncomeStatement;
 use App\Filament\Company\Pages\Reports\TrialBalance;
+use App\Filament\Company\Pages\Reports\VendorBalanceSummary;
 use App\Filament\Infolists\Components\ReportEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Infolist;
@@ -107,13 +108,13 @@ class Reports extends Page
                             ->icon('heroicon-o-clock')
                             ->iconColor(Color::Rose)
                             ->url(AccountsPayableAging::getUrl()),
-                        ReportEntry::make('expenses_by_vendor')
+                        ReportEntry::make('vendor_balance_summary')
                             ->hiddenLabel()
-                            ->heading('Expenses by Vendor')
-                            ->description('Shows expenses incurred with each vendor, helping identify top vendors and opportunities for cost savings.')
-                            ->icon('heroicon-o-arrow-trending-down')
+                            ->heading('Vendor Balance Summary')
+                            ->description('Shows total billed amounts, payments made, and outstanding balances for each vendor, helping track payment obligations and vendor relationships.')
+                            ->icon('heroicon-o-banknotes')
                             ->iconColor(Color::Orange)
-                            ->url('#'),
+                            ->url(VendorBalanceSummary::getUrl()),
                     ]),
                 Section::make('Detailed Reports')
                     ->aside()

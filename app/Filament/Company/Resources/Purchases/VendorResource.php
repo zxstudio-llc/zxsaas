@@ -180,7 +180,7 @@ class VendorResource extends Resource
                     ->label('Payable balance')
                     ->getStateUsing(function (Vendor $vendor) {
                         return $vendor->bills()
-                            ->outstanding()
+                            ->unpaid()
                             ->get()
                             ->sumMoneyInDefaultCurrency('amount_due');
                     })
@@ -200,7 +200,7 @@ class VendorResource extends Resource
                     })
                     ->sortable(query: function (Builder $query, string $direction) {
                         return $query
-                            ->withSum(['bills' => fn (Builder $query) => $query->outstanding()], 'amount_due')
+                            ->withSum(['bills' => fn (Builder $query) => $query->unpaid()], 'amount_due')
                             ->orderBy('bills_sum_amount_due', $direction);
                     })
                     ->currency(convert: false)

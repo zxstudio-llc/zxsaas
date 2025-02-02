@@ -2,9 +2,9 @@
 
 namespace App\DTO;
 
-use App\Contracts\MoneyFormattableDTO;
+use App\Contracts\BalanceFormattable;
 
-class AccountBalanceDTO implements MoneyFormattableDTO
+class AccountBalanceDTO implements BalanceFormattable
 {
     public function __construct(
         public ?string $startingBalance,

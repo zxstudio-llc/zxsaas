@@ -2,14 +2,23 @@
 
 namespace App\Transformers;
 
-use App\DTO\ClientReportDTO;
+use App\DTO\EntityReportDTO;
 use App\DTO\ReportCategoryDTO;
+use App\DTO\ReportDTO;
+use App\Enums\Accounting\DocumentEntityType;
 
-class ClientBalanceSummaryReportTransformer extends BaseReportTransformer
+class EntityBalanceSummaryReportTransformer extends BaseReportTransformer
 {
+    public function __construct(
+        ReportDTO $report,
+        private readonly DocumentEntityType $entityType,
+    ) {
+        parent::__construct($report);
+    }
+
     public function getTitle(): string
     {
-        return 'Client Balance Summary';
+        return $this->entityType->getBalanceSummaryReportTitle();
     }
 
     /**
@@ -20,18 +29,18 @@ class ClientBalanceSummaryReportTransformer extends BaseReportTransformer
         $categories = [];
 
         foreach ($this->report->categories as $categoryName => $category) {
-            $data = array_map(function (ClientReportDTO $client) {
+            $data = array_map(function (EntityReportDTO $entity) {
                 $row = [];
 
                 foreach ($this->getColumns() as $column) {
                     $row[$column->getName()] = match ($column->getName()) {
-                        'client_name' => [
-                            'name' => $client->clientName,
-                            'id' => $client->clientId,
+                        'entity_name' => [
+                            'name' => $entity->name,
+                            'id' => $entity->id,
                         ],
-                        'total_balance' => $client->balance->totalBalance,
-                        'paid_balance' => $client->balance->paidBalance,
-                        'unpaid_balance' => $client->balance->unpaidBalance,
+                        'total_balance' => $entity->balance->totalBalance,
+                        'paid_balance' => $entity->balance->paidBalance,
+                        'unpaid_balance' => $entity->balance->unpaidBalance,
                         default => '',
                     };
                 }
@@ -55,10 +64,10 @@ class ClientBalanceSummaryReportTransformer extends BaseReportTransformer
 
         foreach ($this->getColumns() as $column) {
             $totals[$column->getName()] = match ($column->getName()) {
-                'client_name' => 'Total for all clients',
-                'total_balance' => $this->report->clientBalanceTotal->totalBalance,
-                'paid_balance' => $this->report->clientBalanceTotal->paidBalance,
-                'unpaid_balance' => $this->report->clientBalanceTotal->unpaidBalance,
+                'entity_name' => 'Total',
+                'total_balance' => $this->report->entityBalanceTotal->totalBalance,
+                'paid_balance' => $this->report->entityBalanceTotal->paidBalance,
+                'unpaid_balance' => $this->report->entityBalanceTotal->unpaidBalance,
                 default => '',
             };
         }

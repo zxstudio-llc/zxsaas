@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('date')->nullable();
             $table->date('due_date')->nullable();
             $table->timestamp('paid_at')->nullable();
-            $table->string('status')->default('unpaid');
+            $table->string('status')->default('open');
             $table->string('currency_code')->nullable();
             $table->string('discount_method')->default('per_line_item');
             $table->string('discount_computation')->default('percentage');

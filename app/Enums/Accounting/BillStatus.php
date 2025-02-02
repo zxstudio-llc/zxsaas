@@ -10,7 +10,7 @@ enum BillStatus: string implements HasColor, HasLabel
     case Overdue = 'overdue';
     case Partial = 'partial';
     case Paid = 'paid';
-    case Unpaid = 'unpaid';
+    case Open = 'open';
     case Void = 'void';
 
     public function getLabel(): ?string
@@ -21,8 +21,9 @@ enum BillStatus: string implements HasColor, HasLabel
     public function getColor(): string | array | null
     {
         return match ($this) {
+            self::Open => 'info',
             self::Overdue => 'danger',
-            self::Partial, self::Unpaid => 'warning',
+            self::Partial => 'warning',
             self::Paid => 'success',
             self::Void => 'gray',
         };
@@ -32,7 +33,7 @@ enum BillStatus: string implements HasColor, HasLabel
     {
         return [
             self::Partial,
-            self::Unpaid,
+            self::Open,
         ];
     }
 }

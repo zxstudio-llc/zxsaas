@@ -2,7 +2,7 @@
 
 namespace App\Contracts;
 
-interface MoneyFormattableDTO
+interface BalanceFormattable
 {
     public static function fromArray(array $balances): static;
 }
