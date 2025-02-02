@@ -5,6 +5,7 @@ namespace App\Enums\Accounting;
 use App\DTO\DocumentLabelDTO;
 use Filament\Support\Contracts\HasIcon;
 use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Str;
 
 enum DocumentType: string implements HasIcon, HasLabel
 {
@@ -21,6 +22,11 @@ enum DocumentType: string implements HasIcon, HasLabel
             self::Invoice, self::Bill, self::Estimate => $this->name,
             self::RecurringInvoice => 'Recurring Invoice',
         };
+    }
+
+    public function getPluralLabel(): ?string
+    {
+        return Str::plural($this->getLabel());
     }
 
     public function getIcon(): ?string

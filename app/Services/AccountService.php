@@ -381,6 +381,7 @@ class AccountService
                 'invoices.client_id',
                 'invoices.due_date',
                 'invoices.amount_due',
+                'invoices.currency_code',
                 DB::raw('DATEDIFF(?, invoices.due_date) as days_overdue'),
             ])
             ->addBinding([$asOfDate], 'select')
@@ -398,10 +399,11 @@ class AccountService
                 'bills.vendor_id',
                 'bills.due_date',
                 'bills.amount_due',
+                'bills.currency_code',
                 DB::raw('DATEDIFF(?, bills.due_date) as days_overdue'),
             ])
             ->addBinding([$asOfDate], 'select')
-            ->outstanding()
+            ->unpaid()
             ->where('amount_due', '>', 0);
     }
 }

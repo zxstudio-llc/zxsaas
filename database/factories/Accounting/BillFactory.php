@@ -46,7 +46,7 @@ class BillFactory extends Factory
             'order_number' => $this->faker->unique()->numerify('PO-#####'),
             'date' => $billDate,
             'due_date' => Carbon::parse($billDate)->addDays($dueDays),
-            'status' => BillStatus::Unpaid,
+            'status' => BillStatus::Open,
             'currency_code' => 'USD',
             'notes' => $this->faker->sentence,
             'created_by' => 1,

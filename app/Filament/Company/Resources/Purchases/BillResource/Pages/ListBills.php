@@ -42,10 +42,10 @@ class ListBills extends ListRecords
             'all' => Tab::make()
                 ->label('All'),
 
-            'outstanding' => Tab::make()
-                ->label('Outstanding')
+            'unpaid' => Tab::make()
+                ->label('Unpaid')
                 ->modifyQueryUsing(function (Builder $query) {
-                    $query->outstanding();
+                    $query->unpaid();
                 }),
 
             'paid' => Tab::make()

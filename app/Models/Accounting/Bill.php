@@ -209,10 +209,10 @@ class Bill extends Document
         return $this->initialTransaction()->exists();
     }
 
-    public function scopeOutstanding(Builder $query): Builder
+    public function scopeUnpaid(Builder $query): Builder
     {
         return $query->whereIn('status', [
-            BillStatus::Unpaid,
+            BillStatus::Open,
             BillStatus::Partial,
             BillStatus::Overdue,
         ]);
@@ -396,7 +396,7 @@ class Bill extends Document
             ])
             ->modal(false)
             ->beforeReplicaSaved(function (self $original, self $replica) {
-                $replica->status = BillStatus::Unpaid;
+                $replica->status = BillStatus::Open;
                 $replica->bill_number = self::getNextDocumentNumber();
                 $replica->date = now();
                 $replica->due_date = now()->addDays($original->company->defaultBill->payment_terms->getDays());

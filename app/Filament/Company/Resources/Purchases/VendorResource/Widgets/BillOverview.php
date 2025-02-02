@@ -16,7 +16,7 @@ class BillOverview extends EnhancedStatsOverviewWidget
     protected function getStats(): array
     {
         $unpaidBills = $this->record->bills()
-            ->whereIn('status', [BillStatus::Unpaid, BillStatus::Partial, BillStatus::Overdue]);
+            ->whereIn('status', [BillStatus::Open, BillStatus::Partial, BillStatus::Overdue]);
 
         $amountToPay = $unpaidBills->get()->sumMoneyInDefaultCurrency('amount_due');
 

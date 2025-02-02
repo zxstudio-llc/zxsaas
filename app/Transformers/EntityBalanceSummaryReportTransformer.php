@@ -7,7 +7,7 @@ use App\DTO\ReportCategoryDTO;
 use App\DTO\ReportDTO;
 use App\Enums\Accounting\DocumentEntityType;
 
-class AgingReportTransformer extends BaseReportTransformer
+class EntityBalanceSummaryReportTransformer extends BaseReportTransformer
 {
     public function __construct(
         ReportDTO $report,
@@ -18,7 +18,7 @@ class AgingReportTransformer extends BaseReportTransformer
 
     public function getTitle(): string
     {
-        return $this->entityType->getAgingReportTitle();
+        return $this->entityType->getBalanceSummaryReportTitle();
     }
 
     /**
@@ -28,24 +28,20 @@ class AgingReportTransformer extends BaseReportTransformer
     {
         $categories = [];
 
-        foreach ($this->report->categories as $category) {
+        foreach ($this->report->categories as $categoryName => $category) {
             $data = array_map(function (EntityReportDTO $entity) {
                 $row = [];
 
                 foreach ($this->getColumns() as $column) {
-                    $columnName = $column->getName();
-
-                    $row[$columnName] = match ($columnName) {
+                    $row[$column->getName()] = match ($column->getName()) {
                         'entity_name' => [
                             'name' => $entity->name,
                             'id' => $entity->id,
                         ],
-                        'current' => $entity->aging->current,
-                        'over_periods' => $entity->aging->overPeriods,
-                        'total' => $entity->aging->total,
-                        default => str_starts_with($columnName, 'period_')
-                            ? $entity->aging->periods[$columnName] ?? null
-                            : '',
+                        'total_balance' => $entity->balance->totalBalance,
+                        'paid_balance' => $entity->balance->paidBalance,
+                        'unpaid_balance' => $entity->balance->unpaidBalance,
+                        default => '',
                     };
                 }
 
@@ -67,16 +63,12 @@ class AgingReportTransformer extends BaseReportTransformer
         $totals = [];
 
         foreach ($this->getColumns() as $column) {
-            $columnName = $column->getName();
-
-            $totals[$columnName] = match ($columnName) {
+            $totals[$column->getName()] = match ($column->getName()) {
                 'entity_name' => 'Total',
-                'current' => $this->report->agingSummary->current,
-                'over_periods' => $this->report->agingSummary->overPeriods,
-                'total' => $this->report->agingSummary->total,
-                default => str_starts_with($columnName, 'period_')
-                    ? $this->report->agingSummary->periods[$columnName] ?? null
-                    : '',
+                'total_balance' => $this->report->entityBalanceTotal->totalBalance,
+                'paid_balance' => $this->report->entityBalanceTotal->paidBalance,
+                'unpaid_balance' => $this->report->entityBalanceTotal->unpaidBalance,
+                default => '',
             };
         }
 

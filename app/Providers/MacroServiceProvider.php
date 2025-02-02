@@ -22,6 +22,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Contracts\HasTable;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\ServiceProvider;
 
@@ -40,6 +41,10 @@ class MacroServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Collection::macro('whereNot', function (callable | string $key, mixed $value = null): Collection {
+            return $this->where($key, '!=', $value);
+        });
+
         TextInput::macro('money', function (string | Closure | null $currency = null, bool $useAffix = true): static {
             $currency ??= CurrencyAccessor::getDefaultCurrency();
 
