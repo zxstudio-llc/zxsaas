@@ -4,22 +4,19 @@ namespace App\Filament\Company\Pages\Reports;
 
 use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
+use App\Filament\Forms\Components\DateRangeSelect;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
 use App\Transformers\TrialBalanceReportTransformer;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
-use Guava\FilamentClusters\Forms\Cluster;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TrialBalance extends BaseReportPage
 {
-    protected static string $view = 'filament.company.pages.reports.detailed-report';
-
-    protected static ?string $slug = 'reports/trial-balance';
-
-    protected static bool $shouldRegisterNavigation = false;
+    protected static string $view = 'filament.company.pages.reports.trial-balance';
 
     protected ReportService $reportService;
 
@@ -31,48 +28,55 @@ class TrialBalance extends BaseReportPage
         $this->exportService = $exportService;
     }
 
+    protected function initializeDefaultFilters(): void
+    {
+        if (empty($this->getFilterState('reportType'))) {
+            $this->setFilterState('reportType', 'standard');
+        }
+    }
+
     public function getTable(): array
     {
         return [
             Column::make('account_code')
-                ->label('Account Code')
-                ->toggleable()
-                ->alignment(Alignment::Center),
+                ->label('ACCOUNT CODE')
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->alignment(Alignment::Left),
             Column::make('account_name')
-                ->label('Account')
+                ->label('ACCOUNTS')
                 ->alignment(Alignment::Left),
             Column::make('debit_balance')
-                ->label('Debit')
-                ->toggleable()
+                ->label('DEBIT')
                 ->alignment(Alignment::Right),
             Column::make('credit_balance')
-                ->label('Credit')
-                ->toggleable()
+                ->label('CREDIT')
                 ->alignment(Alignment::Right),
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
-            ->inlineLabel()
-            ->columns([
-                'lg' => 1,
-                '2xl' => 2,
-            ])
-            ->live()
+            ->columns(4)
             ->schema([
-                $this->getDateRangeFormComponent(),
-                Cluster::make([
-                    $this->getStartDateFormComponent(),
-                    $this->getEndDateFormComponent(),
-                ])->hiddenLabel(),
+                Select::make('reportType')
+                    ->label('Report type')
+                    ->options([
+                        'standard' => 'Standard',
+                        'postClosing' => 'Post-Closing',
+                    ])
+                    ->selectablePlaceholder(false),
+                DateRangeSelect::make('dateRange')
+                    ->label('As of')
+                    ->selectablePlaceholder(false)
+                    ->endDateField('asOfDate'),
+                $this->getAsOfDateFormComponent(),
             ]);
     }
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildTrialBalanceReport($this->startDate, $this->endDate, $columns);
+        return $this->reportService->buildTrialBalanceReport($this->getFilterState('reportType'), $this->getFormattedAsOfDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -82,11 +86,11 @@ class TrialBalance extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, endDate: $this->getFilterState('asOfDate'));
     }
 }

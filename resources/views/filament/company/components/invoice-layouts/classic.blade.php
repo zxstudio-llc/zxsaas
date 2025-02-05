@@ -1,80 +1,80 @@
 @php
     $data = $this->form->getRawState();
-    $viewModel = new \App\View\Models\InvoiceViewModel($this->record, $data);
-    $viewSpecial = $viewModel->buildViewData();
-    extract($viewSpecial,\EXTR_SKIP);
+    $document = \App\DTO\DocumentPreviewDTO::fromSettings($this->record, $data);
 @endphp
 
-{!! $font_html !!}
+{!! $document->getFontHtml() !!}
 
 <style>
     .inv-paper {
-        font-family: '{{ $font_family }}', sans-serif;
+        font-family: '{{ $document->font->getLabel() }}', sans-serif;
     }
 </style>
 
-<x-company.invoice.container class="classic-template-container">
+<x-company.invoice.container class="classic-template-container" preview>
     <!-- Header Section -->
     <x-company.invoice.header class="default-template-header">
         <div class="w-2/3 text-left ml-6">
             <div class="text-xs">
-                <h2 class="text-base font-semibold">{{ $company_name }}</h2>
-                @if($company_address && $company_city && $company_state && $company_zip)
-                    <p>{{ $company_address }}</p>
-                    <p>{{ $company_city }}, {{ $company_state }} {{ $company_zip }}</p>
-                    <p>{{ $company_country }}</p>
+                <h2 class="text-base font-semibold">{{ $document->company->name }}</h2>
+                @if($formattedAddress = $document->company->getFormattedAddressHtml())
+                    {!! $formattedAddress !!}
                 @endif
             </div>
         </div>
 
         <div class="w-1/3 flex justify-end mr-6">
-            @if($logo && $show_logo)
-                <x-company.invoice.logo :src="$logo"/>
+            @if($document->logo && $document->showLogo)
+                <x-company.invoice.logo :src="$document->logo"/>
             @endif
         </div>
     </x-company.invoice.header>
 
     <x-company.invoice.metadata class="classic-template-metadata">
         <div class="items-center flex">
-            <hr class="grow-[2] py-0.5 border-solid border-y-2" style="border-color: {{ $accent_color }};">
+            <hr class="grow-[2] py-0.5 border-solid border-y-2" style="border-color: {{ $document->accentColor }};">
             <div class="items-center flex mx-5">
-                <x-icons.decor-border-left color="{{ $accent_color }}"/>
-                <div class="px-2.5 border-solid border-y-2 py-1 -mx-3" style="border-color: {{ $accent_color }};">
-                    <div class="px-2.5 border-solid border-y-2 py-3" style="border-color: {{ $accent_color }};">
+                <x-icons.decor-border-left color="{{ $document->accentColor }}"/>
+                <div class="px-2.5 border-solid border-y-2 py-1 -mx-3" style="border-color: {{ $document->accentColor }};">
+                    <div class="px-2.5 border-solid border-y-2 py-3" style="border-color: {{ $document->accentColor }};">
                         <div class="inline text-2xl font-semibold"
-                             style="color: {{ $accent_color }};">{{ $header }}</div>
+                             style="color: {{ $document->accentColor }};">{{ $document->header }}</div>
                     </div>
                 </div>
-                <x-icons.decor-border-right color="{{ $accent_color }}"/>
+                <x-icons.decor-border-right color="{{ $document->accentColor }}"/>
             </div>
-            <hr class="grow-[2] py-0.5 border-solid border-y-2" style="border-color: {{ $accent_color }};">
+            <hr class="grow-[2] py-0.5 border-solid border-y-2" style="border-color: {{ $document->accentColor }};">
         </div>
-        <div class="mt-2 text-sm text-center text-gray-600 dark:text-gray-400">{{ $subheader }}</div>
+        <div class="mt-2 text-sm text-center text-gray-600 dark:text-gray-400">{{ $document->subheader }}</div>
 
         <div class="flex justify-between items-end">
             <!-- Billing Details -->
             <div class="text-xs">
                 <h3 class="text-gray-600 dark:text-gray-400 font-medium tracking-tight mb-1">BILL TO</h3>
-                <p class="text-base font-bold">John Doe</p>
-                <p>123 Main Street</p>
-                <p>New York, New York 10001</p>
-                <p>United States</p>
+                <p class="text-base font-bold">{{ $document->client->name }}</p>
+                @if($formattedAddress = $document->client->getFormattedAddressHtml())
+                    {!! $formattedAddress !!}
+                @endif
             </div>
 
             <div class="text-xs">
                 <table class="min-w-full">
                     <tbody>
                     <tr>
-                        <td class="font-semibold text-right pr-2">Invoice Number:</td>
-                        <td class="text-left pl-2">{{ $invoice_number }}</td>
+                        <td class="font-semibold text-right pr-2">{{ $document->label->number }}:</td>
+                        <td class="text-left pl-2">{{ $document->number }}</td>
                     </tr>
                     <tr>
-                        <td class="font-semibold text-right pr-2">Invoice Date:</td>
-                        <td class="text-left pl-2">{{ $invoice_date }}</td>
+                        <td class="font-semibold text-right pr-2">{{ $document->label->referenceNumber }}:</td>
+                        <td class="text-left pl-2">{{ $document->referenceNumber }}</td>
                     </tr>
                     <tr>
-                        <td class="font-semibold text-right pr-2">Payment Due:</td>
-                        <td class="text-left pl-2">{{ $invoice_due_date }}</td>
+                        <td class="font-semibold text-right pr-2">{{ $document->label->date }}:</td>
+                        <td class="text-left pl-2">{{ $document->date }}</td>
+                    </tr>
+                    <tr>
+                        <td class="font-semibold text-right pr-2">{{ $document->label->dueDate }}:</td>
+                        <td class="text-left pl-2">{{ $document->dueDate }}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -87,31 +87,21 @@
         <table class="w-full text-left table-fixed">
             <thead class="text-sm leading-8">
             <tr>
-                <th class="text-left">{{ $item_name }}</th>
-                <th class="text-center">{{ $unit_name }}</th>
-                <th class="text-right">{{ $price_name }}</th>
-                <th class="text-right">{{ $amount_name }}</th>
+                <th class="text-left">{{ $document->columnLabel->items }}</th>
+                <th class="text-center">{{ $document->columnLabel->units }}</th>
+                <th class="text-right">{{ $document->columnLabel->price }}</th>
+                <th class="text-right">{{ $document->columnLabel->amount }}</th>
             </tr>
             </thead>
             <tbody class="text-xs border-t-2 border-b-2 border-dotted border-gray-300 leading-8">
-            <tr>
-                <td class="text-left font-semibold">Item 1</td>
-                <td class="text-center">2</td>
-                <td class="text-right">$150.00</td>
-                <td class="text-right">$300.00</td>
-            </tr>
-            <tr>
-                <td class="text-left font-semibold">Item 2</td>
-                <td class="text-center">3</td>
-                <td class="text-right">$200.00</td>
-                <td class="text-right">$600.00</td>
-            </tr>
-            <tr>
-                <td class="text-left font-semibold">Item 3</td>
-                <td class="text-center">1</td>
-                <td class="text-right">$180.00</td>
-                <td class="text-right">$180.00</td>
-            </tr>
+            @foreach($document->lineItems as $item)
+                <tr>
+                    <td class="text-left font-semibold">{{ $item->name }}</td>
+                    <td class="text-center">{{ $item->quantity }}</td>
+                    <td class="text-right">{{ $item->unitPrice }}</td>
+                    <td class="text-right">{{ $item->subtotal }}</td>
+                </tr>
+            @endforeach
             </tbody>
         </table>
 
@@ -120,7 +110,7 @@
             <!-- Notes Section -->
             <div class="w-1/2 border border-dashed border-gray-300 p-2 mt-4">
                 <h4 class="font-semibold mb-2">Notes</h4>
-                <p>{{ $footer }}</p>
+                <p>{{ $document->footer }}</p>
             </div>
 
             <!-- Financial Summary -->
@@ -129,23 +119,23 @@
                     <tbody class="text-xs leading-loose">
                     <tr>
                         <td class="text-right font-semibold">Subtotal:</td>
-                        <td class="text-right">$1080.00</td>
+                        <td class="text-right">{{ $document->subtotal }}</td>
                     </tr>
                     <tr class="text-success-800 dark:text-success-600">
                         <td class="text-right">Discount (5%):</td>
-                        <td class="text-right">($54.00)</td>
+                        <td class="text-right">({{ $document->discount }})</td>
                     </tr>
                     <tr>
                         <td class="text-right">Sales Tax (10%):</td>
-                        <td class="text-right">$102.60</td>
+                        <td class="text-right">{{ $document->tax }}</td>
                     </tr>
                     <tr>
                         <td class="text-right font-semibold">Total:</td>
-                        <td class="text-right">$1128.60</td>
+                        <td class="text-right">{{ $document->total }}</td>
                     </tr>
                     <tr>
                         <td class="text-right font-semibold">Amount Due (USD):</td>
-                        <td class="text-right">$1128.60</td>
+                        <td class="text-right">{{ $document->amountDue }}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -156,6 +146,6 @@
     <!-- Footer -->
     <x-company.invoice.footer class="classic-template-footer">
         <h4 class="font-semibold px-6 mb-2">Terms & Conditions</h4>
-        <p class="px-6 break-words line-clamp-4">{{ $terms }}</p>
+        <p class="px-6 break-words line-clamp-4">{{ $document->terms }}</p>
     </x-company.invoice.footer>
 </x-company.invoice.container>

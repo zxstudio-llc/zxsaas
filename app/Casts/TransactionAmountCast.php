@@ -11,13 +11,15 @@ use UnexpectedValueException;
 
 class TransactionAmountCast implements CastsAttributes
 {
+    private array $currencyCache = [];
+
     public function get(Model $model, string $key, mixed $value, array $attributes): string
     {
         // Attempt to retrieve the currency code from the related bankAccount->account model
-        $currency_code = $this->getCurrencyCodeFromBankAccountId($attributes['bank_account_id'] ?? null);
+        $currencyCode = $this->getCurrencyCodeFromBankAccountId($attributes['bank_account_id'] ?? null);
 
         if ($value !== null) {
-            return CurrencyConverter::prepareForMutator($value, $currency_code);
+            return CurrencyConverter::prepareForMutator($value, $currencyCode);
         }
 
         return '';
@@ -28,7 +30,7 @@ class TransactionAmountCast implements CastsAttributes
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): int
     {
-        $currency_code = $this->getCurrencyCodeFromBankAccountId($attributes['bank_account_id'] ?? null);
+        $currencyCode = $this->getCurrencyCodeFromBankAccountId($attributes['bank_account_id'] ?? null);
 
         if (is_numeric($value)) {
             $value = (string) $value;
@@ -36,7 +38,7 @@ class TransactionAmountCast implements CastsAttributes
             throw new UnexpectedValueException('Expected string or numeric value for money cast');
         }
 
-        return CurrencyConverter::prepareForAccessor($value, $currency_code);
+        return CurrencyConverter::prepareForAccessor($value, $currencyCode);
     }
 
     /**
@@ -49,8 +51,15 @@ class TransactionAmountCast implements CastsAttributes
             return CurrencyAccessor::getDefaultCurrency();
         }
 
+        if (isset($this->currencyCache[$bankAccountId])) {
+            return $this->currencyCache[$bankAccountId];
+        }
+
         $bankAccount = BankAccount::find($bankAccountId);
 
-        return $bankAccount?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+        $currencyCode = $bankAccount?->account?->currency_code ?? CurrencyAccessor::getDefaultCurrency();
+        $this->currencyCache[$bankAccountId] = $currencyCode;
+
+        return $currencyCode;
     }
 }

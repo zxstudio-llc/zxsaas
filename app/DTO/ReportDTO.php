@@ -2,9 +2,9 @@
 
 namespace App\DTO;
 
-use Livewire\Wireable;
+use Illuminate\Support\Carbon;
 
-class ReportDTO implements Wireable
+class ReportDTO
 {
     public function __construct(
         /**
@@ -12,24 +12,13 @@ class ReportDTO implements Wireable
          */
         public array $categories,
         public ?AccountBalanceDTO $overallTotal = null,
+        public ?AgingBucketDTO $agingSummary = null,
+        public ?EntityBalanceDTO $entityBalanceTotal = null,
+        public ?PaymentMetricsDTO $overallPaymentMetrics = null,
         public array $fields = [],
+        public ?string $reportType = null,
+        public ?CashFlowOverviewDTO $overview = null,
+        public ?Carbon $startDate = null,
+        public ?Carbon $endDate = null,
     ) {}
-
-    public function toLivewire(): array
-    {
-        return [
-            'categories' => $this->categories,
-            'overallTotal' => $this->overallTotal?->toLivewire(),
-            'fields' => $this->fields,
-        ];
-    }
-
-    public static function fromLivewire($value): static
-    {
-        return new static(
-            $value['categories'],
-            isset($value['overallTotal']) ? AccountBalanceDTO::fromLivewire($value['overallTotal']) : null,
-            $value['fields'] ?? [],
-        );
-    }
 }

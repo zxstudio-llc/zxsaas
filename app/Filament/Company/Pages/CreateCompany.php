@@ -2,6 +2,7 @@
 
 namespace App\Filament\Company\Pages;
 
+use App\Enums\Common\AddressType;
 use App\Enums\Setting\EntityType;
 use App\Models\Company;
 use App\Models\Locale\Country;
@@ -11,6 +12,8 @@ use App\Utilities\Currency\CurrencyAccessor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Support\Enums\MaxWidth;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +24,27 @@ use Wallo\FilamentCompanies\Pages\Company\CreateCompany as FilamentCreateCompany
 
 class CreateCompany extends FilamentCreateCompany
 {
+    protected bool $hasTopbar = false;
+
+    protected static string $view = 'filament.company.pages.create-company';
+
+    protected static string $layout = 'components.company.layout.custom-simple';
+
+    public function getHeading(): string | Htmlable
+    {
+        return '';
+    }
+
+    public function getMaxWidth(): MaxWidth | string | null
+    {
+        return MaxWidth::FourExtraLarge;
+    }
+
+    public function hasLogo(): bool
+    {
+        return true;
+    }
+
     public function form(Form $form): Form
     {
         return $form
@@ -31,11 +55,11 @@ class CreateCompany extends FilamentCreateCompany
                     ->maxLength(255)
                     ->softRequired(),
                 TextInput::make('profile.email')
-                    ->label('Company Email')
+                    ->label('Company email')
                     ->email()
                     ->softRequired(),
                 Select::make('profile.entity_type')
-                    ->label('Entity Type')
+                    ->label('Entity type')
                     ->options(EntityType::class)
                     ->softRequired(),
                 Select::make('profile.country')
@@ -43,6 +67,8 @@ class CreateCompany extends FilamentCreateCompany
                     ->live()
                     ->searchable()
                     ->options(Country::getAvailableCountryOptions())
+                    ->getSearchResultsUsing(fn (string $search): array => Country::getSearchResultsUsing($search))
+                    ->getOptionLabelUsing(fn ($value): ?string => Country::find($value)?->name . ' ' . Country::find($value)?->flag)
                     ->softRequired(),
                 Select::make('locale.language')
                     ->label('Language')
@@ -56,6 +82,7 @@ class CreateCompany extends FilamentCreateCompany
                     ->optionsLimit(5)
                     ->softRequired(),
             ])
+            ->columns()
             ->model(FilamentCompanies::companyModel())
             ->statePath('data');
     }
@@ -77,15 +104,20 @@ class CreateCompany extends FilamentCreateCompany
                 'personal_company' => $personalCompany,
             ]);
 
-            $company->profile()->create([
+            $profile = $company->profile()->create([
                 'email' => $data['profile']['email'],
                 'entity_type' => $data['profile']['entity_type'],
-                'country' => $data['profile']['country'],
+            ]);
+
+            $profile->address()->create([
+                'company_id' => $company->id,
+                'type' => AddressType::General,
+                'country_code' => $data['profile']['country'],
             ]);
 
             $user?->switchCompany($company);
 
-            $companyDefaultService = app()->make(CompanyDefaultService::class);
+            $companyDefaultService = app(CompanyDefaultService::class);
             $user = $company->owner ?? $user;
             $companyDefaultService->createCompanyDefaults($company, $user, $data['currencies']['code'], $data['profile']['country'], $data['locale']['language']);
 

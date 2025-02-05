@@ -9,6 +9,7 @@ use App\Enums\Setting\WeekStart;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Setting\CompanyProfile as CompanyProfileModel;
 use App\Models\Setting\Localization as LocalizationModel;
+use App\Services\CompanySettingsService;
 use App\Utilities\Localization\Timezone;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -60,7 +61,7 @@ class Localization extends Page
         return translate(static::$title);
     }
 
-    public function getMaxContentWidth(): MaxWidth
+    public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::ScreenTwoExtraLarge;
     }
@@ -129,7 +130,7 @@ class Localization extends Page
                 Select::make('timezone')
                     ->softRequired()
                     ->localizeLabel()
-                    ->options(Timezone::getTimezoneOptions(CompanyProfileModel::first()->country))
+                    ->options(Timezone::getTimezoneOptions(CompanyProfileModel::first()->address->country_code))
                     ->searchable(),
             ])->columns();
     }
@@ -156,9 +157,9 @@ class Localization extends Page
 
     protected function getFinancialAndFiscalSection(): Component
     {
-        $beforeNumber = translate('Before Number');
-        $afterNumber = translate('After Number');
-        $selectPosition = translate('Select Position');
+        $beforeNumber = translate('Before number');
+        $afterNumber = translate('After number');
+        $selectPosition = translate('Select position');
 
         return Section::make('Financial & Fiscal')
             ->schema([
@@ -168,7 +169,7 @@ class Localization extends Page
                     ->options(NumberFormat::class),
                 Select::make('percent_first')
                     ->softRequired()
-                    ->localizeLabel('Percent Position')
+                    ->localizeLabel('Percent position')
                     ->boolean($beforeNumber, $afterNumber, $selectPosition),
                 Group::make()
                     ->schema([
@@ -184,7 +185,7 @@ class Localization extends Page
                                 ->softRequired()
                                 ->columnSpan(1)
                                 ->options(function (Get $get) {
-                                    $month = $get('fiscal_year_end_month');
+                                    $month = (int) $get('fiscal_year_end_month');
 
                                     $daysInMonth = now()->month($month)->daysInMonth;
 
@@ -196,7 +197,7 @@ class Localization extends Page
                             ->columnSpan(2)
                             ->required()
                             ->markAsRequired(false)
-                            ->label('Fiscal Year End'),
+                            ->label('Fiscal year end'),
                     ])->columns(3),
             ])->columns();
     }
@@ -214,6 +215,7 @@ class Localization extends Page
         ];
 
         if ($record->isDirty($keysToWatch)) {
+            CompanySettingsService::invalidateSettings($record->company_id);
             $this->dispatch('localizationUpdated');
         }
 

@@ -3,8 +3,9 @@
 namespace Database\Factories\Setting;
 
 use App\Enums\Setting\EntityType;
-use App\Faker\PhoneNumber;
 use App\Faker\State;
+use App\Models\Common\Address;
+use App\Models\Company;
 use App\Models\Setting\CompanyProfile;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -26,25 +27,23 @@ class CompanyProfileFactory extends Factory
     public function definition(): array
     {
         return [
-            'address' => $this->faker->streetAddress,
-            'zip_code' => $this->faker->postcode,
+            'phone_number' => $this->faker->phoneNumber,
             'email' => $this->faker->email,
             'entity_type' => $this->faker->randomElement(EntityType::class),
         ];
     }
 
-    public function withCountry(string $code): static
+    public function forCompany(Company $company): self
     {
-        /** @var PhoneNumber $phoneFaker */
-        $phoneFaker = $this->faker;
-
-        /** @var State $stateFaker */
-        $stateFaker = $this->faker;
-
         return $this->state([
-            'country' => $code,
-            'state_id' => $stateFaker->state($code),
-            'phone_number' => $phoneFaker->phoneNumberForCountryCode($code),
+            'company_id' => $company->id,
+            'created_by' => $company->owner->id,
+            'updated_by' => $company->owner->id,
         ]);
+    }
+
+    public function withAddress(): self
+    {
+        return $this->has(Address::factory()->general());
     }
 }

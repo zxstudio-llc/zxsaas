@@ -21,6 +21,7 @@ class AccountSubtype extends Model
     protected $fillable = [
         'company_id',
         'multi_currency',
+        'inverse_cash_flow',
         'category',
         'type',
         'name',
@@ -29,6 +30,7 @@ class AccountSubtype extends Model
 
     protected $casts = [
         'multi_currency' => 'boolean',
+        'inverse_cash_flow' => 'boolean',
         'category' => AccountCategory::class,
         'type' => AccountType::class,
     ];

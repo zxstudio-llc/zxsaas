@@ -1,30 +1,20 @@
 <x-filament-panels::page>
-    <x-filament-tables::container>
-        <form wire:submit="loadReportData" class="p-6">
-            {{ $this->form }}
-        </form>
-        <div class="relative divide-y divide-gray-200 overflow-x-auto dark:divide-white/10 dark:border-t-white/10 min-h-64">
-            <div wire:init="loadReportData" class="flex items-center justify-center w-full h-full absolute">
-                <div wire:loading wire:target="loadReportData">
-                    <x-filament::loading-indicator class="p-6 text-primary-700 dark:text-primary-300" />
-                </div>
-            </div>
+    <x-filament::section>
+        @if(method_exists($this, 'filtersForm'))
+            {{ $this->filtersForm }}
+        @endif
+    </x-filament::section>
 
-            @if($this->reportLoaded)
-                <div wire:loading.remove wire:target="loadReportData">
-                    @if($this->report && !$this->tableHasEmptyState())
-                        <x-company.tables.reports.account-transactions :report="$this->report" />
-                    @else
-                        <x-filament-tables::empty-state
-                            :actions="$this->getEmptyStateActions()"
-                            :description="$this->getEmptyStateDescription()"
-                            :heading="$this->getEmptyStateHeading()"
-                            :icon="$this->getEmptyStateIcon()"
-                        />
-                    @endif
-                </div>
-            @endif
-        </div>
-        <div class="es-table__footer-ctn border-t border-gray-200"></div>
-    </x-filament-tables::container>
+    <x-company.tables.container :report-loaded="$this->reportLoaded">
+        @if(! $this->tableHasEmptyState())
+            <x-company.tables.reports.account-transactions :report="$this->report"/>
+        @else
+            <x-filament-tables::empty-state
+                :actions="$this->getEmptyStateActions()"
+                :description="$this->getEmptyStateDescription()"
+                :heading="$this->getEmptyStateHeading()"
+                :icon="$this->getEmptyStateIcon()"
+            />
+        @endif
+    </x-company.tables.container>
 </x-filament-panels::page>

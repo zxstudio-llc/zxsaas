@@ -63,7 +63,7 @@ class Invoice extends Page
         return translate(static::$title);
     }
 
-    public function getMaxContentWidth(): MaxWidth
+    public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::ScreenTwoExtraLarge;
     }
@@ -137,13 +137,15 @@ class Invoice extends Page
                 TextInput::make('number_next')
                     ->softRequired()
                     ->localizeLabel()
-                    ->maxLength(static fn (Get $get) => $get('number_digits'))
-                    ->hint(static function (Get $get, $state) {
+                    ->mask(static function (Get $get) {
+                        return str_repeat('9', $get('number_digits'));
+                    })
+                    ->hint(function (Get $get, $state) {
                         $number_prefix = $get('number_prefix');
                         $number_digits = $get('number_digits');
                         $number_next = $state;
 
-                        return InvoiceModel::getNumberNext(true, true, $number_prefix, $number_digits, $number_next);
+                        return $this->record->getNumberNext(true, true, $number_prefix, $number_digits, $number_next);
                     }),
                 Select::make('payment_terms')
                     ->softRequired()
@@ -166,7 +168,7 @@ class Invoice extends Page
                     ->localizeLabel()
                     ->nullable(),
                 Textarea::make('footer')
-                    ->localizeLabel('Footer / Notes')
+                    ->localizeLabel('Footer')
                     ->nullable(),
             ])->columns();
     }
@@ -220,7 +222,7 @@ class Invoice extends Page
                             ->options(Template::class),
                         Select::make('item_name.option')
                             ->softRequired()
-                            ->localizeLabel('Item Name')
+                            ->localizeLabel('Item name')
                             ->options(InvoiceModel::getAvailableItemNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('item_name.custom'))) {
@@ -238,7 +240,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('unit_name.option')
                             ->softRequired()
-                            ->localizeLabel('Unit Name')
+                            ->localizeLabel('Unit name')
                             ->options(InvoiceModel::getAvailableUnitNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('unit_name.custom'))) {
@@ -256,7 +258,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('price_name.option')
                             ->softRequired()
-                            ->localizeLabel('Price Name')
+                            ->localizeLabel('Price name')
                             ->options(InvoiceModel::getAvailablePriceNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('price_name.custom'))) {
@@ -274,7 +276,7 @@ class Invoice extends Page
                             ->nullable(),
                         Select::make('amount_name.option')
                             ->softRequired()
-                            ->localizeLabel('Amount Name')
+                            ->localizeLabel('Amount name')
                             ->options(InvoiceModel::getAvailableAmountNameOptions())
                             ->afterStateUpdated(static function (Get $get, Set $set, $state, $old) {
                                 if ($state !== 'other' && $old === 'other' && filled($get('amount_name.custom'))) {

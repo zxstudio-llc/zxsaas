@@ -39,8 +39,8 @@ class ListCompanyCurrencies extends Component implements HasForms, HasTable
                     ->weight(FontWeight::Medium)
                     ->icon(static fn (Currency $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(function (Currency $record) {
-                        $tooltipMessage = translate('Default :Record', [
-                            'Record' => $this->getTableModelLabel(),
+                        $tooltipMessage = translate('Default :record', [
+                            'record' => $this->getTableModelLabel(),
                         ]);
 
                         if ($record->isEnabled()) {
@@ -70,7 +70,7 @@ class ListCompanyCurrencies extends Component implements HasForms, HasTable
             ])
             ->actions([
                 Tables\Actions\Action::make('update_rate')
-                    ->label('Update Rate')
+                    ->label('Update rate')
                     ->icon('heroicon-o-arrow-path')
                     ->hidden(static fn (Currency $record): bool => $record->isEnabled() || ($record->rate === $record->live_rate))
                     ->requiresConfirmation()
@@ -82,7 +82,7 @@ class ListCompanyCurrencies extends Component implements HasForms, HasTable
 
                             Notification::make()
                                 ->success()
-                                ->title('Exchange Rate Updated')
+                                ->title('Exchange rate updated')
                                 ->body(__('The exchange rate for :currency has been updated to reflect the current market rate.', [
                                     'currency' => $record->name,
                                 ]))
@@ -92,7 +92,7 @@ class ListCompanyCurrencies extends Component implements HasForms, HasTable
             ])
             ->bulkActions([
                 Tables\Actions\BulkAction::make('update_rate')
-                    ->label('Update Rate')
+                    ->label('Update rate')
                     ->icon('heroicon-o-arrow-path')
                     ->requiresConfirmation()
                     ->deselectRecordsAfterCompletion()
@@ -120,7 +120,7 @@ class ListCompanyCurrencies extends Component implements HasForms, HasTable
 
                             Notification::make()
                                 ->success()
-                                ->title('Exchange Rates Updated')
+                                ->title('Exchange rates updated')
                                 ->body($message)
                                 ->send();
                         }

@@ -17,10 +17,6 @@ class AccountBalances extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.detailed-report';
 
-    protected static ?string $slug = 'reports/account-balances';
-
-    protected static bool $shouldRegisterNavigation = false;
-
     protected ReportService $reportService;
 
     protected ExportService $exportService;
@@ -38,41 +34,40 @@ class AccountBalances extends BaseReportPage
     {
         return [
             Column::make('account_code')
-                ->label('Account Code')
-                ->toggleable()
-                ->alignment(Alignment::Center),
+                ->label('ACCOUNT CODE')
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->alignment(Alignment::Left),
             Column::make('account_name')
-                ->label('Account')
+                ->label('ACCOUNT')
                 ->alignment(Alignment::Left),
             Column::make('starting_balance')
-                ->label('Starting Balance')
+                ->label('STARTING BALANCE')
                 ->toggleable()
                 ->alignment(Alignment::Right),
             Column::make('debit_balance')
-                ->label('Debit')
+                ->label('DEBIT')
                 ->toggleable()
                 ->alignment(Alignment::Right),
             Column::make('credit_balance')
-                ->label('Credit')
+                ->label('CREDIT')
                 ->toggleable()
                 ->alignment(Alignment::Right),
             Column::make('net_movement')
-                ->label('Net Movement')
+                ->label('NET MOVEMENT')
                 ->toggleable()
                 ->alignment(Alignment::Right),
             Column::make('ending_balance')
-                ->label('Ending Balance')
+                ->label('ENDING BALANCE')
                 ->toggleable()
                 ->alignment(Alignment::Right),
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
             ->inlineLabel()
             ->columns()
-            ->live()
             ->schema([
                 $this->getDateRangeFormComponent(),
                 Cluster::make([
@@ -84,7 +79,7 @@ class AccountBalances extends BaseReportPage
 
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountBalanceReport($this->startDate, $this->endDate, $columns);
+        return $this->reportService->buildAccountBalanceReport($this->getFormattedStartDate(), $this->getFormattedEndDate(), $columns);
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -94,11 +89,11 @@ class AccountBalances extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 }

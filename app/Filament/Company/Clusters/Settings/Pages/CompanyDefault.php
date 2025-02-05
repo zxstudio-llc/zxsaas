@@ -6,12 +6,10 @@ use App\Events\CompanyDefaultUpdated;
 use App\Filament\Company\Clusters\Settings;
 use App\Models\Banking\BankAccount;
 use App\Models\Setting\CompanyDefault as CompanyDefaultModel;
-use App\Models\Setting\Currency;
-use App\Models\Setting\Discount;
-use App\Models\Setting\Tax;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
@@ -59,7 +57,7 @@ class CompanyDefault extends Page
         return translate(static::$title);
     }
 
-    public function getMaxContentWidth(): MaxWidth
+    public function getMaxContentWidth(): MaxWidth | string | null
     {
         return MaxWidth::ScreenTwoExtraLarge;
     }
@@ -108,7 +106,6 @@ class CompanyDefault extends Page
         return $form
             ->schema([
                 $this->getGeneralSection(),
-                $this->getModifiersSection(),
             ])
             ->model($this->record)
             ->statePath('data')
@@ -133,84 +130,10 @@ class CompanyDefault extends Page
                     ->selectablePlaceholder(false)
                     ->searchable()
                     ->preload(),
-                Select::make('currency_code')
-                    ->softRequired()
-                    ->localizeLabel('Currency')
-                    ->relationship('currency', 'name')
-                    ->getOptionLabelFromRecordUsing(static fn (Currency $record) => "{$record->code} {$record->symbol} - {$record->name}")
-                    ->saveRelationshipsUsing(null)
-                    ->searchable()
-                    ->preload(),
-            ])->columns();
-    }
-
-    protected function getModifiersSection(): Component
-    {
-        return Section::make('Taxes & Discounts')
-            ->schema([
-                Select::make('sales_tax_id')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->relationship('salesTax', 'name')
-                    ->getOptionLabelFromRecordUsing(function (Tax $record) {
-                        $currencyCode = $this->record->currency_code;
-
-                        $rate = rateFormat($record->rate, $record->computation->value, $currencyCode);
-
-                        $rateBadge = $this->renderBadgeOptionLabel($rate);
-
-                        return "{$record->name} ⁓ {$rateBadge}";
-                    })
-                    ->allowHtml()
-                    ->saveRelationshipsUsing(null)
-                    ->searchable(),
-                Select::make('purchase_tax_id')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->relationship('purchaseTax', 'name')
-                    ->getOptionLabelFromRecordUsing(function (Tax $record) {
-                        $currencyCode = $this->record->currency_code;
-
-                        $rate = rateFormat($record->rate, $record->computation->value, $currencyCode);
-
-                        $rateBadge = $this->renderBadgeOptionLabel($rate);
-
-                        return "{$record->name} ⁓ {$rateBadge}";
-                    })
-                    ->allowHtml()
-                    ->saveRelationshipsUsing(null)
-                    ->searchable(),
-                Select::make('sales_discount_id')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->relationship('salesDiscount', 'name')
-                    ->getOptionLabelFromRecordUsing(function (Discount $record) {
-                        $currencyCode = $this->record->currency_code;
-
-                        $rate = rateFormat($record->rate, $record->computation->value, $currencyCode);
-
-                        $rateBadge = $this->renderBadgeOptionLabel($rate);
-
-                        return "{$record->name} ⁓ {$rateBadge}";
-                    })
-                    ->saveRelationshipsUsing(null)
-                    ->allowHtml()
-                    ->searchable(),
-                Select::make('purchase_discount_id')
-                    ->softRequired()
-                    ->localizeLabel()
-                    ->relationship('purchaseDiscount', 'name')
-                    ->getOptionLabelFromRecordUsing(function (Discount $record) {
-                        $currencyCode = $this->record->currency_code;
-                        $rate = rateFormat($record->rate, $record->computation->value, $currencyCode);
-
-                        $rateBadge = $this->renderBadgeOptionLabel($rate);
-
-                        return "{$record->name} ⁓ {$rateBadge}";
-                    })
-                    ->allowHtml()
-                    ->saveRelationshipsUsing(null)
-                    ->searchable(),
+                Placeholder::make('currency_code')
+                    ->label(translate('Currency'))
+                    ->hintIcon('heroicon-o-question-mark-circle', 'You cannot change this after your company has been created. You can still use other currencies for transactions.')
+                    ->content(static fn (CompanyDefaultModel $record) => "{$record->currency->code} {$record->currency->symbol} - {$record->currency->name}"),
             ])->columns();
     }
 

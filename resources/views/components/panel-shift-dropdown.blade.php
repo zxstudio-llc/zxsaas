@@ -1,4 +1,5 @@
 @php
+    $user = filament()->auth()->user();
     $items = filament()->getUserMenuItems();
     $logoutItem = $items['logout'] ?? null;
     $currentTenant = filament()->getTenant();
@@ -11,16 +12,23 @@
     $panels = $component->getNavigationAsHierarchyArray();
 @endphp
 
-<div x-data="panelShiftDropdown">
-    <div x-on:click="toggleDropdown()" class="flex cursor-pointer">
+<div x-data="panelShiftDropdown" x-on:click.outside="closeDropdown">
+    <div x-on:click="toggleDropdown" class="flex cursor-pointer">
         <button
             type="button"
-            class="fi-tenant-menu-trigger group flex w-full items-center justify-center gap-x-3 rounded-lg p-2 text-sm font-medium outline-none transition duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+            class="flex items-center justify-center gap-x-3 rounded-lg p-2 text-sm font-medium outline-none transition duration-75 hover:bg-gray-100 focus-visible:bg-gray-100 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
         >
-            <x-filament-panels::avatar.tenant
-                :tenant="$currentTenant"
-                class="shrink-0"
-            />
+            @if($currentTenant)
+                <x-filament-panels::avatar.tenant
+                    :tenant="$currentTenant"
+                    class="shrink-0"
+                />
+            @else
+                <x-filament-panels::avatar.user
+                    :user="$user"
+                    class="shrink-0"
+                />
+            @endif
 
             <span class="grid justify-items-start text-start">
                 @if ($currentTenant instanceof \Filament\Models\Contracts\HasCurrentTenantLabel)
@@ -30,7 +38,7 @@
                 @endif
 
                 <span class="text-gray-950 dark:text-white">
-                    {{ $currentTenantName }}
+                    {{ $currentTenantName ?? filament()->getUserName($user) }}
                 </span>
             </span>
 
@@ -41,22 +49,25 @@
             />
         </button>
     </div>
-    <div x-show="open" class="flex flex-col transition duration-200 ease-in-out grow shrink mt-4 absolute z-10 w-screen max-w-[360px] end-8 rounded-lg bg-white shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden">
+    <div x-show="open"
+         class="flex flex-col transition duration-200 ease-in-out grow shrink mt-4 absolute z-10 w-screen max-w-[360px] end-8 rounded-lg bg-white shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10 overflow-hidden">
         @foreach($panels as $panelId => $panel)
             <x-panel-shift-dropdown.panel :panel-id="$panelId">
                 @if($panelId !== 'main' && isset($panel['label']))
-                    <x-panel-shift-dropdown.subpanel-header :label="$panel['label']" :panel-id="$panelId" />
+                    <x-panel-shift-dropdown.subpanel-header :label="$panel['label']" :panel-id="$panelId"/>
                 @endif
                 @if($panel['renderItems'])
                     @foreach($panel['items'] as $item)
-                        <x-panel-shift-dropdown.content-handler :item="$item" />
+                        <x-panel-shift-dropdown.content-handler :item="$item"/>
                     @endforeach
                 @endif
-                @if($panelId === 'company-settings')
-                    <x-panel-shift-dropdown.company-settings :current-tenant="$currentTenant" icon="heroicon-m-building-office-2" />
+                @if($panelId === 'company-settings' && $currentTenant)
+                    <x-panel-shift-dropdown.company-settings :current-tenant="$currentTenant"
+                                                             icon="heroicon-m-building-office-2"/>
                 @endif
-                @if($panelId === 'company-switcher')
-                    <x-panel-shift-dropdown.company-switcher :current-tenant="$currentTenant" icon="heroicon-m-adjustments-horizontal" />
+                @if($panelId === 'company-switcher' && $currentTenant)
+                    <x-panel-shift-dropdown.company-switcher :current-tenant="$currentTenant"
+                                                             icon="heroicon-m-adjustments-horizontal"/>
                 @endif
                 @if($panelId === 'display-and-accessibility')
                     <x-panel-shift-dropdown.display-accessibility icon="heroicon-s-moon"/>
@@ -89,6 +100,10 @@
 
             toggleDropdown() {
                 this.open = !this.open;
+            },
+
+            closeDropdown() {
+                this.open = false;
             },
 
             setActiveMenu(menu) {

@@ -6,6 +6,8 @@ use App\Contracts\ExportableReport;
 use App\DTO\ReportDTO;
 use App\Filament\Company\Pages\Accounting\Transactions;
 use App\Models\Accounting\Account;
+use App\Models\Common\Client;
+use App\Models\Common\Vendor;
 use App\Services\ExportService;
 use App\Services\ReportService;
 use App\Support\Column;
@@ -14,6 +16,7 @@ use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Tables\Actions\Action;
 use Guava\FilamentClusters\Forms\Cluster;
 use Illuminate\Contracts\Support\Htmlable;
@@ -24,20 +27,30 @@ class AccountTransactions extends BaseReportPage
 {
     protected static string $view = 'filament.company.pages.reports.account-transactions';
 
-    protected static ?string $slug = 'reports/account-transactions';
-
-    protected static bool $shouldRegisterNavigation = false;
-
     protected ReportService $reportService;
 
     protected ExportService $exportService;
-
-    public ?string $account_id = 'all';
 
     public function boot(ReportService $reportService, ExportService $exportService): void
     {
         $this->reportService = $reportService;
         $this->exportService = $exportService;
+    }
+
+    public function getMaxContentWidth(): MaxWidth | string | null
+    {
+        return 'max-w-8xl';
+    }
+
+    protected function initializeDefaultFilters(): void
+    {
+        if (empty($this->getFilterState('selectedAccount'))) {
+            $this->setFilterState('selectedAccount', 'all');
+        }
+
+        if (empty($this->getFilterState('selectedEntity'))) {
+            $this->setFilterState('selectedEntity', 'all');
+        }
     }
 
     /**
@@ -47,30 +60,30 @@ class AccountTransactions extends BaseReportPage
     {
         return [
             Column::make('date')
-                ->label('Date')
+                ->label('DATE')
+                ->markAsDate()
                 ->alignment(Alignment::Left),
             Column::make('description')
-                ->label('Description')
+                ->label('DESCRIPTION')
                 ->alignment(Alignment::Left),
             Column::make('debit')
-                ->label('Debit')
+                ->label('DEBIT')
                 ->alignment(Alignment::Right),
             Column::make('credit')
-                ->label('Credit')
+                ->label('CREDIT')
                 ->alignment(Alignment::Right),
             Column::make('balance')
-                ->label('Balance')
+                ->label('RUNNING BALANCE')
                 ->alignment(Alignment::Right),
         ];
     }
 
-    public function form(Form $form): Form
+    public function filtersForm(Form $form): Form
     {
         return $form
-            ->columns(4)
-            ->live()
+            ->columns(5)
             ->schema([
-                Select::make('account_id')
+                Select::make('selectedAccount')
                     ->label('Account')
                     ->options($this->getAccountOptions())
                     ->selectablePlaceholder(false)
@@ -79,12 +92,20 @@ class AccountTransactions extends BaseReportPage
                 Cluster::make([
                     $this->getStartDateFormComponent(),
                     $this->getEndDateFormComponent(),
-                ])->label("\u{200B}"), // its too bad hiddenLabel removes spacing of the label
+                ])->extraFieldWrapperAttributes([
+                    'class' => 'report-hidden-label',
+                ]),
+                Select::make('selectedEntity')
+                    ->label('Entity')
+                    ->options($this->getEntityOptions())
+                    ->searchable()
+                    ->selectablePlaceholder(false),
                 Actions::make([
-                    Actions\Action::make('loadReportData')
-                        ->label('Update Report')
-                        ->submit('loadReportData')
-                        ->keyBindings(['mod+s']),
+                    Actions\Action::make('applyFilters')
+                        ->label('Update report')
+                        ->action('applyFilters')
+                        ->keyBindings(['mod+s'])
+                        ->button(),
                 ])->alignEnd()->verticallyAlignEnd(),
             ]);
     }
@@ -94,7 +115,7 @@ class AccountTransactions extends BaseReportPage
         $accounts = Account::query()
             ->get()
             ->groupBy(fn (Account $account) => $account->category->getPluralLabel())
-            ->map(fn (Collection $accounts, string $category) => $accounts->pluck('name', 'id'))
+            ->map(fn (Collection $accounts) => $accounts->pluck('name', 'id'))
             ->toArray();
 
         $allAccountsOption = [
@@ -104,9 +125,38 @@ class AccountTransactions extends BaseReportPage
         return $allAccountsOption + $accounts;
     }
 
+    protected function getEntityOptions(): array
+    {
+        $clients = Client::query()
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->toArray();
+
+        $vendors = Vendor::query()
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->mapWithKeys(fn ($name, $id) => [-$id => $name])
+            ->toArray();
+
+        $allEntitiesOption = [
+            'All Entities' => ['all' => 'All Entities'],
+        ];
+
+        return $allEntitiesOption + [
+            'Clients' => $clients,
+            'Vendors' => $vendors,
+        ];
+    }
+
     protected function buildReport(array $columns): ReportDTO
     {
-        return $this->reportService->buildAccountTransactionsReport($this->startDate, $this->endDate, $columns, $this->account_id);
+        return $this->reportService->buildAccountTransactionsReport(
+            startDate: $this->getFormattedStartDate(),
+            endDate: $this->getFormattedEndDate(),
+            columns: $columns,
+            accountId: $this->getFilterState('selectedAccount'),
+            entityId: $this->getFilterState('selectedEntity'),
+        );
     }
 
     protected function getTransformer(ReportDTO $reportDTO): ExportableReport
@@ -116,12 +166,12 @@ class AccountTransactions extends BaseReportPage
 
     public function exportCSV(): StreamedResponse
     {
-        return $this->exportService->exportToCsv($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToCsv($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function exportPDF(): StreamedResponse
     {
-        return $this->exportService->exportToPdf($this->company, $this->report, $this->startDate, $this->endDate);
+        return $this->exportService->exportToPdf($this->company, $this->report, $this->getFilterState('startDate'), $this->getFilterState('endDate'));
     }
 
     public function getEmptyStateHeading(): string | Htmlable
@@ -143,17 +193,13 @@ class AccountTransactions extends BaseReportPage
     {
         return [
             Action::make('createTransaction')
-                ->label('Create Transaction')
+                ->label('Create transaction')
                 ->url(Transactions::getUrl()),
         ];
     }
 
     public function tableHasEmptyState(): bool
     {
-        if ($this->report) {
-            return empty($this->report->getCategories());
-        } else {
-            return true;
-        }
+        return empty($this->report?->getCategories());
     }
 }

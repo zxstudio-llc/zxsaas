@@ -2,32 +2,50 @@
 
 namespace App\Observers;
 
-use App\Enums\Accounting\JournalEntryType;
-use App\Models\Accounting\Account;
-use App\Models\Accounting\JournalEntry;
+use App\Enums\Accounting\BillStatus;
+use App\Enums\Accounting\InvoiceStatus;
+use App\Models\Accounting\Bill;
+use App\Models\Accounting\Invoice;
 use App\Models\Accounting\Transaction;
-use App\Utilities\Currency\CurrencyAccessor;
+use App\Services\TransactionService;
 use App\Utilities\Currency\CurrencyConverter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class TransactionObserver
 {
+    public function __construct(
+        protected TransactionService $transactionService,
+    ) {}
+
+    /**
+     * Handle the Transaction "saving" event.
+     */
+    public function saving(Transaction $transaction): void
+    {
+        if ($transaction->type->isTransfer() && $transaction->description === null) {
+            $transaction->description = 'Account Transfer';
+        }
+    }
+
     /**
      * Handle the Transaction "created" event.
      */
     public function created(Transaction $transaction): void
     {
-        if ($transaction->type->isJournal()) {
+        $this->transactionService->createJournalEntries($transaction);
+
+        if (! $transaction->transactionable) {
             return;
         }
 
-        [$debitAccount, $creditAccount] = $this->determineAccounts($transaction);
+        $document = $transaction->transactionable;
 
-        if ($debitAccount === null || $creditAccount === null) {
-            return;
+        if ($document instanceof Invoice) {
+            $this->updateInvoiceTotals($document);
+        } elseif ($document instanceof Bill) {
+            $this->updateBillTotals($document);
         }
-
-        $this->createJournalEntries($transaction, $debitAccount, $creditAccount);
     }
 
     /**
@@ -37,29 +55,19 @@ class TransactionObserver
     {
         $transaction->refresh(); // DO NOT REMOVE
 
-        if ($transaction->type->isJournal() || $this->hasRelevantChanges($transaction) === false) {
+        $this->transactionService->updateJournalEntries($transaction);
+
+        if (! $transaction->transactionable) {
             return;
         }
 
-        $journalEntries = $transaction->journalEntries;
+        $document = $transaction->transactionable;
 
-        $debitEntry = $journalEntries->where('type', JournalEntryType::Debit)->first();
-        $creditEntry = $journalEntries->where('type', JournalEntryType::Credit)->first();
-
-        if ($debitEntry === null || $creditEntry === null) {
-            return;
+        if ($document instanceof Invoice) {
+            $this->updateInvoiceTotals($document);
+        } elseif ($document instanceof Bill) {
+            $this->updateBillTotals($document);
         }
-
-        [$debitAccount, $creditAccount] = $this->determineAccounts($transaction);
-
-        if ($debitAccount === null || $creditAccount === null) {
-            return;
-        }
-
-        $convertedTransactionAmount = $this->getConvertedTransactionAmount($transaction);
-
-        $this->updateJournalEntriesForTransaction($debitEntry, $debitAccount, $convertedTransactionAmount);
-        $this->updateJournalEntriesForTransaction($creditEntry, $creditAccount, $convertedTransactionAmount);
     }
 
     /**
@@ -67,79 +75,124 @@ class TransactionObserver
      */
     public function deleting(Transaction $transaction): void
     {
-        DB::transaction(static function () use ($transaction) {
-            $transaction->journalEntries()->each(fn (JournalEntry $entry) => $entry->delete());
+        DB::transaction(function () use ($transaction) {
+            $this->transactionService->deleteJournalEntries($transaction);
+
+            if (! $transaction->transactionable) {
+                return;
+            }
+
+            $document = $transaction->transactionable;
+
+            if (($document instanceof Invoice || $document instanceof Bill) && ! $document->exists) {
+                return;
+            }
+
+            if ($document instanceof Invoice) {
+                $this->updateInvoiceTotals($document, $transaction);
+            } elseif ($document instanceof Bill) {
+                $this->updateBillTotals($document, $transaction);
+            }
         });
     }
 
-    private function determineAccounts(Transaction $transaction): array
+    public function deleted(Transaction $transaction): void
     {
-        $chartAccount = $transaction->account;
-        $bankAccount = $transaction->bankAccount?->account;
-
-        $debitAccount = $transaction->type->isWithdrawal() ? $chartAccount : $bankAccount;
-        $creditAccount = $transaction->type->isWithdrawal() ? $bankAccount : $chartAccount;
-
-        return [$debitAccount, $creditAccount];
+        //
     }
 
-    private function createJournalEntries(Transaction $transaction, Account $debitAccount, Account $creditAccount): void
+    protected function updateInvoiceTotals(Invoice $invoice, ?Transaction $excludedTransaction = null): void
     {
-        $convertedTransactionAmount = $this->getConvertedTransactionAmount($transaction);
-
-        $debitAccount->journalEntries()->create([
-            'company_id' => $transaction->company_id,
-            'transaction_id' => $transaction->id,
-            'type' => JournalEntryType::Debit,
-            'amount' => $convertedTransactionAmount,
-            'description' => $transaction->description,
-        ]);
-
-        $creditAccount->journalEntries()->create([
-            'company_id' => $transaction->company_id,
-            'transaction_id' => $transaction->id,
-            'type' => JournalEntryType::Credit,
-            'amount' => $convertedTransactionAmount,
-            'description' => $transaction->description,
-        ]);
-    }
-
-    private function getConvertedTransactionAmount(Transaction $transaction): string
-    {
-        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
-        $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
-        $chartAccountCurrency = $transaction->account->currency_code;
-
-        if ($bankAccountCurrency !== $defaultCurrency) {
-            return $this->convertToDefaultCurrency($transaction->amount, $bankAccountCurrency, $defaultCurrency);
-        } elseif ($chartAccountCurrency !== $defaultCurrency) {
-            return $this->convertToDefaultCurrency($transaction->amount, $chartAccountCurrency, $defaultCurrency);
+        if (! $invoice->hasPayments()) {
+            return;
         }
 
-        return $transaction->amount;
+        $invoiceCurrency = $invoice->currency_code;
+
+        $depositTotalInInvoiceCurrencyCents = (int) $invoice->deposits()
+            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
+            ->get()
+            ->sum(function (Transaction $transaction) use ($invoiceCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
+
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $invoiceCurrency);
+            });
+
+        $withdrawalTotalInInvoiceCurrencyCents = (int) $invoice->withdrawals()
+            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
+            ->get()
+            ->sum(function (Transaction $transaction) use ($invoiceCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
+
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $invoiceCurrency);
+            });
+
+        $totalPaidInInvoiceCurrencyCents = $depositTotalInInvoiceCurrencyCents - $withdrawalTotalInInvoiceCurrencyCents;
+
+        $invoiceTotalInInvoiceCurrencyCents = (int) $invoice->getRawOriginal('total');
+
+        $newStatus = match (true) {
+            $totalPaidInInvoiceCurrencyCents > $invoiceTotalInInvoiceCurrencyCents => InvoiceStatus::Overpaid,
+            $totalPaidInInvoiceCurrencyCents === $invoiceTotalInInvoiceCurrencyCents => InvoiceStatus::Paid,
+            default => InvoiceStatus::Partial,
+        };
+
+        $paidAt = $invoice->paid_at;
+
+        if (in_array($newStatus, [InvoiceStatus::Paid, InvoiceStatus::Overpaid]) && ! $paidAt) {
+            $paidAt = $invoice->deposits()
+                ->latest('posted_at')
+                ->value('posted_at');
+        }
+
+        $invoice->update([
+            'amount_paid' => CurrencyConverter::convertCentsToFormatSimple($totalPaidInInvoiceCurrencyCents, $invoiceCurrency),
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
+        ]);
     }
 
-    private function convertToDefaultCurrency(string $amount, string $fromCurrency, string $toCurrency): string
+    protected function updateBillTotals(Bill $bill, ?Transaction $excludedTransaction = null): void
     {
-        $amountInCents = CurrencyConverter::prepareForAccessor($amount, $fromCurrency);
+        if (! $bill->hasPayments()) {
+            return;
+        }
 
-        $convertedAmountInCents = CurrencyConverter::convertBalance($amountInCents, $fromCurrency, $toCurrency);
+        $billCurrency = $bill->currency_code;
 
-        return CurrencyConverter::prepareForMutator($convertedAmountInCents, $toCurrency);
-    }
+        $withdrawalTotalInBillCurrencyCents = (int) $bill->withdrawals()
+            ->when($excludedTransaction, fn (Builder $query) => $query->whereKeyNot($excludedTransaction->getKey()))
+            ->get()
+            ->sum(function (Transaction $transaction) use ($billCurrency) {
+                $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+                $amountCents = (int) $transaction->getRawOriginal('amount');
 
-    private function hasRelevantChanges(Transaction $transaction): bool
-    {
-        return $transaction->wasChanged(['amount', 'account_id', 'bank_account_id', 'type']);
-    }
+                return CurrencyConverter::convertBalance($amountCents, $bankAccountCurrency, $billCurrency);
+            });
 
-    private function updateJournalEntriesForTransaction(JournalEntry $journalEntry, Account $account, string $convertedTransactionAmount): void
-    {
-        DB::transaction(static function () use ($journalEntry, $account, $convertedTransactionAmount) {
-            $journalEntry->update([
-                'account_id' => $account->id,
-                'amount' => $convertedTransactionAmount,
-            ]);
-        });
+        $totalPaidInBillCurrencyCents = $withdrawalTotalInBillCurrencyCents;
+
+        $billTotalInBillCurrencyCents = (int) $bill->getRawOriginal('total');
+
+        $newStatus = match (true) {
+            $totalPaidInBillCurrencyCents >= $billTotalInBillCurrencyCents => BillStatus::Paid,
+            default => BillStatus::Partial,
+        };
+
+        $paidAt = $bill->paid_at;
+
+        if ($newStatus === BillStatus::Paid && ! $paidAt) {
+            $paidAt = $bill->withdrawals()
+                ->latest('posted_at')
+                ->value('posted_at');
+        }
+
+        $bill->update([
+            'amount_paid' => CurrencyConverter::convertCentsToFormatSimple($totalPaidInBillCurrencyCents, $billCurrency),
+            'status' => $newStatus,
+            'paid_at' => $paidAt,
+        ]);
     }
 }

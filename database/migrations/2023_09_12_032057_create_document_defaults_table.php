@@ -1,8 +1,5 @@
 <?php
 
-use App\Enums\Setting\Font;
-use App\Enums\Setting\PaymentTerms;
-use App\Enums\Setting\Template;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -23,14 +20,14 @@ return new class extends Migration
             $table->string('number_prefix')->nullable();
             $table->unsignedTinyInteger('number_digits')->default(5);
             $table->unsignedBigInteger('number_next')->default(1);
-            $table->string('payment_terms')->default(PaymentTerms::DEFAULT);
+            $table->string('payment_terms')->default('due_upon_receipt');
             $table->string('header')->nullable();
             $table->string('subheader')->nullable();
             $table->text('terms')->nullable();
             $table->text('footer')->nullable();
             $table->string('accent_color')->default('#4F46E5');
-            $table->string('font')->default(Font::DEFAULT);
-            $table->string('template')->default(Template::DEFAULT);
+            $table->string('font')->default('inter');
+            $table->string('template')->default('default');
             $table->json('item_name')->nullable();
             $table->json('unit_name')->nullable();
             $table->json('price_name')->nullable();

@@ -3,6 +3,7 @@
 namespace App\Contracts;
 
 use App\DTO\ReportCategoryDTO;
+use App\Support\Column;
 
 interface ExportableReport
 {
@@ -17,7 +18,16 @@ interface ExportableReport
 
     public function getOverallTotals(): array;
 
+    /**
+     * @return Column[]
+     */
     public function getColumns(): array;
 
     public function getPdfView(): string;
+
+    public function getAlignmentClass(string $columnName): string;
+
+    public function getStartDate(): ?string;
+
+    public function getEndDate(): ?string;
 }

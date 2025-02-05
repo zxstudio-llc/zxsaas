@@ -15,12 +15,19 @@ trait CompanyOwned
     {
         static::creating(static function ($model) {
             if (empty($model->company_id)) {
-                if (Auth::check() && Auth::user()->currentCompany) {
-                    $model->company_id = Auth::user()->currentCompany->id;
-                } else {
-                    Log::info('CompanyOwned trait: No company_id set on model ' . get_class($model) . ' ' . $model->id);
+                $companyId = session('current_company_id');
 
-                    throw new ModelNotFoundException('CompanyOwned trait: No company_id set on model ' . get_class($model) . ' ' . $model->id);
+                if (! $companyId && Auth::check()) {
+                    $companyId = Auth::user()->currentCompany->id;
+                    session(['current_company_id' => $companyId]);
+                }
+
+                if ($companyId) {
+                    $model->company_id = $companyId;
+                } else {
+                    Log::error('CurrentCompanyScope: No company_id found for user ' . Auth::id());
+
+                    throw new ModelNotFoundException('CurrentCompanyScope: No company_id set in the session, user, or database.');
                 }
             }
         });

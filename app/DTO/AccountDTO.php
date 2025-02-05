@@ -2,31 +2,14 @@
 
 namespace App\DTO;
 
-use Livewire\Wireable;
-
-class AccountDTO implements Wireable
+class AccountDTO
 {
     public function __construct(
         public string $accountName,
         public string $accountCode,
+        public ?int $accountId,
         public AccountBalanceDTO $balance,
+        public ?string $startDate,
+        public ?string $endDate,
     ) {}
-
-    public function toLivewire(): array
-    {
-        return [
-            'accountName' => $this->accountName,
-            'accountCode' => $this->accountCode,
-            'balance' => $this->balance->toLivewire(),
-        ];
-    }
-
-    public static function fromLivewire($value): static
-    {
-        return new static(
-            $value['accountName'],
-            $value['accountCode'],
-            AccountBalanceDTO::fromLivewire($value['balance']),
-        );
-    }
 }

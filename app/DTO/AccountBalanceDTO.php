@@ -2,9 +2,9 @@
 
 namespace App\DTO;
 
-use Livewire\Wireable;
+use App\Contracts\BalanceFormattable;
 
-class AccountBalanceDTO implements Wireable
+class AccountBalanceDTO implements BalanceFormattable
 {
     public function __construct(
         public ?string $startingBalance,
@@ -14,25 +14,14 @@ class AccountBalanceDTO implements Wireable
         public ?string $endingBalance,
     ) {}
 
-    public function toLivewire(): array
-    {
-        return [
-            'startingBalance' => $this->startingBalance,
-            'debitBalance' => $this->debitBalance,
-            'creditBalance' => $this->creditBalance,
-            'netMovement' => $this->netMovement,
-            'endingBalance' => $this->endingBalance,
-        ];
-    }
-
-    public static function fromLivewire($value): static
+    public static function fromArray(array $balances): static
     {
         return new static(
-            $value['startingBalance'],
-            $value['debitBalance'],
-            $value['creditBalance'],
-            $value['netMovement'],
-            $value['endingBalance'],
+            startingBalance: $balances['starting_balance'] ?? null,
+            debitBalance: $balances['debit_balance'] ?? null,
+            creditBalance: $balances['credit_balance'] ?? null,
+            netMovement: $balances['net_movement'] ?? null,
+            endingBalance: $balances['ending_balance'] ?? null,
         );
     }
 }

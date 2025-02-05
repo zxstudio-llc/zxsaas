@@ -15,6 +15,7 @@ use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Unique;
@@ -24,7 +25,7 @@ class AccountResource extends Resource
 {
     protected static ?string $model = BankAccount::class;
 
-    protected static ?string $modelLabel = 'Account';
+    protected static ?string $modelLabel = 'account';
 
     public static function getModelLabel(): string
     {
@@ -44,6 +45,7 @@ class AccountResource extends Resource
                             ->localizeLabel()
                             ->searchable()
                             ->columnSpan(1)
+                            ->disabledOn('edit')
                             ->default(BankAccountType::DEFAULT)
                             ->live()
                             ->afterStateUpdated(static function (Forms\Set $set, $state, ?BankAccount $bankAccount, string $operation) {
@@ -64,6 +66,7 @@ class AccountResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('subtype_id')
                                     ->options(static fn (Forms\Get $get) => static::groupSubtypesBySubtypeType(BankAccountType::parse($get('data.type', true))))
+                                    ->disabledOn('edit')
                                     ->localizeLabel()
                                     ->searchable()
                                     ->live()
@@ -79,14 +82,14 @@ class AccountResource extends Resource
                                     ->localizeLabel()
                                     ->required(),
                                 CreateCurrencySelect::make('currency_code')
-                                    ->relationship('currency', 'name'),
+                                    ->disabledOn('edit'),
                             ]),
                         Forms\Components\Group::make()
                             ->columns()
                             ->columnSpanFull()
                             ->schema([
                                 Forms\Components\TextInput::make('number')
-                                    ->localizeLabel('Account Number')
+                                    ->localizeLabel('Account number')
                                     ->unique(ignoreRecord: true, modifyRuleUsing: static function (Unique $rule, $state) {
                                         $companyId = Auth::user()->currentCompany->id;
 
@@ -104,6 +107,12 @@ class AccountResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                $query->with([
+                    'account',
+                    'account.subtype',
+                ]);
+            })
             ->columns([
                 Tables\Columns\TextColumn::make('account.name')
                     ->localizeLabel('Account')
@@ -118,7 +127,7 @@ class AccountResource extends Resource
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('account.ending_balance')
-                    ->localizeLabel('Ending Balance')
+                    ->localizeLabel('Ending balance')
                     ->state(static fn (BankAccount $record) => $record->account->ending_balance->convert()->formatWithCode())
                     ->toggleable()
                     ->alignment(Alignment::End),
@@ -133,15 +142,15 @@ class AccountResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->requiresConfirmation()
-                        ->modalDescription('Are you sure you want to delete the selected accounts? All transactions associated with the accounts will be deleted as well.'),
+                        ->modalDescription('Are you sure you want to delete the selected accounts? All transactions associated with the accounts will be deleted as well.')
+                        ->hidden(function (Table $table) {
+                            return $table->getAllSelectableRecordsCount() === 0;
+                        }),
                 ]),
             ])
             ->checkIfRecordIsSelectableUsing(static function (BankAccount $record) {
                 return $record->isDisabled();
-            })
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
-            ]);
+            });
     }
 
     public static function getPages(): array

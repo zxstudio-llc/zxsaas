@@ -5,15 +5,13 @@ namespace App\Models\Setting;
 use App\Concerns\Blamable;
 use App\Concerns\CompanyOwned;
 use App\Enums\Setting\EntityType;
-use App\Models\Locale\City;
-use App\Models\Locale\Country;
-use App\Models\Locale\State;
+use App\Models\Common\Address;
 use Database\Factories\Setting\CompanyProfileFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Support\Facades\Storage;
 
 class CompanyProfile extends Model
@@ -27,11 +25,6 @@ class CompanyProfile extends Model
     protected $fillable = [
         'company_id',
         'logo',
-        'address',
-        'city_id',
-        'zip_code',
-        'state_id',
-        'country',
         'phone_number',
         'email',
         'tax_id',
@@ -59,24 +52,9 @@ class CompanyProfile extends Model
         });
     }
 
-    public function country(): BelongsTo
+    public function address(): MorphOne
     {
-        return $this->belongsTo(Country::class, 'country', 'id');
-    }
-
-    public function city(): BelongsTo
-    {
-        return $this->belongsTo(City::class, 'city_id', 'id');
-    }
-
-    public function state(): BelongsTo
-    {
-        return $this->belongsTo(State::class, 'state_id', 'id');
-    }
-
-    public function getCountryName(): string
-    {
-        return Country::findByIsoCode2($this->country)?->name ?? '';
+        return $this->morphOne(Address::class, 'addressable');
     }
 
     protected static function newFactory(): Factory

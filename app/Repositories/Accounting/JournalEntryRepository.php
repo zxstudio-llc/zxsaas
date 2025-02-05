@@ -12,14 +12,16 @@ class JournalEntryRepository
     {
         $query = $account->journalEntries()->where('type', $type);
 
+        $startDateCarbon = Carbon::parse($startDate)->startOfDay();
+        $endDateCarbon = Carbon::parse($endDate)->endOfDay();
+
         if ($startDate && $endDate) {
-            $endOfDay = Carbon::parse($endDate)->endOfDay();
-            $query->whereHas('transaction', static function (Builder $query) use ($startDate, $endOfDay) {
-                $query->whereBetween('posted_at', [$startDate, $endOfDay]);
+            $query->whereHas('transaction', static function (Builder $query) use ($startDateCarbon, $endDateCarbon) {
+                $query->whereBetween('posted_at', [$startDateCarbon, $endDateCarbon]);
             });
         } elseif ($startDate) {
-            $query->whereHas('transaction', static function (Builder $query) use ($startDate) {
-                $query->where('posted_at', '<=', $startDate);
+            $query->whereHas('transaction', static function (Builder $query) use ($startDateCarbon) {
+                $query->where('posted_at', '<=', $startDateCarbon);
             });
         }
 

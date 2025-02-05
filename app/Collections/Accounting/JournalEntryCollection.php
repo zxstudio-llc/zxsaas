@@ -14,7 +14,7 @@ class JournalEntryCollection extends Collection
     {
         $total = $this->reduce(static function ($carry, JournalEntry $item) {
             if ($item->type->isDebit()) {
-                $amountAsInteger = CurrencyConverter::prepareForAccessor($item->amount, CurrencyAccessor::getDefaultCurrency());
+                $amountAsInteger = CurrencyConverter::convertToCents($item->amount);
 
                 return bcadd($carry, $amountAsInteger, 0);
             }
@@ -29,7 +29,7 @@ class JournalEntryCollection extends Collection
     {
         $total = $this->reduce(static function ($carry, JournalEntry $item) {
             if ($item->type->isCredit()) {
-                $amountAsInteger = CurrencyConverter::prepareForAccessor($item->amount, CurrencyAccessor::getDefaultCurrency());
+                $amountAsInteger = CurrencyConverter::convertToCents($item->amount);
 
                 return bcadd($carry, $amountAsInteger, 0);
             }

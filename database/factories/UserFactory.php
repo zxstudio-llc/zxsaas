@@ -3,12 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Company;
-use App\Models\Setting\CompanyProfile;
 use App\Models\User;
-use App\Services\CompanyDefaultService;
-use Database\Factories\Accounting\TransactionFactory;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Wallo\FilamentCompanies\FilamentCompanies;
@@ -58,38 +54,23 @@ class UserFactory extends Factory
     /**
      * Indicate that the user should have a personal company.
      */
-    public function withPersonalCompany(): static
+    public function withPersonalCompany(?callable $callback = null): static
     {
         if (! FilamentCompanies::hasCompanyFeatures()) {
             return $this->state([]);
         }
 
-        $countryCode = $this->faker->countryCode;
-
-        return $this->afterCreating(function (User $user) use ($countryCode) {
+        return $this->has(
             Company::factory()
-                ->has(CompanyProfile::factory()->withCountry($countryCode), 'profile')
-                ->afterCreating(function (Company $company) use ($user, $countryCode) {
-                    DB::transaction(function () use ($company, $user, $countryCode) {
-                        $companyDefaultService = app()->make(CompanyDefaultService::class);
-                        $companyDefaultService->createCompanyDefaults($company, $user, 'USD', $countryCode, 'en');
-
-                        $defaultBankAccount = $company->default->bankAccount;
-
-                        TransactionFactory::new()
-                            ->forCompanyAndBankAccount($company, $defaultBankAccount)
-                            ->count(2000)
-                            ->createQuietly([
-                                'created_by' => $user->id,
-                                'updated_by' => $user->id,
-                            ]);
-                    });
-                })
-                ->create([
+                ->withCompanyProfile()
+                ->withCompanyDefaults()
+                ->state(fn (array $attributes, User $user) => [
                     'name' => $user->name . '\'s Company',
                     'user_id' => $user->id,
                     'personal_company' => true,
-                ]);
-        });
+                ])
+                ->when(is_callable($callback), $callback),
+            'ownedCompanies'
+        );
     }
 }

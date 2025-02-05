@@ -2,7 +2,7 @@
 
 namespace App\Models\Locale;
 
-use App\Models\Setting\CompanyProfile;
+use App\Models\Common\Address;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -49,9 +49,9 @@ class Country extends Model
         return $this->belongsTo(Currency::class, 'currency_code', 'code');
     }
 
-    public function profiles(): HasMany
+    public function addresses(): HasMany
     {
-        return $this->hasMany(CompanyProfile::class, 'country', 'id');
+        return $this->hasMany(Address::class, 'country_code', 'id');
     }
 
     public function states(): HasMany
@@ -80,19 +80,50 @@ class Country extends Model
 
     public static function getAllCountryCodes(): Collection
     {
-        return self::all()->pluck('id');
+        return self::query()
+            ->select('id')
+            ->pluck('id');
     }
 
     public static function getAvailableCountryOptions(): array
     {
-        return self::all()->mapWithKeys(static function ($country): array {
-            return [$country->id => $country->name . ' ' . $country->flag];
-        })->toArray();
+        return self::query()
+            ->select(['id', 'name', 'flag'])
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(static fn ($country) => [
+                $country->id => $country->name . ' ' . $country->flag,
+            ])
+            ->toArray();
+    }
+
+    public static function getSearchResultsUsing(string $search): array
+    {
+        return self::query()
+            ->select(['id', 'name', 'flag'])
+            ->where(static function ($query) use ($search) {
+                $query->whereLike('name', "%{$search}%")
+                    ->orWhereLike('id', "%{$search}%");
+            })
+            ->orderByRaw('
+                CASE
+                    WHEN id = ? THEN 1
+                    WHEN id LIKE ? THEN 2
+                    WHEN name LIKE ? THEN 3
+                    ELSE 4
+                END
+            ', [$search, $search . '%', $search . '%'])
+            ->limit(50)
+            ->get()
+            ->mapWithKeys(static fn (self $country) => [
+                $country->id => $country->name . ' ' . $country->flag,
+            ])
+            ->toArray();
     }
 
     public static function getLanguagesByCountryCode(?string $code = null): array
     {
-        if ($code === null) {
+        if (! $code) {
             return Locales::getNames();
         }
 

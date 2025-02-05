@@ -33,12 +33,7 @@ class AccountChart extends Page
     protected static string $view = 'filament.company.pages.accounting.chart';
 
     #[Url]
-    public ?string $activeTab = null;
-
-    public function mount(): void
-    {
-        $this->activeTab = $this->activeTab ?? AccountCategory::Asset->value;
-    }
+    public ?string $activeTab = AccountCategory::Asset->value;
 
     protected function configureAction(Action $action): void
     {
@@ -51,6 +46,8 @@ class AccountChart extends Page
     public function categories(): Collection
     {
         return AccountSubtype::withCount('accounts')
+            ->with('accounts')
+            ->with('accounts.adjustment')
             ->get()
             ->groupBy('category');
     }
@@ -166,7 +163,7 @@ class AccountChart extends Page
     protected function getArchiveFormComponent(): Component
     {
         return Checkbox::make('archived')
-            ->label('Archive Account')
+            ->label('Archive account')
             ->helperText('Archived accounts will not be available for selection in transactions.')
             ->hidden(static function (string $operation): bool {
                 return $operation === 'create';
@@ -189,7 +186,7 @@ class AccountChart extends Page
         return [
             CreateAction::make()
                 ->button()
-                ->label('Add New Account')
+                ->label('Add new account')
                 ->model(Account::class)
                 ->form(fn (Form $form) => $this->getChartForm($form, false)->operation('create')),
         ];

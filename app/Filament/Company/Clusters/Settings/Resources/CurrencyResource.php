@@ -19,7 +19,6 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
-use Wallo\FilamentSelectify\Components\ToggleButton;
 
 class CurrencyResource extends Resource
 {
@@ -28,7 +27,7 @@ class CurrencyResource extends Resource
 
     protected static ?string $model = CurrencyModel::class;
 
-    protected static ?string $modelLabel = 'Currency';
+    protected static ?string $modelLabel = 'currency';
 
     protected static ?string $cluster = Settings::class;
 
@@ -51,7 +50,6 @@ class CurrencyResource extends Resource
                             ->live()
                             ->required()
                             ->localizeLabel()
-                            ->hidden(static fn (Forms\Get $get, $state): bool => $get('enabled') && $state !== null)
                             ->afterStateUpdated(static function (Forms\Set $set, $state) {
                                 $fields = ['name', 'precision', 'symbol', 'symbol_first', 'decimal_mark', 'thousands_separator'];
 
@@ -71,12 +69,6 @@ class CurrencyResource extends Resource
 
                                 array_walk($fields, static fn ($field) => $set($field, $currencyDetails[$field] ?? null));
                             }),
-                        Forms\Components\TextInput::make('code')
-                            ->localizeLabel()
-                            ->hidden(static fn (Forms\Get $get): bool => ! ($get('enabled') && $get('code') !== null))
-                            ->disabled(static fn (Forms\Get $get): bool => $get('enabled'))
-                            ->dehydrated()
-                            ->required(),
                         Forms\Components\TextInput::make('name')
                             ->localizeLabel()
                             ->maxLength(50)
@@ -86,8 +78,6 @@ class CurrencyResource extends Resource
                             ->rule('gt:0')
                             ->live()
                             ->localizeLabel()
-                            ->disabled(static fn (?CurrencyModel $record): bool => $record?->isEnabled() ?? false)
-                            ->dehydrated()
                             ->required(),
                         Forms\Components\Select::make('precision')
                             ->localizeLabel()
@@ -98,11 +88,11 @@ class CurrencyResource extends Resource
                             ->maxLength(5)
                             ->required(),
                         Forms\Components\Select::make('symbol_first')
-                            ->localizeLabel('Symbol Position')
-                            ->boolean(translate('Before Amount'), translate('After Amount'), translate('Select a symbol position'))
+                            ->localizeLabel('Symbol position')
+                            ->boolean(translate('Before amount'), translate('After amount'), translate('Select a symbol position'))
                             ->required(),
                         Forms\Components\TextInput::make('decimal_mark')
-                            ->localizeLabel('Decimal Separator')
+                            ->localizeLabel('Decimal separator')
                             ->maxLength(1)
                             ->rule(static function (Forms\Get $get): Closure {
                                 return static function ($attribute, $value, Closure $fail) use ($get) {
@@ -123,36 +113,6 @@ class CurrencyResource extends Resource
                                 };
                             })
                             ->nullable(),
-                        ToggleButton::make('enabled')
-                            ->localizeLabel('Default')
-                            ->onLabel(CurrencyModel::enabledLabel())
-                            ->offLabel(CurrencyModel::disabledLabel())
-                            ->disabled(static fn (?CurrencyModel $record): bool => $record?->isEnabled() ?? false)
-                            ->dehydrated()
-                            ->live()
-                            ->afterStateUpdated(static function (Forms\Set $set, Forms\Get $get, $state) {
-                                $enabledState = (bool) $state;
-                                $code = $get('code');
-
-                                if (! $code) {
-                                    return;
-                                }
-
-                                if ($enabledState) {
-                                    $set('rate', 1);
-
-                                    return;
-                                }
-
-                                $forexEnabled = Forex::isEnabled();
-                                if ($forexEnabled) {
-                                    $defaultCurrencyCode = CurrencyAccessor::getDefaultCurrency();
-                                    $exchangeRate = Forex::getCachedExchangeRate($defaultCurrencyCode, $code);
-                                    if ($exchangeRate !== null) {
-                                        $set('rate', $exchangeRate);
-                                    }
-                                }
-                            }),
                     ])->columns(),
             ]);
     }
@@ -166,8 +126,8 @@ class CurrencyResource extends Resource
                     ->weight(FontWeight::Medium)
                     ->icon(static fn (CurrencyModel $record) => $record->isEnabled() ? 'heroicon-o-lock-closed' : null)
                     ->tooltip(static function (CurrencyModel $record) {
-                        $tooltipMessage = translate('Default :Record', [
-                            'Record' => static::getModelLabel(),
+                        $tooltipMessage = translate('Default :record', [
+                            'record' => static::getModelLabel(),
                         ]);
 
                         return $record->isEnabled() ? $tooltipMessage : null;
@@ -225,15 +185,15 @@ class CurrencyResource extends Resource
                                     $action->cancel();
                                 }
                             }
+                        })
+                        ->hidden(function (Table $table) {
+                            return $table->getAllSelectableRecordsCount() === 0;
                         }),
                 ]),
             ])
             ->checkIfRecordIsSelectableUsing(static function (CurrencyModel $record) {
                 return $record->isDisabled();
-            })
-            ->emptyStateActions([
-                Tables\Actions\CreateAction::make(),
-            ]);
+            });
     }
 
     public static function getPages(): array

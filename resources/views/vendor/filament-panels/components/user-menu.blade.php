@@ -12,11 +12,10 @@
     $items = \Illuminate\Support\Arr::except($items, ['account', 'logout', 'profile']);
 
     $hasPanelShiftDropdown = filament()->hasPlugin('panel-shift-dropdown');
-    $hasTenant = filament()->getTenant() !== null;
 @endphp
 
 
-@if($hasTenant)
+@if($hasPanelShiftDropdown)
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::USER_MENU_BEFORE) }}
 @endif
 
@@ -35,7 +34,7 @@
                 type="button"
                 class="shrink-0"
             >
-                <x-filament-panels::avatar.user :user="$user" />
+                <x-filament-panels::avatar.user :user="$user"/>
             </button>
         </x-slot>
 
@@ -68,7 +67,7 @@
 
         @if (filament()->hasDarkMode() && (! filament()->hasDarkModeForced()))
             <x-filament::dropdown.list>
-                <x-filament-panels::theme-switcher />
+                <x-filament-panels::theme-switcher/>
             </x-filament::dropdown.list>
         @endif
 

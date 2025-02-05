@@ -2,8 +2,6 @@
 
 namespace App\Listeners;
 
-use App\Enums\Setting\DiscountType;
-use App\Enums\Setting\TaxType;
 use App\Events\CompanyDefaultEvent;
 use App\Models\Setting\CompanyDefault;
 use Illuminate\Support\Facades\DB;
@@ -48,44 +46,17 @@ class SyncWithCompanyDefaults
     private function updateCompanyDefaults($model, $companyId): void
     {
         $modelName = class_basename($model);
-        $type = $model->getAttribute('type');
 
         $default = CompanyDefault::firstOrNew([
             'company_id' => $companyId,
         ]);
 
         match ($modelName) {
-            'Discount' => $this->handleDiscount($default, $type, $model->getKey()),
-            'Tax' => $this->handleTax($default, $type, $model->getKey()),
             'Currency' => $default->currency_code = $model->getAttribute('code'),
             'BankAccount' => $default->bank_account_id = $model->getKey(),
             default => null,
         };
 
         $default->save();
-    }
-
-    private function handleDiscount($default, $type, $key): void
-    {
-        if (! in_array($type, [DiscountType::Sales, DiscountType::Purchase], true)) {
-            return;
-        }
-
-        match (true) {
-            $type === DiscountType::Sales => $default->sales_discount_id = $key,
-            $type === DiscountType::Purchase => $default->purchase_discount_id = $key,
-        };
-    }
-
-    private function handleTax($default, $type, $key): void
-    {
-        if (! in_array($type, [TaxType::Sales, TaxType::Purchase], true)) {
-            return;
-        }
-
-        match (true) {
-            $type === TaxType::Sales => $default->sales_tax_id = $key,
-            $type === TaxType::Purchase => $default->purchase_tax_id = $key,
-        };
     }
 }

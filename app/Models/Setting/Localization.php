@@ -83,19 +83,23 @@ class Localization extends Model
 
     public function fiscalYearStartDate(): string
     {
-        return Carbon::parse($this->fiscalYearEndDate())->subYear()->addDay()->toDateString();
+        return once(function () {
+            return Carbon::parse($this->fiscalYearEndDate())->subYear()->addDay()->toDateString();
+        });
     }
 
     public function fiscalYearEndDate(): string
     {
-        $today = now();
-        $fiscalYearEndThisYear = Carbon::createFromDate($today->year, $this->fiscal_year_end_month, $this->fiscal_year_end_day);
+        return once(function () {
+            $today = now();
+            $fiscalYearEndThisYear = Carbon::createFromDate($today->year, $this->fiscal_year_end_month, $this->fiscal_year_end_day);
 
-        if ($today->gt($fiscalYearEndThisYear)) {
-            return $fiscalYearEndThisYear->copy()->addYear()->toDateString();
-        }
+            if ($today->gt($fiscalYearEndThisYear)) {
+                return $fiscalYearEndThisYear->copy()->addYear()->toDateString();
+            }
 
-        return $fiscalYearEndThisYear->toDateString();
+            return $fiscalYearEndThisYear->toDateString();
+        });
     }
 
     public function getDateTimeFormatAttribute(): string

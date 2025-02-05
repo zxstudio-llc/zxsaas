@@ -4,12 +4,17 @@ namespace App\Services;
 
 use App\Enums\Accounting\AccountCategory;
 use App\Enums\Accounting\AccountType;
+use App\Enums\Accounting\JournalEntryType;
 use App\Enums\Accounting\TransactionType;
 use App\Models\Accounting\Account;
+use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\Transaction;
 use App\Models\Banking\BankAccount;
 use App\Models\Company;
+use App\Utilities\Currency\CurrencyAccessor;
+use App\Utilities\Currency\CurrencyConverter;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class TransactionService
 {
@@ -141,5 +146,138 @@ class TransactionService
             ->where('type', $type)
             ->where('name', $name)
             ->firstOrFail();
+    }
+
+    public function createJournalEntries(Transaction $transaction): void
+    {
+        // Additional check to avoid duplication during replication
+        if ($transaction->journalEntries()->exists() || $transaction->type->isJournal() || str_starts_with($transaction->description, '(Copy of)')) {
+            return;
+        }
+
+        [$debitAccount, $creditAccount] = $this->determineAccounts($transaction);
+
+        if ($debitAccount === null || $creditAccount === null) {
+            return;
+        }
+
+        $this->createJournalEntriesForTransaction($transaction, $debitAccount, $creditAccount);
+    }
+
+    public function updateJournalEntries(Transaction $transaction): void
+    {
+        if ($transaction->type->isJournal() || $this->hasRelevantChanges($transaction) === false) {
+            return;
+        }
+
+        $journalEntries = $transaction->journalEntries;
+
+        $debitEntry = $journalEntries->where('type', JournalEntryType::Debit)->first();
+        $creditEntry = $journalEntries->where('type', JournalEntryType::Credit)->first();
+
+        if ($debitEntry === null || $creditEntry === null) {
+            return;
+        }
+
+        [$debitAccount, $creditAccount] = $this->determineAccounts($transaction);
+
+        if ($debitAccount === null || $creditAccount === null) {
+            return;
+        }
+
+        $convertedTransactionAmount = $this->getConvertedTransactionAmount($transaction);
+
+        DB::transaction(function () use ($debitEntry, $debitAccount, $convertedTransactionAmount, $creditEntry, $creditAccount) {
+            $this->updateJournalEntryForTransaction($debitEntry, $debitAccount, $convertedTransactionAmount);
+            $this->updateJournalEntryForTransaction($creditEntry, $creditAccount, $convertedTransactionAmount);
+        });
+    }
+
+    public function deleteJournalEntries(Transaction $transaction): void
+    {
+        DB::transaction(static function () use ($transaction) {
+            $transaction->journalEntries()->each(fn (JournalEntry $entry) => $entry->delete());
+        });
+    }
+
+    private function determineAccounts(Transaction $transaction): array
+    {
+        $chartAccount = $transaction->account;
+        $bankAccount = $transaction->bankAccount?->account;
+
+        if ($transaction->type->isTransfer()) {
+            // Essentially a withdrawal from the bank account and a deposit to the chart account (which is a bank account)
+            // Credit: bankAccount (source of funds, money is being withdrawn)
+            // Debit: chartAccount (destination of funds, money is being deposited)
+            return [$chartAccount, $bankAccount];
+        }
+
+        $debitAccount = $transaction->type->isWithdrawal() ? $chartAccount : $bankAccount;
+        $creditAccount = $transaction->type->isWithdrawal() ? $bankAccount : $chartAccount;
+
+        return [$debitAccount, $creditAccount];
+    }
+
+    private function createJournalEntriesForTransaction(Transaction $transaction, Account $debitAccount, Account $creditAccount): void
+    {
+        $convertedTransactionAmount = $this->getConvertedTransactionAmount($transaction);
+
+        DB::transaction(function () use ($debitAccount, $transaction, $convertedTransactionAmount, $creditAccount) {
+            $debitAccount->journalEntries()->create([
+                'company_id' => $transaction->company_id,
+                'transaction_id' => $transaction->id,
+                'type' => JournalEntryType::Debit,
+                'amount' => $convertedTransactionAmount,
+                'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
+            ]);
+
+            $creditAccount->journalEntries()->create([
+                'company_id' => $transaction->company_id,
+                'transaction_id' => $transaction->id,
+                'type' => JournalEntryType::Credit,
+                'amount' => $convertedTransactionAmount,
+                'description' => $transaction->description,
+                'created_by' => $transaction->created_by,
+                'updated_by' => $transaction->updated_by,
+            ]);
+        });
+    }
+
+    private function getConvertedTransactionAmount(Transaction $transaction): string
+    {
+        $defaultCurrency = CurrencyAccessor::getDefaultCurrency();
+        $bankAccountCurrency = $transaction->bankAccount->account->currency_code;
+
+        if ($bankAccountCurrency !== $defaultCurrency) {
+            return $this->convertToDefaultCurrency($transaction->amount, $bankAccountCurrency, $defaultCurrency);
+        }
+
+        return $transaction->amount;
+    }
+
+    private function convertToDefaultCurrency(string $amount, string $fromCurrency, string $toCurrency): string
+    {
+        $amountInCents = CurrencyConverter::prepareForAccessor($amount, $fromCurrency);
+
+        $convertedAmountInCents = CurrencyConverter::convertBalance($amountInCents, $fromCurrency, $toCurrency);
+
+        return CurrencyConverter::prepareForMutator($convertedAmountInCents, $toCurrency);
+    }
+
+    private function hasRelevantChanges(Transaction $transaction): bool
+    {
+        return $transaction->wasChanged(['amount', 'account_id', 'bank_account_id', 'type']);
+    }
+
+    private function updateJournalEntryForTransaction(JournalEntry $journalEntry, Account $account, string $convertedTransactionAmount): void
+    {
+        DB::transaction(static function () use ($journalEntry, $account, $convertedTransactionAmount) {
+            $journalEntry->update([
+                'account_id' => $account->id,
+                'amount' => $convertedTransactionAmount,
+            ]);
+        });
     }
 }
